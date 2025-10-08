@@ -1,4 +1,4 @@
-# UniCarpool
+# UniPool
 
 A simple carpooling app designed for university students to share rides safely and conveniently among peers.
 
