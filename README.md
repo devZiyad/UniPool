@@ -22,3 +22,14 @@ UniPool is a carpooling application designed exclusively for university students
 
 - **1.12** Riders receive notifications for booking confirmations, cancellations, or ride status updates
 - **1.13** Riders can split the ride cost with friends for shared trips
+
+---
+
+### Members
+
+- [Your Name]:
+- [Your Name]:
+- [Your Name]:
+- [Your Name]:
+- [Your Name]:
+- [Your Name]:
