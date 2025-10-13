@@ -29,7 +29,7 @@ UniPool is a carpooling application designed exclusively for university students
 
 - Lana: We need to work on basic requirment 1.1 and 1.2. 
 - Jess: We need to work on the uml diagram
-- [Your Name]:
+- Lulwa: We need to work on finalizing the assigmnent doocument.
 - [Your Name]:
 - [Your Name]:
 - [Your Name]:
