@@ -31,5 +31,5 @@ UniPool is a carpooling application designed exclusively for university students
 - Jess: We need to work on the uml diagram
 - Lulwa: We need to work on finalizing the assigmnent doocument.
 - Abdulla: Developing the Figma, which is a draft and guide of the UI will look like.
-- [Your Name]:
+- Meshal ajaj: worked on user class and rider and also helped with figma 
 - [Your Name]:
