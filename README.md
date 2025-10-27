@@ -54,5 +54,6 @@ For the next sprint, I plan to take a more prominent role in the development asp
 Jess: We need to work on the uml diagram
 Lulwa: We need to work on finalizing the assigmnent doocument.
 Abdulla: Developing the Figma, which is a draft and guide of the UI will look like.
+Figma Prototype: https://www.figma.com/design/aUsCFUyGGDVJVQKYUAtEgi/SWEN360?node-id=0-1&t=KrOTEi6aqajt424U-1 
 Meshal ajaj: worked on user class and rider and also helped with figma 
 
