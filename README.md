@@ -54,6 +54,8 @@ The Rating Class:
 User Stories & Acceptence Criteria: 
 https://aubh-my.sharepoint.com/:x:/g/personal/f2300042_aubh_edu_bh/EeBXGKtcCv5BqDXi_xNr7QYBmPrVSkncUu_cL2G2kEI2dg?e=6p2j0W 
 
+Meeting Minutes & Daily Scrum: https://aubh-my.sharepoint.com/:w:/g/personal/f2300042_aubh_edu_bh/EYpsHn5786JPq5v_gPiUuAcBvjxAs2WRjFgbLoKEc69vXQ?e=Ef8evH
+
 For the next sprint, I plan to take a more prominent role in the development aspect such as implementing the user login and designing how the system will interact with the information, including the database schema. 
 
 ---
