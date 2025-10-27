@@ -77,7 +77,10 @@ For the next sprint, I plan to transition towards **backend implementation**, fo
 
 Jess: We need to work on the uml diagram
 Lulwa: We need to work on finalizing the assigmnent doocument.
-Abdulla: Developing the Figma, which is a draft and guide of the UI will look like.
+
+Abdulla: Developing the Figma, which is a draft and guide of the UI will look like. Developing all the pages and figuring out a logical flow for the Mobile app, which will eventually decide the system architecture. Therefore I had to review the UML aswell if it made sense and had a logical flow that works with the planned flow of the app.
+
+
 Figma Prototype: https://www.figma.com/design/aUsCFUyGGDVJVQKYUAtEgi/SWEN360?node-id=0-1&t=KrOTEi6aqajt424U-1 
 Meshal ajaj: worked on user class and rider and also helped with figma 
 
