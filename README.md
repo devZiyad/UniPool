@@ -48,7 +48,7 @@ The Rating Class:
 
 ![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20135240.png) 
 
-
+For the next sprint, I plan to take a more prominent role in the development aspect such as implementing the user login and designing how the system will interact with the information, including the database schema. 
 
    
 Jess: We need to work on the uml diagram
