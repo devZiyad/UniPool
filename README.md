@@ -42,7 +42,8 @@ The Payment Class:
 ![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20134154.png)
 
 The Rating Class:
-![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20134211.png)
+
+![alt text]([https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20134211.png)](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20135240.png)
 
 
 
