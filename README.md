@@ -36,14 +36,17 @@ What I worked on:
 - Design use case: Search rides, match driver 
  - Create UML for Rating class 
  - Create UML of payment class
+
 I focused on all the tasks that needed to be completed rather than starting with the user stories. However, this issue was quickly resolved with clear expectations established that user stories needed to be completed first, followed by the other diagrams. I primarily worked on completing the “Design use case: Register, verify, login, choose role” (User Story 1.1) and “Design use case: Search rides, match drivers” (User Stories 1.3, 1.4), both of which are crucial for the core user functionality of the system. Additionally, I created the UML for the Rating class (User Story 1.11) and the UML for the Payment class (User Stories 1.9, 1.10, 1.13), ensuring accurate representation of class structures and relationships.
 Use Case Diagram: https://www.canva.com/design/DAG2-uqMKC4/deotXj8ZvYZZUCAtbIa-uw/edit?utm_content=DAG2-uqMKC4&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+
 The Payment Class:
+
 ![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20134154.png)
 
 The Rating Class:
 
-![alt text]([https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20134211.png)](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20135240.png)
+![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20135240.png) 
 
 
 
