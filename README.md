@@ -26,6 +26,9 @@ Kanban Board: https://trello.com/invite/b/68fce5588559a96c8bb57a4d/ATTI70741969f
 - **1.13** Riders can split the ride cost with friends for shared trips
 
 ---
+Sprint 1: 
+
+Tasks: 
 
 ### Members
 
@@ -59,4 +62,10 @@ Lulwa: We need to work on finalizing the assigmnent doocument.
 Abdulla: Developing the Figma, which is a draft and guide of the UI will look like.
 Figma Prototype: https://www.figma.com/design/aUsCFUyGGDVJVQKYUAtEgi/SWEN360?node-id=0-1&t=KrOTEi6aqajt424U-1 
 Meshal ajaj: worked on user class and rider and also helped with figma 
+
+
+Sprint Retrospective: 
+
+
+
 
