@@ -30,7 +30,7 @@ Sprint 1:
 
 Tasks: https://aubh-my.sharepoint.com/:x:/g/personal/f2300042_aubh_edu_bh/EX7kJLI2CSpFlWhCrvqJ5IMBWyHqqn_nWtJDmsFFi4T0Nw?e=tWXgMH
 
-### Members
+### Members & Contributions
 
 Lana: 
 
@@ -56,7 +56,23 @@ https://aubh-my.sharepoint.com/:x:/g/personal/f2300042_aubh_edu_bh/EeBXGKtcCv5Bq
 
 For the next sprint, I plan to take a more prominent role in the development aspect such as implementing the user login and designing how the system will interact with the information, including the database schema. 
 
-   
+---
+
+Ziyad
+
+**What I worked on:**  
+- Design use case: Post ride, manage rides  
+
+During this sprint, I focused on developing the **“Design use case: Post ride, manage rides”** (User Stories 1.2, 1.8), which forms the foundation for how drivers interact with the system to create and manage ride offers. This included defining user flows for posting new rides, editing ride details, and managing active or completed rides.
+
+Additionally, I contributed to **team discussions and coordination**, ensuring that my work aligned with the login and search use cases developed by Lana, allowing for a cohesive user experience across different modules.
+
+I also assisted with **refining the UML structures** and reviewed the design consistency between ride management and driver-related components.
+
+For the next sprint, I plan to transition towards **backend implementation**, focusing on developing the database schema and logic to support ride posting, management, and driver matching.
+
+---
+
 Jess: We need to work on the uml diagram
 Lulwa: We need to work on finalizing the assigmnent doocument.
 Abdulla: Developing the Figma, which is a draft and guide of the UI will look like.
