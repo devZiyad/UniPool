@@ -1,6 +1,7 @@
 # UniPool
 
 UniPool is a carpooling application designed exclusively for university students to share rides safely, conveniently, and affordably within their campus community.
+Kanban Board: https://trello.com/invite/b/68fce5588559a96c8bb57a4d/ATTI70741969f7daa0f7319562d4f276b8da75F9874B/swen-kanban-board 
 
 ## Features
 
