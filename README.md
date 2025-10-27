@@ -48,6 +48,9 @@ The Rating Class:
 
 ![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20135240.png) 
 
+User Stories & Acceptence Criteria: 
+https://aubh-my.sharepoint.com/:x:/g/personal/f2300042_aubh_edu_bh/EeBXGKtcCv5BqDXi_xNr7QYBmPrVSkncUu_cL2G2kEI2dg?e=6p2j0W 
+
 For the next sprint, I plan to take a more prominent role in the development aspect such as implementing the user login and designing how the system will interact with the information, including the database schema. 
 
    
