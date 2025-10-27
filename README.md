@@ -28,7 +28,7 @@ Kanban Board: https://trello.com/invite/b/68fce5588559a96c8bb57a4d/ATTI70741969f
 ---
 Sprint 1: 
 
-Tasks: 
+Tasks: https://aubh-my.sharepoint.com/:x:/g/personal/f2300042_aubh_edu_bh/EX7kJLI2CSpFlWhCrvqJ5IMBWyHqqn_nWtJDmsFFi4T0Nw?e=tWXgMH
 
 ### Members
 
