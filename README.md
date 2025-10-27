@@ -82,7 +82,11 @@ Abdulla: Developing the Figma, which is a draft and guide of the UI will look li
 
 
 Figma Prototype: https://www.figma.com/design/aUsCFUyGGDVJVQKYUAtEgi/SWEN360?node-id=0-1&t=KrOTEi6aqajt424U-1 
-Meshal ajaj: worked on user class and rider and also helped with figma 
+Meshal ajaj: worked on user class and rider and also helped with figma and finlizing use-case diagram
+<img width="545" height="397" alt="image" src="https://github.com/user-attachments/assets/7c791700-8c3b-4a48-a64e-868a03e1451b" />
+<img width="567" height="285" alt="image" src="https://github.com/user-attachments/assets/ece9defc-4802-4731-b0e5-c90e5c57112f" />
+<img width="492" height="263" alt="image" src="https://github.com/user-attachments/assets/0d347b83-825d-4d9c-91d2-1eefd510d1d5" />
+https://aubh-my.sharepoint.com/:w:/g/personal/f2300160_aubh_edu_bh/ESUZzY9bpfhNnDqlRzUD2VcB8XR9R9wbbNxRpSYrt0u5tw?e=CtXaEg
 
 
 Sprint Retrospective: ![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20142732.png)
