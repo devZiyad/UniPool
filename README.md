@@ -75,7 +75,13 @@ For the next sprint, I plan to transition towards **backend implementation**, fo
 
 ---
 
-Jess: We need to work on the uml diagram
+Jess: 
+During the first sprint, I worked behind the design and analysis of UML diagram specifically for User class which is our primary class and Vehicle class which is an extension for driver class. In addition, me and Ziyad had our discussion on how to organize user stories into UML classes and how each class could be interrelated. We also discussed all possible functions and data structures we could implement based on our team's user stories. After continuous iterative planning, we designed three UML diagrams which explain the classes and their interrelationships in three possible ways. While Ziyad designed the UML diagrams, I monitored his steps ensuring that its properly aligned to our user stories. In addition to UML, I worked in designing the use case for payment method and cost-split method. 
+
+The user stories that I mainly worked on are 1.1, 1.9, 1.10, & 1.13. Throughout the sprint I faced challenges during the phase of UML designing, where I should brainstorm, narrow down and organize functions and data structures into classes in a way that aligns with our user stories. Compared to UML, specific tasks like Use case diagrams felt much easier to visualize and design. In the Upcoming sprint, I would monitor and analyze the effectiveness of integrating backend and databases without affecting the basic structure but building upon it.
+
+To conclude : Things I mainly worked on: Created User & Vehicle class,`Organization & Design of UML, reshaping UML based on User stories, Designing Use-Case diagrams for payment
+
 Lulwa: We need to work on finalizing the assigmnent doocument.
 
 Abdulla: Developing the Figma, which is a draft and guide of the UI will look like. Developing all the pages and figuring out a logical flow for the Mobile app, which will eventually decide the system architecture. Therefore I had to review the UML aswell if it made sense and had a logical flow that works with the planned flow of the app.
