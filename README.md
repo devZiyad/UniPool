@@ -30,6 +30,7 @@ Kanban Board: https://trello.com/invite/b/68fce5588559a96c8bb57a4d/ATTI70741969f
 ### Members
 
 Lana: 
+
 What I worked on:  
 - Design use case: Register, verify, login, choose role 
 - Design use case: Search rides, match driver 
