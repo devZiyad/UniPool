@@ -40,6 +40,7 @@ I focused on all the tasks that needed to be completed rather than starting with
 Use Case Diagram: https://www.canva.com/design/DAG2-uqMKC4/deotXj8ZvYZZUCAtbIa-uw/edit?utm_content=DAG2-uqMKC4&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 
 
+
    
 Jess: We need to work on the uml diagram
 Lulwa: We need to work on finalizing the assigmnent doocument.
