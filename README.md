@@ -84,6 +84,14 @@ Meshal ajaj: worked on user class and rider and also helped with figma
 
 Sprint Retrospective: ![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-10-27%20142732.png)
 
+- Possible Constraints for the Carpool-Sharing System that will be elaborated on in the next sprint. 
+- Ride Modification: Drivers can only modify ride details up to a certain time before the ride starts (for example and hour before).  
+- Feedback Timing: Feedback can only be submitted after the ride is marked as completed.  
+- Location Accuracy: Real-time tracking is dependent on the availability and accuracy of GPS data. 
+- Search: Ride search results are limited to a defined proximity range (e.g., within 10 km). 
+- System Load: The system must handle peak usage times, including class start/end hours, without performance degradation. 
+- Scalability Constraint: The system must support more users without needing major architectural changes. 
+
 
 
 
