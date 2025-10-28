@@ -6,6 +6,84 @@ Kanban Board: https://trello.com/invite/b/68fce5588559a96c8bb57a4d/ATTI70741969f
 
 ## Features
 
+### Functional requirements: 
+
+  
+
+User management: 
+
+The system shall allow users to register using their university credentials.  
+
+The system shall verify users as valid university students before giving access to the app.  
+
+The system shall allow users to choose their role after registration (the role could be rider or driver).  
+
+Ride management: 
+
+The system must provide posting the driver’s ride, its details (destination, date, time, and number of empty seats). 
+
+The system must allow drivers to have access to modify or update their posted rides. 
+
+The system will reduce the number of available seats after a successful booking. 
+
+The system shall automatically calculate the price in the system per distance and ride time.  
+
+Ride search and matching: 
+
+The system shall allow user to see the closest rider who is in their proximity area of influence. 
+
+The system shall provide users with a search facility to find available rides by destination, time, date, and location. 
+
+The system shall allow users to view the ride details before booking.  
+
+Booking and payment:  
+
+The system shall allow users to book a ride and reserve a seat in the ride.  
+
+The system shall allow users to view a booking summary.  
+
+The system shall support secure payment methods and allow users to split the ride costs with other riders within the same ride.  
+
+Notification and tracking:  
+
+The system shall allow users to view their riders’ or drivers’ real-time location.  
+
+The system shall send ride reminders to the users, whether it is the rider and driver, including notification of booking confirmation and cancellation.  
+
+Feedback and rating: 
+
+The system shall allow the user to rate the rider after the ride is completed.  
+
+The system shall store feedback to maintain driver and rider reliability matrices.  
+
+  
+
+###Non-functional requirements:  
+
+Performance: 
+
+The systems shall respond within seconds after the user chooses actions. 
+
+Security: 
+
+The system shall support encryption and securely store all user data and payments.  
+
+Usability: 
+
+The system interface must be simple in a way that the user can interact with the system easily.  
+
+Scalability: 
+
+The system must be able to deal with new features that are added later on. 
+
+Privacy:  
+
+The system must not share users’ personal data, including location data, without consent.  
+
+Notification efficiency: 
+
+The system must send booking updates within seconds of an update/change. 
+
 ### Basic Requirements
 
 - **1.1** User registration and login with university verification (via email domain or student ID), and the ability to choose a role: Rider or Driver
