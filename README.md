@@ -227,7 +227,13 @@ Team familiarity and ease of collaboration matter, but skills can improve over t
 
 In ethical design statement I pushed for  a design where location visibility is enabled only during the pickup and ride period and automatically disabled afterward, reducing the risk of exposing users to intrusion or misuse of personal data. 
 
+Meshal : 
+In Sprint 2 worked on Mapping design pattern and Rating UML Diagram Component .
 
+
+<img width="346" height="403" alt="Picture1" src="https://github.com/user-attachments/assets/ad4f4389-2649-4a62-b323-f513dc11c21e" />
+<img width="334" height="402" alt="Picture2" src="https://github.com/user-attachments/assets/46fc6ede-f5c4-4f3e-83da-dca91578de2d" />
+<img width="624" height="440" alt="Picture3" src="https://github.com/user-attachments/assets/d0c7f50c-0172-496f-8e00-1bdd6c63c588" />
 
 
 
