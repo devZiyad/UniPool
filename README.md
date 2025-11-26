@@ -197,6 +197,10 @@ Sprint 2:
 
 ![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-11-24%20082159.png)
 
+Complete Table with Tasks: 
+
+Ziyad: 
+Pervious Design of UML Class Component Diagram
 ![uml class diagram](https://github.com/devZiyad/UniPool/blob/main/UML%20Class%20Diagram.png)
 
 
