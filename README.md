@@ -235,6 +235,34 @@ In Sprint 2 worked on Mapping design pattern and Rating UML Diagram Component .
 <img width="334" height="402" alt="Picture2" src="https://github.com/user-attachments/assets/46fc6ede-f5c4-4f3e-83da-dca91578de2d" />
 <img width="624" height="440" alt="Picture3" src="https://github.com/user-attachments/assets/d0c7f50c-0172-496f-8e00-1bdd6c63c588" />
 
+---
+Lulwa: 
+In Sprint 2, I was mainly involved in enhancing the system structure and moral principles underlying UniPool. I spent time on the refinement of the Data Flow Model, so that the flow of user authentication, ride posting, and booking and location tracking was achieved in accordance with our intended components and the Non-Functional Requirements. I also made a contribution to the Ethical Design Statement as well, but in this case, I decided to influence the safety section as I suggested that the riders and drivers need to cancel the ride anytime and that emergency alerts need to be integrated into the design as a fundamental element to secure the users when interacting with each other physically. My contributions empowered the team to make decisions regarding safety, privacy, and real-time tracking rules. I also took active part in the Sprint 2 ceremonies, writing down the major points of discussion in the meeting minutes, and the team needed to stay on track and hold to the right direction when narrowing down features. In general, my sprint work facilitated the technical organization of the system and ethical principles according to which it was created.
+
+Ethical Design Statement: 
+
+The UniPool team will strive to ensure that it creates a university carpool and ride-sharing app that upholds responsible engineering, that protects users. Ethics directs all decision-making in the system design, including data manipulation to matching algorithms, and protection features. The following principles describe our commitments.  
+
+Privacy (Location/Data Handling) 
+
+UniPool works with sensitive personal information of students such as identity, profile photos, and live GPS position. All storage entries of personal and location data are encrypted and only disclosed when necessary to do core ride-matching. Location visibility is also strictly controlled to pick up and active-ride duration, then automatically disabled to avoid excessive tracking. The access to the platform is limited to verified AUBH credentials; only valid users can be involved, and no information is transferred to third parties. Sprint 1 reliability issues and GPS-related security risks will be overcome with the help of a design change: the transition to secure cloud infrastructure, in this case, AWS, that will enhance data security and stability of the whole system. A small, controlled group of users will be used to conduct initial QA/QC beta testing to determine the existence of privacy or reliability defects before it is fully deployed. 
+
+Fairness (Matching Algorithm) 
+
+UniPool guarantees that all the riders and drivers are treated equally. The matching algorithm does not involve any gender, nationality, looks, or other personal characteristics in the decision. There is no subjective approach to matches: the fact is that they are determined only by objective criteria: similarity of routes, time, and availability of seats, and professed preferences. The two-way rating system with a clear degree of transparency ensures that the bias is minimized, and accountability is achieved, so that each user has an equal chance to either request or offer rides. 
+
+Safety (Emergency Features) 
+
+Since UniPool requires actual physical interactions, the safety of the users is a fundamental ethical necessity. ID check helps avoid the creation of fake accounts, and live ride tracking, which enables students to share their current position with trusted people. In-built alarm buttons and alerts facilitate quick actions in hazardous events, which will be postponed for later in sprint 3. User autonomy and personal protection are supported by riders and drivers being able to cancel their rides at any time and ensure personal safety. 
+
+Ethical Trade-Off: Privacy vs. Convenience 
+
+UniPool has to find a balance between effective coordination with the right of the user to privacy. Although the use of accurate GPS enhances the speed of matching and minimizes the waiting time, over exposure poses the risk of privacy. The system thus enables the live tracking only at vital stages of the ride not before or after. Since the features like posting rides, booking rides, and GPS tracking are essential safety and convenience features, they simply cannot be pushed to subsequent sprints. Delaying such features, under the principle of Cost of Quality, would exponentially increase the cost and disruptiveness of fixing defects. These functions are presented as the main interactions of the Sequence and Component Diagrams. This is a moderate solution that does not violate privacy at the expense of functionality and safety. 
+
+
+Ethical Commitment  
+
+With such values combined in our design and development process, the UniPool team can ensure that it has the ability to use the application to serve in ensuring a safe, fair, and trustworthy ride-sharing community for all university students. Our team will provide a constant review of these principles as the system changes. 
 
 
 
