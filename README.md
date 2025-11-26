@@ -225,6 +225,16 @@ The system will evolve with new features and bug fixes. While important, it’s 
 - Team Fit (Weight = 2): 
 Team familiarity and ease of collaboration matter, but skills can improve over time. Therefore, this criterion has the lowest weight.
 
+The UML Components 
+User: 
+
+![user](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-11-26%20192742.png)
+
+The UML Components 
+Location:
+
+![user](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-11-26%20192759.png)
+
 In ethical design statement I pushed for  a design where location visibility is enabled only during the pickup and ride period and automatically disabled afterward, reducing the risk of exposing users to intrusion or misuse of personal data. 
 
 Meshal : 
