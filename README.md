@@ -208,12 +208,12 @@ Pervious Design of UML Class Component Diagram
 Lana: 
 In sprint 2 I completed the comparison matrix between the Layered and MVC architecture approach. First, I completed the comparison between the 2 in terms of Scalability, Security, Maintainability, Team fit and support for uniPool’s needs.  
 
-
+![Compare](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-11-26%20100343.png)
 
 
 Then created the decision matrix between the 2 approaches.  
 
-
+![Decision matrix](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-11-26%20100357.png)
 
 The weights were determined based on the importance of each criterion to the uniPool system’s goals and requirements.  
 - Scalability (Weight = 5): 
