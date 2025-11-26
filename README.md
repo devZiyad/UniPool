@@ -198,10 +198,34 @@ Sprint 2:
 ![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-11-24%20082159.png)
 
 Complete Table with Tasks: 
+![alt text](https://github.com/devZiyad/UniPool/blob/main/Screenshot%202025-11-26%20094824.png)
 
 Ziyad: 
 Pervious Design of UML Class Component Diagram
 ![uml class diagram](https://github.com/devZiyad/UniPool/blob/main/UML%20Class%20Diagram.png)
+
+
+Lana: 
+In sprint 2 I completed the comparison matrix between the Layered and MVC architecture approach. First, I completed the comparison between the 2 in terms of Scalability, Security, Maintainability, Team fit and support for uniPool’s needs.  
+
+
+
+
+Then created the decision matrix between the 2 approaches.  
+
+
+
+The weights were determined based on the importance of each criterion to the uniPool system’s goals and requirements.  
+- Scalability (Weight = 5): 
+UniPool is expected to grow significantly—more users, advanced ride matching, real-time tracking, and future features. Scalability is critical for long-term success, so it received the highest weight. 
+- Security (Weight = 4): 
+The system handles sensitive data like university IDs, location, and payment details. Strong security is essential, so it was given a high weight, just slightly below scalability. 
+- Maintainability (Weight = 3): 
+The system will evolve with new features and bug fixes. While important, it’s less critical than scalability and security for initial success, so it has a moderate weight. 
+- Team Fit (Weight = 2): 
+Team familiarity and ease of collaboration matter, but skills can improve over time. Therefore, this criterion has the lowest weight.
+
+In ethical design statement I pushed for  a design where location visibility is enabled only during the pickup and ride period and automatically disabled afterward, reducing the risk of exposing users to intrusion or misuse of personal data. 
 
 
 
