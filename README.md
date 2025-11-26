@@ -204,6 +204,9 @@ Ziyad:
 Pervious Design of UML Class Component Diagram
 ![uml class diagram](https://github.com/devZiyad/UniPool/blob/main/UML%20Class%20Diagram.png)
 
+Jess (Scrum Master(also stood as Developer)):
+https://aubh-my.sharepoint.com/:w:/g/personal/f2300044_aubh_edu_bh/IQCw40F03E5zQZlCl2HOobtbAbpa0lD8cpJB9bKGUQ2FKJE?e=MdTByF
+Responsibly did my work as a scrum master while developing meeting minutes, Standups, Sprint ceremonies , Burn down chart , Impediment log , velocity graph 
 
 Lana: 
 In sprint 2 I completed the comparison matrix between the Layered and MVC architecture approach. First, I completed the comparison between the 2 in terms of Scalability, Security, Maintainability, Team fit and support for uniPool’s needs.  
