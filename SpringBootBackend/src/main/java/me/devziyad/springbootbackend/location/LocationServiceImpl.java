@@ -1,52 +1,159 @@
 package me.devziyad.springbootbackend.location;
 
 import lombok.RequiredArgsConstructor;
+import me.devziyad.springbootbackend.exception.ForbiddenException;
+import me.devziyad.springbootbackend.exception.ResourceNotFoundException;
+import me.devziyad.springbootbackend.location.dto.*;
+import me.devziyad.springbootbackend.user.User;
+import me.devziyad.springbootbackend.user.UserRepository;
+import me.devziyad.springbootbackend.util.DistanceUtil;
+import me.devziyad.springbootbackend.util.GeocodingService;
+import me.devziyad.springbootbackend.util.RoutingService;
+import me.devziyad.springbootbackend.util.RoutingService.RouteInfo;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class LocationServiceImpl implements LocationService {
 
     private final LocationRepository locationRepository;
+    private final UserRepository userRepository;
+    private final RoutingService routingService;
+    private final GeocodingService geocodingService;
 
-    @Override
-    public Location createLocation(Location location) {
-        return locationRepository.save(location);
+    private LocationResponse toResponse(Location location) {
+        return LocationResponse.builder()
+                .id(location.getId())
+                .label(location.getLabel())
+                .address(location.getAddress())
+                .latitude(location.getLatitude())
+                .longitude(location.getLongitude())
+                .userId(location.getUser() != null ? location.getUser().getId() : null)
+                .isFavorite(location.getIsFavorite())
+                .build();
     }
 
     @Override
-    public Location getLocation(Long id) {
-        return locationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Location not found"));
+    @Transactional
+    public LocationResponse createLocation(CreateLocationRequest request, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Location location = Location.builder()
+                .label(request.getLabel())
+                .address(request.getAddress())
+                .latitude(request.getLatitude())
+                .longitude(request.getLongitude())
+                .user(user)
+                .isFavorite(request.getIsFavorite() != null ? request.getIsFavorite() : false)
+                .build();
+
+        return toResponse(locationRepository.save(location));
     }
 
     @Override
-    public List<Location> getAllLocations() {
-        return locationRepository.findAll();
+    public LocationResponse getLocationById(Long id) {
+        Location location = locationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Location not found"));
+        return toResponse(location);
     }
 
     @Override
-    public double distanceKm(Location a, Location b) {
-        if (a.getLatitude() == null || a.getLongitude() == null ||
-                b.getLatitude() == null || b.getLongitude() == null) {
-            return -1;
+    public List<LocationResponse> getUserLocations(Long userId) {
+        return locationRepository.findByUserId(userId).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<LocationResponse> getUserFavoriteLocations(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        return locationRepository.findByUserAndIsFavoriteTrue(user).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public LocationResponse updateLocation(Long id, CreateLocationRequest request, Long userId) {
+        Location location = locationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Location not found"));
+
+        if (location.getUser() != null && !location.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("You can only update your own locations");
         }
-        return haversine(a.getLatitude(), a.getLongitude(), b.getLatitude(), b.getLongitude());
+
+        if (request.getLabel() != null) location.setLabel(request.getLabel());
+        if (request.getAddress() != null) location.setAddress(request.getAddress());
+        if (request.getLatitude() != null) location.setLatitude(request.getLatitude());
+        if (request.getLongitude() != null) location.setLongitude(request.getLongitude());
+        if (request.getIsFavorite() != null) location.setIsFavorite(request.getIsFavorite());
+
+        return toResponse(locationRepository.save(location));
     }
 
-    private double haversine(double lat1, double lon1, double lat2, double lon2) {
-        final int R = 6371; // km
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLon = Math.toRadians(lon2 - lon1);
+    @Override
+    @Transactional
+    public void deleteLocation(Long id, Long userId) {
+        Location location = locationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Location not found"));
 
-        double x = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(Math.toRadians(lat1)) *
-                        Math.cos(Math.toRadians(lat2)) *
-                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        if (location.getUser() != null && !location.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("You can only delete your own locations");
+        }
 
-        double c = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
-        return R * c;
+        locationRepository.delete(location);
+    }
+
+    @Override
+    public DistanceResponse calculateDistance(Long locationAId, Long locationBId) {
+        Location a = locationRepository.findById(locationAId)
+                .orElseThrow(() -> new ResourceNotFoundException("Location A not found"));
+        Location b = locationRepository.findById(locationBId)
+                .orElseThrow(() -> new ResourceNotFoundException("Location B not found"));
+
+        double distanceKm = DistanceUtil.haversineDistance(
+                a.getLatitude(), a.getLongitude(),
+                b.getLatitude(), b.getLongitude()
+        );
+
+        RouteInfo routeInfo = routingService.getRouteInfo(
+                a.getLatitude(), a.getLongitude(),
+                b.getLatitude(), b.getLongitude()
+        );
+
+        return DistanceResponse.builder()
+                .distanceKm(distanceKm)
+                .estimatedDurationMinutes(routeInfo.getDurationMinutes())
+                .build();
+    }
+
+    @Override
+    public RouteInfo getRouteInfo(Long locationAId, Long locationBId) {
+        Location a = locationRepository.findById(locationAId)
+                .orElseThrow(() -> new ResourceNotFoundException("Location A not found"));
+        Location b = locationRepository.findById(locationBId)
+                .orElseThrow(() -> new ResourceNotFoundException("Location B not found"));
+
+        return routingService.getRouteInfo(
+                a.getLatitude(), a.getLongitude(),
+                b.getLatitude(), b.getLongitude()
+        );
+    }
+
+    @Override
+    public List<Map<String, Object>> searchLocation(String query) {
+        return geocodingService.searchLocation(query);
+    }
+
+    @Override
+    public String reverseGeocode(Double latitude, Double longitude) {
+        return geocodingService.reverseGeocode(latitude, longitude);
     }
 }

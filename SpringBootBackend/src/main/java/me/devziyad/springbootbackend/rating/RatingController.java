@@ -1,7 +1,11 @@
 package me.devziyad.springbootbackend.rating;
 
-import lombok.Data;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import me.devziyad.springbootbackend.auth.AuthService;
+import me.devziyad.springbootbackend.rating.dto.CreateRatingRequest;
+import me.devziyad.springbootbackend.rating.dto.RatingResponse;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,34 +14,39 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/ratings")
 @RequiredArgsConstructor
-@CrossOrigin
+@CrossOrigin(origins = "*")
 public class RatingController {
 
     private final RatingService ratingService;
+    private final AuthService authService;
 
     @PostMapping
-    public ResponseEntity<Rating> create(@RequestBody CreateRatingRequest request) {
-        Rating rating = ratingService.createRating(
-                request.getFromUserId(),
-                request.getToUserId(),
-                request.getBookingId(),
-                request.getScore(),
-                request.getComment()
-        );
-        return ResponseEntity.ok(rating);
+    public ResponseEntity<RatingResponse> createRating(@Valid @RequestBody CreateRatingRequest request) {
+        Long fromUserId = authService.getCurrentUser().getId();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ratingService.createRating(request, fromUserId));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<RatingResponse> getRating(@PathVariable Long id) {
+        return ResponseEntity.ok(ratingService.getRatingById(id));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<Rating>> forUser(@PathVariable Long userId) {
+    public ResponseEntity<List<RatingResponse>> getRatingsForUser(@PathVariable Long userId) {
         return ResponseEntity.ok(ratingService.getRatingsForUser(userId));
     }
 
-    @Data
-    public static class CreateRatingRequest {
-        private Long fromUserId;
-        private Long toUserId;
-        private Long bookingId;
-        private int score;
-        private String comment;
+    @GetMapping("/me/given")
+    public ResponseEntity<List<RatingResponse>> getRatingsByMe() {
+        Long userId = authService.getCurrentUser().getId();
+        return ResponseEntity.ok(ratingService.getRatingsByUser(userId));
+    }
+
+    @GetMapping("/booking/{bookingId}")
+    public ResponseEntity<RatingResponse> getRatingForBooking(@PathVariable Long bookingId) {
+        Long userId = authService.getCurrentUser().getId();
+        RatingResponse rating = ratingService.getRatingForBooking(bookingId, userId);
+        return rating != null ? ResponseEntity.ok(rating) : ResponseEntity.notFound().build();
     }
 }

@@ -2,7 +2,8 @@ package me.devziyad.springbootbackend.common;
 
 public enum PaymentStatus {
     INITIATED,
-    AUTHORIZED,
+    PROCESSING,
     SETTLED,
-    FAILED
+    FAILED,
+    REFUNDED
 }

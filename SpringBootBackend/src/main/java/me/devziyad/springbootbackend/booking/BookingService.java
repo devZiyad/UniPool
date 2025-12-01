@@ -1,16 +1,15 @@
 package me.devziyad.springbootbackend.booking;
 
+import me.devziyad.springbootbackend.booking.dto.BookingResponse;
+import me.devziyad.springbootbackend.booking.dto.CreateBookingRequest;
+
 import java.util.List;
 
 public interface BookingService {
-
-    Booking createBooking(Long rideId, Long riderId, int seats);
-
-    Booking getBooking(Long id);
-
-    List<Booking> getBookingsForRider(Long riderId);
-
-    List<Booking> getBookingsForRide(Long rideId);
-
-    void cancelBooking(Long bookingId);
+    BookingResponse createBooking(CreateBookingRequest request, Long riderId);
+    BookingResponse getBookingById(Long id);
+    List<BookingResponse> getBookingsForRider(Long riderId);
+    List<BookingResponse> getBookingsForRide(Long rideId, Long driverId);
+    void cancelBooking(Long bookingId, Long userId);
+    List<BookingResponse> getMyBookings(Long riderId);
 }

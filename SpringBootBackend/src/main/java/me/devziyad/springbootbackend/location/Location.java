@@ -2,11 +2,14 @@ package me.devziyad.springbootbackend.location;
 
 import jakarta.persistence.*;
 import lombok.*;
+import me.devziyad.springbootbackend.user.User;
 
 @Entity
 @Table(name = "locations")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Location {
 
@@ -14,10 +17,22 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String label;     // "Home", "Campus Gate", etc.
+    @Column(nullable = false)
+    private String label;
 
-    private String address;   // optional free text
+    private String address;
 
-    private Double latitude;  // nullable until you hook GPS
+    @Column(nullable = false)
+    private Double latitude;
+
+    @Column(nullable = false)
     private Double longitude;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean isFavorite = false;
 }

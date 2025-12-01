@@ -1,9 +1,12 @@
 package me.devziyad.springbootbackend.payment;
 
-import me.devziyad.springbootbackend.payment.Payment;
+import me.devziyad.springbootbackend.common.PaymentStatus;
 import me.devziyad.springbootbackend.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
@@ -13,4 +16,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     List<Payment> findByBookingId(Long bookingId);
 
     List<Payment> findByPayerId(Long payerId);
+
+    List<Payment> findByDriverId(Long driverId);
+
+    List<Payment> findByStatus(PaymentStatus status);
+
+    @Query("SELECT SUM(p.driverEarnings) FROM Payment p WHERE p.driver.id = :driverId AND p.status = 'SETTLED'")
+    BigDecimal getTotalEarningsByDriverId(@Param("driverId") Long driverId);
 }

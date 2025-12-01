@@ -1,6 +1,5 @@
 package me.devziyad.springbootbackend.notification;
 
-import me.devziyad.springbootbackend.notification.Notification;
 import me.devziyad.springbootbackend.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -1,13 +1,17 @@
 package me.devziyad.springbootbackend.notification;
 
 import lombok.RequiredArgsConstructor;
+import me.devziyad.springbootbackend.common.NotificationType;
+import me.devziyad.springbootbackend.exception.ForbiddenException;
+import me.devziyad.springbootbackend.exception.ResourceNotFoundException;
+import me.devziyad.springbootbackend.notification.dto.NotificationResponse;
 import me.devziyad.springbootbackend.user.User;
 import me.devziyad.springbootbackend.user.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -16,34 +20,66 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
-    @Override
-    public Notification createNotification(Long userId, String title, String body) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-
-        Notification notification = Notification.builder()
-                .user(user)
-                .title(title)
-                .body(body)
-                .read(false)
-                .createdAt(LocalDateTime.now())
+    private NotificationResponse toResponse(Notification notification) {
+        return NotificationResponse.builder()
+                .id(notification.getId())
+                .userId(notification.getUser().getId())
+                .type(notification.getType())
+                .title(notification.getTitle())
+                .body(notification.getBody())
+                .read(notification.getRead())
+                .createdAt(notification.getCreatedAt())
                 .build();
-
-        return notificationRepository.save(notification);
-    }
-
-    @Override
-    public List<Notification> getNotificationsForUser(Long userId) {
-        return notificationRepository.findByUserId(userId);
     }
 
     @Override
     @Transactional
-    public void markAsRead(Long notificationId) {
-        Notification n = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new IllegalArgumentException("Notification not found"));
-        n.setRead(true);
-        notificationRepository.save(n);
+    public NotificationResponse createNotification(Long userId, String title, String body, NotificationType type) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        Notification notification = Notification.builder()
+                .user(user)
+                .type(type)
+                .title(title)
+                .body(body)
+                .read(false)
+                .build();
+
+        return toResponse(notificationRepository.save(notification));
+    }
+
+    @Override
+    public List<NotificationResponse> getNotificationsForUser(Long userId) {
+        return notificationRepository.findByUserId(userId).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<NotificationResponse> getUnreadNotificationsForUser(Long userId) {
+        return notificationRepository.findByUserIdAndReadFalse(userId).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public Long getUnreadCount(Long userId) {
+        return (long) notificationRepository.findByUserIdAndReadFalse(userId).size();
+    }
+
+    @Override
+    @Transactional
+    public void markAsRead(Long notificationId, Long userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
+
+        if (!notification.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("You can only mark your own notifications as read");
+        }
+
+        notification.setRead(true);
+        notificationRepository.save(notification);
     }
 
     @Override

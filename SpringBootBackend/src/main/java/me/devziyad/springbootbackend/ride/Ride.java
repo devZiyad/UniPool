@@ -12,8 +12,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "rides")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Ride {
 
@@ -22,27 +24,54 @@ public class Ride {
     private Long id;
 
     @ManyToOne(optional = false)
+    @JoinColumn(name = "driver_id")
     private User driver;
 
     @ManyToOne(optional = false)
+    @JoinColumn(name = "vehicle_id")
     private Vehicle vehicle;
 
     @ManyToOne(optional = false)
+    @JoinColumn(name = "pickup_location_id")
     private Location pickupLocation;
 
     @ManyToOne(optional = false)
+    @JoinColumn(name = "destination_location_id")
     private Location destinationLocation;
 
+    @Column(nullable = false)
     private LocalDateTime departureTime;
 
-    private int totalSeats;
-    private int availableSeats;
+    @Column(nullable = false)
+    private Integer totalSeats;
 
-    // For cost calculation / display
+    @Column(nullable = false)
+    private Integer availableSeats;
+
+    @Column(nullable = false)
     private Double estimatedDistanceKm;
-    private BigDecimal basePrice;     // price for whole ride
-    private BigDecimal pricePerSeat;  // optional derived
+
+    @Column(nullable = false)
+    private Double routeDistanceKm;
+
+    @Column(nullable = false)
+    private Integer estimatedDurationMinutes;
+
+    @Column(nullable = false)
+    private BigDecimal basePrice;
+
+    @Column(nullable = false)
+    private BigDecimal pricePerSeat;
 
     @Enumerated(EnumType.STRING)
-    private RideStatus status;
+    @Column(nullable = false)
+    @Builder.Default
+    private RideStatus status = RideStatus.POSTED;
+
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column
+    private String routePolyline;
 }

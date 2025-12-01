@@ -1,11 +1,14 @@
 package me.devziyad.springbootbackend.booking;
 
-import me.devziyad.springbootbackend.booking.Booking;
+import me.devziyad.springbootbackend.common.BookingStatus;
 import me.devziyad.springbootbackend.user.User;
 import me.devziyad.springbootbackend.ride.Ride;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
 
@@ -16,4 +19,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     List<Booking> findByRiderId(Long riderId);
 
     List<Booking> findByRideId(Long rideId);
+
+    List<Booking> findByRiderIdAndStatus(Long riderId, BookingStatus status);
+
+    Optional<Booking> findByRideIdAndRiderId(Long rideId, Long riderId);
+
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.ride.id = :rideId AND b.status != 'CANCELLED'")
+    Integer countActiveBookingsByRideId(@Param("rideId") Long rideId);
 }

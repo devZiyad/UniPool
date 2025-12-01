@@ -9,8 +9,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "notifications")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Notification {
 
@@ -19,15 +21,24 @@ public class Notification {
     private Long id;
 
     @ManyToOne(optional = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private NotificationType type;
 
+    @Column(nullable = false)
     private String title;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    private boolean read;
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean read = false;
 
-    private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

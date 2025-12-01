@@ -12,8 +12,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "payments")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Payment {
 
@@ -21,23 +23,44 @@ public class Payment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // one booking -> possibly one payment (simple)
     @OneToOne(optional = false)
+    @JoinColumn(name = "booking_id", unique = true)
     private Booking booking;
 
     @ManyToOne(optional = false)
-    private User payer;  // rider paying
+    @JoinColumn(name = "payer_id")
+    private User payer;
 
+    @ManyToOne
+    @JoinColumn(name = "driver_id")
+    private User driver;
+
+    @Column(nullable = false)
     private BigDecimal amount;
 
+    @Column(nullable = false)
+    private BigDecimal platformFee;
+
+    @Column(nullable = false)
+    private BigDecimal driverEarnings;
+
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private PaymentMethod method;
 
     @Enumerated(EnumType.STRING)
-    private PaymentStatus status;
+    @Column(nullable = false)
+    @Builder.Default
+    private PaymentStatus status = PaymentStatus.INITIATED;
 
-    private String transactionRef;  // internal or fake gateway ref
+    @Column(unique = true)
+    private String transactionRef;
 
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(nullable = false)
+    @Builder.Default
+    private LocalDateTime updatedAt = LocalDateTime.now();
 }

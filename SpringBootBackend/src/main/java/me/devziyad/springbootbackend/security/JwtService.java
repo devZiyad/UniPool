@@ -1,24 +1,28 @@
 package me.devziyad.springbootbackend.security;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
-import java.security.Key;
+
+import javax.crypto.SecretKey;
 import java.util.Date;
 
 @Service
 public class JwtService {
 
-    private final String SECRET = "THIS_IS_A_VERY_LONG_SECRET_KEY_256_BIT_MINIMUM!!!!";
-    private final Key key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    private static final String SECRET = "THIS_IS_A_VERY_LONG_SECRET_KEY_256_BIT_MINIMUM_FOR_PRODUCTION_CHANGE_THIS";
+    private static final long EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+    private final SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
 
     public String generateToken(Long userId, String email) {
         return Jwts.builder()
-                .setSubject(email)
+                .subject(email)
                 .claim("userId", userId)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24)) // 24h
-                .signWith(key, SignatureAlgorithm.HS256)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_MS))
+                .signWith(key, io.jsonwebtoken.Jwts.SIG.HS256)
                 .compact();
     }
 
@@ -30,11 +34,20 @@ public class JwtService {
         return getClaims(token).getSubject();
     }
 
+    public boolean isTokenValid(String token) {
+        try {
+            getClaims(token);
+            return true;
+        } catch (JwtException | IllegalArgumentException e) {
+            return false;
+        }
+    }
+
     private Claims getClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
+        return Jwts.parser()
+                .verifyWith(key)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

@@ -1,10 +1,14 @@
 package me.devziyad.springbootbackend.rating;
 
+import me.devziyad.springbootbackend.rating.dto.CreateRatingRequest;
+import me.devziyad.springbootbackend.rating.dto.RatingResponse;
+
 import java.util.List;
 
 public interface RatingService {
-
-    Rating createRating(Long fromUserId, Long toUserId, Long bookingId, int score, String comment);
-
-    List<Rating> getRatingsForUser(Long userId);
+    RatingResponse createRating(CreateRatingRequest request, Long fromUserId);
+    RatingResponse getRatingById(Long id);
+    List<RatingResponse> getRatingsForUser(Long userId);
+    List<RatingResponse> getRatingsByUser(Long userId);
+    RatingResponse getRatingForBooking(Long bookingId, Long userId);
 }

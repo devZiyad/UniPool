@@ -4,10 +4,14 @@ import jakarta.persistence.*;
 import lombok.*;
 import me.devziyad.springbootbackend.user.User;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "vehicles")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Vehicle {
 
@@ -15,13 +19,29 @@ public class Vehicle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String make;       // e.g. Toyota
-    private String model;      // e.g. Corolla
+    @Column(nullable = false)
+    private String make;
+
+    @Column(nullable = false)
+    private String model;
+
     private String color;
+
+    @Column(nullable = false, unique = true)
     private String plateNumber;
 
-    private int seatCount;
+    @Column(nullable = false)
+    private Integer seatCount;
 
     @ManyToOne(optional = false)
-    private User owner;        // driver
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean active = true;
+
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
 }

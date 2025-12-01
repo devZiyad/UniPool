@@ -1,16 +1,18 @@
 package me.devziyad.springbootbackend.payment;
 
-import me.devziyad.springbootbackend.common.PaymentMethod;
+import me.devziyad.springbootbackend.payment.dto.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface PaymentService {
-
-    Payment initiatePayment(Long bookingId, Long payerId, PaymentMethod method);
-
-    Payment getPayment(Long id);
-
-    List<Payment> getPaymentsForUser(Long userId);
-
-    List<Payment> getPaymentsForBooking(Long bookingId);
+    PaymentResponse initiatePayment(InitiatePaymentRequest request, Long payerId);
+    PaymentResponse getPaymentById(Long id);
+    List<PaymentResponse> getPaymentsForUser(Long userId);
+    List<PaymentResponse> getPaymentsForBooking(Long bookingId);
+    List<PaymentResponse> getPaymentsForDriver(Long driverId);
+    PaymentResponse processPayment(Long paymentId);
+    PaymentResponse refundPayment(Long paymentId, Long userId);
+    BigDecimal getWalletBalance(Long userId);
+    PaymentResponse topUpWallet(WalletTopUpRequest request, Long userId);
 }

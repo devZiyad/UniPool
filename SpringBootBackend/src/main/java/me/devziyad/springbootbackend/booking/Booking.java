@@ -11,8 +11,10 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bookings")
-@Getter @Setter
-@NoArgsConstructor @AllArgsConstructor
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
 public class Booking {
 
@@ -21,17 +23,28 @@ public class Booking {
     private Long id;
 
     @ManyToOne(optional = false)
+    @JoinColumn(name = "ride_id")
     private Ride ride;
 
     @ManyToOne(optional = false)
+    @JoinColumn(name = "rider_id")
     private User rider;
 
-    private int seatsBooked;
+    @Column(nullable = false)
+    private Integer seatsBooked;
 
     @Enumerated(EnumType.STRING)
-    private BookingStatus status;
+    @Column(nullable = false)
+    @Builder.Default
+    private BookingStatus status = BookingStatus.PENDING;
 
+    @Column(nullable = false)
     private BigDecimal costForThisRider;
 
-    private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column
+    private LocalDateTime cancelledAt;
 }

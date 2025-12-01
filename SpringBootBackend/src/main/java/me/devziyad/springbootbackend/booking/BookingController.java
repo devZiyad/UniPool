@@ -1,7 +1,11 @@
 package me.devziyad.springbootbackend.booking;
 
-import lombok.Data;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import me.devziyad.springbootbackend.auth.AuthService;
+import me.devziyad.springbootbackend.booking.dto.BookingResponse;
+import me.devziyad.springbootbackend.booking.dto.CreateBookingRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,46 +14,45 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/bookings")
 @RequiredArgsConstructor
-@CrossOrigin
+@CrossOrigin(origins = "*")
 public class BookingController {
 
     private final BookingService bookingService;
+    private final AuthService authService;
 
     @PostMapping
-    public ResponseEntity<Booking> create(@RequestBody CreateBookingRequest request) {
-        Booking booking = bookingService.createBooking(
-                request.getRideId(),
-                request.getRiderId(),
-                request.getSeats()
-        );
-        return ResponseEntity.ok(booking);
+    public ResponseEntity<BookingResponse> create(@Valid @RequestBody CreateBookingRequest request) {
+        Long riderId = authService.getCurrentUser().getId();
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(bookingService.createBooking(request, riderId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Booking> get(@PathVariable Long id) {
-        return ResponseEntity.ok(bookingService.getBooking(id));
+    public ResponseEntity<BookingResponse> getBooking(@PathVariable Long id) {
+        return ResponseEntity.ok(bookingService.getBookingById(id));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<BookingResponse>> getMyBookings() {
+        Long riderId = authService.getCurrentUser().getId();
+        return ResponseEntity.ok(bookingService.getMyBookings(riderId));
     }
 
     @GetMapping("/rider/{riderId}")
-    public ResponseEntity<List<Booking>> forRider(@PathVariable Long riderId) {
+    public ResponseEntity<List<BookingResponse>> getBookingsForRider(@PathVariable Long riderId) {
         return ResponseEntity.ok(bookingService.getBookingsForRider(riderId));
     }
 
     @GetMapping("/ride/{rideId}")
-    public ResponseEntity<List<Booking>> forRide(@PathVariable Long rideId) {
-        return ResponseEntity.ok(bookingService.getBookingsForRide(rideId));
+    public ResponseEntity<List<BookingResponse>> getBookingsForRide(@PathVariable Long rideId) {
+        Long driverId = authService.getCurrentUser().getId();
+        return ResponseEntity.ok(bookingService.getBookingsForRide(rideId, driverId));
     }
 
     @PostMapping("/{bookingId}/cancel")
-    public ResponseEntity<Void> cancel(@PathVariable Long bookingId) {
-        bookingService.cancelBooking(bookingId);
+    public ResponseEntity<Void> cancelBooking(@PathVariable Long bookingId) {
+        Long userId = authService.getCurrentUser().getId();
+        bookingService.cancelBooking(bookingId, userId);
         return ResponseEntity.ok().build();
-    }
-
-    @Data
-    public static class CreateBookingRequest {
-        private Long rideId;
-        private Long riderId;
-        private int seats;
     }
 }
