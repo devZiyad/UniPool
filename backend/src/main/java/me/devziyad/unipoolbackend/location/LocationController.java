@@ -2,6 +2,7 @@ package me.devziyad.unipoolbackend.location;
 
 import jakarta.validation.Valid;
 import lombok.Data;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.AuthService;
 import me.devziyad.unipoolbackend.location.dto.*;
@@ -22,56 +23,56 @@ public class LocationController {
     private final AuthService authService;
 
     @PostMapping
-    public ResponseEntity<LocationResponse> create(@Valid @RequestBody CreateLocationRequest request) {
+    public ResponseEntity<@NonNull LocationResponse> create(@Valid @RequestBody CreateLocationRequest request) {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(locationService.createLocation(request, userId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<LocationResponse> getLocation(@PathVariable Long id) {
+    public ResponseEntity<@NonNull LocationResponse> getLocation(@PathVariable Long id) {
         return ResponseEntity.ok(locationService.getLocationById(id));
     }
 
     @GetMapping("/me")
-    public ResponseEntity<List<LocationResponse>> getMyLocations() {
+    public ResponseEntity<@NonNull List<@NonNull LocationResponse>> getMyLocations() {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(locationService.getUserLocations(userId));
     }
 
     @GetMapping("/me/favorites")
-    public ResponseEntity<List<LocationResponse>> getMyFavoriteLocations() {
+    public ResponseEntity<@NonNull List<@NonNull LocationResponse>> getMyFavoriteLocations() {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(locationService.getUserFavoriteLocations(userId));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<LocationResponse> updateLocation(@PathVariable Long id,
+    public ResponseEntity<@NonNull LocationResponse> updateLocation(@PathVariable Long id,
                                                            @Valid @RequestBody CreateLocationRequest request) {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(locationService.updateLocation(id, request, userId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteLocation(@PathVariable Long id) {
+    public ResponseEntity<@NonNull Void> deleteLocation(@PathVariable Long id) {
         Long userId = authService.getCurrentUser().getId();
         locationService.deleteLocation(id, userId);
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/distance")
-    public ResponseEntity<DistanceResponse> calculateDistance(@Valid @RequestBody DistanceRequest request) {
+    public ResponseEntity<@NonNull DistanceResponse> calculateDistance(@Valid @RequestBody DistanceRequest request) {
         return ResponseEntity.ok(locationService.calculateDistance(
                 request.getLocationAId(), request.getLocationBId()));
     }
 
     @PostMapping("/search")
-    public ResponseEntity<List<Map<String, Object>>> searchLocation(@Valid @RequestBody SearchLocationRequest request) {
+    public ResponseEntity<@NonNull List<@NonNull Map<String, Object>>> searchLocation(@Valid @RequestBody SearchLocationRequest request) {
         return ResponseEntity.ok(locationService.searchLocation(request.getQuery()));
     }
 
     @GetMapping("/reverse-geocode")
-    public ResponseEntity<ReverseGeocodeResponse> reverseGeocode(
+    public ResponseEntity<@NonNull ReverseGeocodeResponse> reverseGeocode(
             @RequestParam Double latitude,
             @RequestParam Double longitude) {
         String address = locationService.reverseGeocode(latitude, longitude);

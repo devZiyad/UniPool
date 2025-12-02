@@ -1,6 +1,7 @@
 package me.devziyad.unipoolbackend.controller;
 
 import lombok.Data;
+import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -19,7 +20,7 @@ public class HealthController {
     private String version;
 
     @GetMapping
-    public ResponseEntity<HealthResponse> health() {
+    public ResponseEntity<@NonNull HealthResponse> health() {
         HealthResponse response = new HealthResponse();
         response.setStatus("UP");
         response.setTimestamp(Instant.now().toString());

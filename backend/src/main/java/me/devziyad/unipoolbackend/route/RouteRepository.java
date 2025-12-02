@@ -1,12 +1,16 @@
 package me.devziyad.unipoolbackend.route;
 
+import lombok.NonNull;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
-public interface RouteRepository extends JpaRepository<Route, Long> {
+@Repository
+public interface RouteRepository extends JpaRepository<@NonNull Route, @NonNull Long> {
     Optional<Route> findByRideId(Long rideId);
-    List<Route> findByStopsId(Long locationId);
+    @NonNull
+    List<@NonNull Route> findByStopsId(Long locationId);
 }
 

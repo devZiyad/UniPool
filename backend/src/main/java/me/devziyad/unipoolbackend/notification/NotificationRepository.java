@@ -1,15 +1,21 @@
 package me.devziyad.unipoolbackend.notification;
 
+import lombok.NonNull;
 import me.devziyad.unipoolbackend.user.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-public interface NotificationRepository extends JpaRepository<Notification, Long> {
+@Repository
+public interface NotificationRepository extends JpaRepository<@NonNull Notification, @NonNull Long> {
 
-    List<Notification> findByUser(User user);
+    @NonNull
+    List<@NonNull Notification> findByUser(User user);
 
-    List<Notification> findByUserId(Long userId);
+    @NonNull
+    List<@NonNull Notification> findByUserId(Long userId);
 
-    List<Notification> findByUserIdAndReadFalse(Long userId);
+    @NonNull
+    List<@NonNull Notification> findByUserIdAndReadFalse(Long userId);
 }

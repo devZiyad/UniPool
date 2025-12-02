@@ -2,6 +2,7 @@ package me.devziyad.unipoolbackend.tracking;
 
 import jakarta.validation.Valid;
 import lombok.Data;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.AuthService;
 import me.devziyad.unipoolbackend.exception.ForbiddenException;
@@ -22,7 +23,7 @@ public class GpsTrackingController {
     private final RideRepository rideRepository;
 
     @PostMapping("/{rideId}/update")
-    public ResponseEntity<Void> updateLocation(@PathVariable Long rideId,
+    public ResponseEntity<@NonNull Void> updateLocation(@PathVariable Long rideId,
                                                 @Valid @RequestBody UpdateLocationRequest request) {
         Long userId = authService.getCurrentUser().getId();
         Ride ride = rideRepository.findById(rideId)
@@ -37,12 +38,12 @@ public class GpsTrackingController {
     }
 
     @GetMapping("/{rideId}")
-    public ResponseEntity<GpsLocationResponse> getCurrentLocation(@PathVariable Long rideId) {
+    public ResponseEntity<@NonNull GpsLocationResponse> getCurrentLocation(@PathVariable Long rideId) {
         return ResponseEntity.ok(trackingService.getCurrentLocation(rideId));
     }
 
     @PostMapping("/{rideId}/start")
-    public ResponseEntity<Void> startTracking(@PathVariable Long rideId) {
+    public ResponseEntity<@NonNull Void> startTracking(@PathVariable Long rideId) {
         Long userId = authService.getCurrentUser().getId();
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> new me.devziyad.unipoolbackend.exception.ResourceNotFoundException("Ride not found"));
@@ -56,7 +57,7 @@ public class GpsTrackingController {
     }
 
     @PostMapping("/{rideId}/stop")
-    public ResponseEntity<Void> stopTracking(@PathVariable Long rideId) {
+    public ResponseEntity<@NonNull Void> stopTracking(@PathVariable Long rideId) {
         Long userId = authService.getCurrentUser().getId();
         Ride ride = rideRepository.findById(rideId)
                 .orElseThrow(() -> new me.devziyad.unipoolbackend.exception.ResourceNotFoundException("Ride not found"));

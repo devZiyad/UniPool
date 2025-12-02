@@ -1,15 +1,20 @@
 package me.devziyad.unipoolbackend.admin;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.AuthService;
-import me.devziyad.unipoolbackend.booking.Booking;
 import me.devziyad.unipoolbackend.booking.BookingRepository;
+import me.devziyad.unipoolbackend.booking.BookingService;
+import me.devziyad.unipoolbackend.booking.dto.BookingResponse;
 import me.devziyad.unipoolbackend.common.Role;
 import me.devziyad.unipoolbackend.exception.ForbiddenException;
-import me.devziyad.unipoolbackend.payment.Payment;
 import me.devziyad.unipoolbackend.payment.PaymentRepository;
+import me.devziyad.unipoolbackend.payment.PaymentService;
+import me.devziyad.unipoolbackend.payment.dto.PaymentResponse;
 import me.devziyad.unipoolbackend.ride.Ride;
 import me.devziyad.unipoolbackend.ride.RideRepository;
+import me.devziyad.unipoolbackend.ride.RideService;
+import me.devziyad.unipoolbackend.ride.dto.RideResponse;
 import me.devziyad.unipoolbackend.common.RideStatus;
 import me.devziyad.unipoolbackend.user.UserService;
 import me.devziyad.unipoolbackend.user.dto.UserResponse;
@@ -17,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -26,8 +32,11 @@ public class AdminController {
 
     private final AuthService authService;
     private final UserService userService;
+    private final RideService rideService;
     private final RideRepository rideRepository;
+    private final BookingService bookingService;
     private final BookingRepository bookingRepository;
+    private final PaymentService paymentService;
     private final PaymentRepository paymentRepository;
 
     private void checkAdmin() {
@@ -37,38 +46,40 @@ public class AdminController {
     }
 
     @GetMapping("/users")
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
+    public ResponseEntity<@NonNull List<@NonNull UserResponse>> getAllUsers() {
         checkAdmin();
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
     @GetMapping("/users/{id}")
-    public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
+    public ResponseEntity<@NonNull UserResponse> getUser(@PathVariable Long id) {
         checkAdmin();
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @PutMapping("/users/{id}/enable")
-    public ResponseEntity<UserResponse> enableUser(@PathVariable Long id, @RequestBody EnableUserRequest request) {
+    public ResponseEntity<@NonNull UserResponse> enableUser(@PathVariable Long id, @RequestBody EnableUserRequest request) {
         checkAdmin();
         return ResponseEntity.ok(userService.enableUser(id, request.getEnabled()));
     }
 
     @GetMapping("/rides")
-    public ResponseEntity<List<Ride>> getAllRides() {
+    public ResponseEntity<@NonNull List<@NonNull RideResponse>> getAllRides() {
         checkAdmin();
-        return ResponseEntity.ok(rideRepository.findAll());
+        List<RideResponse> rides = rideRepository.findAll().stream()
+                .map(ride -> rideService.getRideById(ride.getId()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(rides);
     }
 
     @GetMapping("/rides/{id}")
-    public ResponseEntity<Ride> getRide(@PathVariable Long id) {
+    public ResponseEntity<@NonNull RideResponse> getRide(@PathVariable Long id) {
         checkAdmin();
-        return ResponseEntity.ok(rideRepository.findById(id)
-                .orElseThrow(() -> new me.devziyad.unipoolbackend.exception.ResourceNotFoundException("Ride not found")));
+        return ResponseEntity.ok(rideService.getRideById(id));
     }
 
     @PutMapping("/rides/{id}/complete")
-    public ResponseEntity<Void> forceCompleteRide(@PathVariable Long id) {
+    public ResponseEntity<@NonNull Void> forceCompleteRide(@PathVariable Long id) {
         checkAdmin();
         Ride ride = rideRepository.findById(id)
                 .orElseThrow(() -> new me.devziyad.unipoolbackend.exception.ResourceNotFoundException("Ride not found"));
@@ -78,29 +89,33 @@ public class AdminController {
     }
 
     @GetMapping("/bookings")
-    public ResponseEntity<List<Booking>> getAllBookings() {
+    public ResponseEntity<@NonNull List<@NonNull BookingResponse>> getAllBookings() {
         checkAdmin();
-        return ResponseEntity.ok(bookingRepository.findAll());
+        List<BookingResponse> bookings = bookingRepository.findAll().stream()
+                .map(booking -> bookingService.getBookingById(booking.getId()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(bookings);
     }
 
     @GetMapping("/bookings/{id}")
-    public ResponseEntity<Booking> getBooking(@PathVariable Long id) {
+    public ResponseEntity<@NonNull BookingResponse> getBooking(@PathVariable Long id) {
         checkAdmin();
-        return ResponseEntity.ok(bookingRepository.findById(id)
-                .orElseThrow(() -> new me.devziyad.unipoolbackend.exception.ResourceNotFoundException("Booking not found")));
+        return ResponseEntity.ok(bookingService.getBookingById(id));
     }
 
     @GetMapping("/payments")
-    public ResponseEntity<List<Payment>> getAllPayments() {
+    public ResponseEntity<@NonNull List<@NonNull PaymentResponse>> getAllPayments() {
         checkAdmin();
-        return ResponseEntity.ok(paymentRepository.findAll());
+        List<PaymentResponse> payments = paymentRepository.findAll().stream()
+                .map(payment -> paymentService.getPaymentById(payment.getId()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(payments);
     }
 
     @GetMapping("/payments/{id}")
-    public ResponseEntity<Payment> getPayment(@PathVariable Long id) {
+    public ResponseEntity<@NonNull PaymentResponse> getPayment(@PathVariable Long id) {
         checkAdmin();
-        return ResponseEntity.ok(paymentRepository.findById(id)
-                .orElseThrow(() -> new me.devziyad.unipoolbackend.exception.ResourceNotFoundException("Payment not found")));
+        return ResponseEntity.ok(paymentService.getPaymentById(id));
     }
 
     @lombok.Data

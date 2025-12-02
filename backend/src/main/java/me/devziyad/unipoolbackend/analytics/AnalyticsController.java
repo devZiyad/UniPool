@@ -1,5 +1,6 @@
 package me.devziyad.unipoolbackend.analytics;
 
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.analytics.dto.*;
 import me.devziyad.unipoolbackend.auth.AuthService;
@@ -21,7 +22,7 @@ public class AnalyticsController {
     private final AuthService authService;
 
     @GetMapping("/driver/earnings")
-    public ResponseEntity<DriverEarningsResponse> getDriverEarnings(
+    public ResponseEntity<@NonNull DriverEarningsResponse> getDriverEarnings(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         Long driverId = authService.getCurrentUser().getId();
@@ -29,7 +30,7 @@ public class AnalyticsController {
     }
 
     @GetMapping("/rider/spending")
-    public ResponseEntity<RiderSpendingResponse> getRiderSpending(
+    public ResponseEntity<@NonNull RiderSpendingResponse> getRiderSpending(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         Long riderId = authService.getCurrentUser().getId();
@@ -37,32 +38,32 @@ public class AnalyticsController {
     }
 
     @GetMapping("/rides/stats")
-    public ResponseEntity<RideStatsResponse> getRideStats() {
+    public ResponseEntity<@NonNull RideStatsResponse> getRideStats() {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(analyticsService.getRideStats(userId));
     }
 
     @GetMapping("/bookings/stats")
-    public ResponseEntity<BookingStatsResponse> getBookingStats() {
+    public ResponseEntity<@NonNull BookingStatsResponse> getBookingStats() {
         checkAdmin();
         return ResponseEntity.ok(analyticsService.getBookingStats());
     }
 
     @GetMapping("/destinations/popular")
-    public ResponseEntity<PopularDestinationsResponse> getPopularDestinations(
+    public ResponseEntity<@NonNull PopularDestinationsResponse> getPopularDestinations(
             @RequestParam(required = false, defaultValue = "10") Integer limit) {
         checkAdmin();
         return ResponseEntity.ok(analyticsService.getPopularDestinations(limit));
     }
 
     @GetMapping("/times/peak")
-    public ResponseEntity<PeakTimesResponse> getPeakTimes() {
+    public ResponseEntity<@NonNull PeakTimesResponse> getPeakTimes() {
         checkAdmin();
         return ResponseEntity.ok(analyticsService.getPeakTimes());
     }
 
     @GetMapping("/dashboard")
-    public ResponseEntity<DashboardStatsResponse> getDashboardStats() {
+    public ResponseEntity<@NonNull DashboardStatsResponse> getDashboardStats() {
         checkAdmin();
         return ResponseEntity.ok(analyticsService.getDashboardStats());
     }

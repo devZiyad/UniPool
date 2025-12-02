@@ -1,6 +1,7 @@
 package me.devziyad.unipoolbackend.auth;
 
 import jakarta.validation.Valid;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.dto.AuthResponse;
 import me.devziyad.unipoolbackend.auth.dto.LoginRequest;
@@ -20,19 +21,19 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<@NonNull AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<@NonNull AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
-    public ResponseEntity<UserResponse> getCurrentUser() {
+    public ResponseEntity<@NonNull UserResponse> getCurrentUser() {
         User user = authService.getCurrentUser();
         UserResponse response = UserResponse.builder()
                 .id(user.getId())

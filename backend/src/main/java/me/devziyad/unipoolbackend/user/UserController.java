@@ -1,6 +1,7 @@
 package me.devziyad.unipoolbackend.user;
 
 import jakarta.validation.Valid;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.AuthService;
 import me.devziyad.unipoolbackend.common.Role;
@@ -19,31 +20,31 @@ public class UserController {
     private final AuthService authService;
 
     @GetMapping("/me")
-    public ResponseEntity<UserResponse> getCurrentUser() {
+    public ResponseEntity<@NonNull UserResponse> getCurrentUser() {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(userService.getUserById(userId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
+    public ResponseEntity<@NonNull UserResponse> getUser(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @PutMapping("/me")
-    public ResponseEntity<UserResponse> updateCurrentUser(@Valid @RequestBody UpdateUserRequest request) {
+    public ResponseEntity<@NonNull UserResponse> updateCurrentUser(@Valid @RequestBody UpdateUserRequest request) {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(userService.updateUser(userId, request));
     }
 
     @PutMapping("/me/password")
-    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+    public ResponseEntity<@NonNull Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         Long userId = authService.getCurrentUser().getId();
         userService.changePassword(userId, request);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping("/me/role")
-    public ResponseEntity<UserResponse> updateRole(@Valid @RequestBody UpdateRoleRequest request) {
+    public ResponseEntity<@NonNull UserResponse> updateRole(@Valid @RequestBody UpdateRoleRequest request) {
         Long userId = authService.getCurrentUser().getId();
         Role role;
         try {
@@ -60,19 +61,19 @@ public class UserController {
     }
 
     @GetMapping("/me/settings")
-    public ResponseEntity<UserSettingsResponse> getSettings() {
+    public ResponseEntity<@NonNull UserSettingsResponse> getSettings() {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(userService.getUserSettings(userId));
     }
 
     @PutMapping("/me/settings")
-    public ResponseEntity<UserSettingsResponse> updateSettings(@Valid @RequestBody UpdateSettingsRequest request) {
+    public ResponseEntity<@NonNull UserSettingsResponse> updateSettings(@Valid @RequestBody UpdateSettingsRequest request) {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(userService.updateUserSettings(userId, request));
     }
 
     @GetMapping("/me/stats")
-    public ResponseEntity<UserStatsResponse> getStats() {
+    public ResponseEntity<@NonNull UserStatsResponse> getStats() {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(userService.getUserStats(userId));
     }

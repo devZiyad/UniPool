@@ -1,6 +1,7 @@
 package me.devziyad.unipoolbackend.rating;
 
 import jakarta.validation.Valid;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.AuthService;
 import me.devziyad.unipoolbackend.rating.dto.CreateRatingRequest;
@@ -21,30 +22,30 @@ public class RatingController {
     private final AuthService authService;
 
     @PostMapping
-    public ResponseEntity<RatingResponse> createRating(@Valid @RequestBody CreateRatingRequest request) {
+    public ResponseEntity<@NonNull RatingResponse> createRating(@Valid @RequestBody CreateRatingRequest request) {
         Long fromUserId = authService.getCurrentUser().getId();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ratingService.createRating(request, fromUserId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<RatingResponse> getRating(@PathVariable Long id) {
+    public ResponseEntity<@NonNull RatingResponse> getRating(@PathVariable Long id) {
         return ResponseEntity.ok(ratingService.getRatingById(id));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<RatingResponse>> getRatingsForUser(@PathVariable Long userId) {
+    public ResponseEntity<@NonNull List<@NonNull RatingResponse>> getRatingsForUser(@PathVariable Long userId) {
         return ResponseEntity.ok(ratingService.getRatingsForUser(userId));
     }
 
     @GetMapping("/me/given")
-    public ResponseEntity<List<RatingResponse>> getRatingsByMe() {
+    public ResponseEntity<@NonNull List<@NonNull RatingResponse>> getRatingsByMe() {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(ratingService.getRatingsByUser(userId));
     }
 
     @GetMapping("/booking/{bookingId}")
-    public ResponseEntity<RatingResponse> getRatingForBooking(@PathVariable Long bookingId) {
+    public ResponseEntity<@NonNull RatingResponse> getRatingForBooking(@PathVariable Long bookingId) {
         Long userId = authService.getCurrentUser().getId();
         RatingResponse rating = ratingService.getRatingForBooking(bookingId, userId);
         return rating != null ? ResponseEntity.ok(rating) : ResponseEntity.notFound().build();

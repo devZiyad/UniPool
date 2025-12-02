@@ -1,6 +1,7 @@
 package me.devziyad.unipoolbackend.ride;
 
 import jakarta.validation.Valid;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.AuthService;
 import me.devziyad.unipoolbackend.common.RideStatus;
@@ -21,56 +22,56 @@ public class RideController {
     private final AuthService authService;
 
     @PostMapping
-    public ResponseEntity<RideResponse> createRide(@Valid @RequestBody CreateRideRequest request) {
+    public ResponseEntity<@NonNull RideResponse> createRide(@Valid @RequestBody CreateRideRequest request) {
         Long driverId = authService.getCurrentUser().getId();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(rideService.createRide(request, driverId));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<RideResponse> getRide(@PathVariable Long id) {
+    public ResponseEntity<@NonNull RideResponse> getRide(@PathVariable Long id) {
         return ResponseEntity.ok(rideService.getRideById(id));
     }
 
     @PostMapping("/search")
-    public ResponseEntity<List<RideResponse>> searchRides(@Valid @RequestBody SearchRidesRequest request) {
+    public ResponseEntity<@NonNull List<@NonNull RideResponse>> searchRides(@Valid @RequestBody SearchRidesRequest request) {
         return ResponseEntity.ok(rideService.searchRides(request));
     }
 
     @GetMapping("/driver/{driverId}")
-    public ResponseEntity<List<RideResponse>> getRidesByDriver(@PathVariable Long driverId) {
+    public ResponseEntity<@NonNull List<@NonNull RideResponse>> getRidesByDriver(@PathVariable Long driverId) {
         return ResponseEntity.ok(rideService.getRidesByDriver(driverId));
     }
 
     @GetMapping("/me/driver")
-    public ResponseEntity<List<RideResponse>> getMyRidesAsDriver() {
+    public ResponseEntity<@NonNull List<@NonNull RideResponse>> getMyRidesAsDriver() {
         Long driverId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(rideService.getMyRidesAsDriver(driverId));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<RideResponse> updateRide(@PathVariable Long id,
+    public ResponseEntity<@NonNull RideResponse> updateRide(@PathVariable Long id,
                                                     @Valid @RequestBody UpdateRideRequest request) {
         Long driverId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(rideService.updateRide(id, request, driverId));
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<RideResponse> updateRideStatus(@PathVariable Long id,
+    public ResponseEntity<@NonNull RideResponse> updateRideStatus(@PathVariable Long id,
                                                         @RequestBody UpdateStatusRequest request) {
         Long driverId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(rideService.updateRideStatus(id, request.getStatus(), driverId));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> cancelRide(@PathVariable Long id) {
+    public ResponseEntity<@NonNull Void> cancelRide(@PathVariable Long id) {
         Long driverId = authService.getCurrentUser().getId();
         rideService.cancelRide(id, driverId);
         return ResponseEntity.ok().build();
     }
 
     @GetMapping("/{id}/available-seats")
-    public ResponseEntity<Integer> getAvailableSeats(@PathVariable Long id) {
+    public ResponseEntity<@NonNull Integer> getAvailableSeats(@PathVariable Long id) {
         return ResponseEntity.ok(rideService.getAvailableSeats(id));
     }
 
