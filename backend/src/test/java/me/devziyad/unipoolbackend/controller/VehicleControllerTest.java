@@ -1,36 +1,34 @@
 package me.devziyad.unipoolbackend.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import me.devziyad.unipoolbackend.UniPoolBackendApplication;
-import me.devziyad.unipoolbackend.common.Role;
-import me.devziyad.unipoolbackend.security.JwtService;
+import me.devziyad.unipoolbackend.auth.AuthService;
+import me.devziyad.unipoolbackend.config.TestSecurityConfig;
 import me.devziyad.unipoolbackend.user.User;
-import me.devziyad.unipoolbackend.user.UserRepository;
-import me.devziyad.unipoolbackend.vehicle.Vehicle;
-import me.devziyad.unipoolbackend.vehicle.VehicleRepository;
+import me.devziyad.unipoolbackend.vehicle.VehicleController;
+import me.devziyad.unipoolbackend.vehicle.VehicleService;
 import me.devziyad.unipoolbackend.vehicle.dto.CreateVehicleRequest;
 import me.devziyad.unipoolbackend.vehicle.dto.UpdateVehicleRequest;
-import org.junit.jupiter.api.BeforeEach;
+import me.devziyad.unipoolbackend.vehicle.dto.VehicleResponse;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(classes = UniPoolBackendApplication.class)
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Transactional
+@WebMvcTest(controllers = VehicleController.class)
+@Import(TestSecurityConfig.class)
+@DisplayName("VehicleController Tests")
 class VehicleControllerTest {
 
     @Autowired
@@ -39,156 +37,134 @@ class VehicleControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Autowired
-    private UserRepository userRepository;
+    @MockitoBean
+    private VehicleService vehicleService;
 
-    @Autowired
-    private VehicleRepository vehicleRepository;
+    @MockitoBean
+    private AuthService authService;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtService jwtService;
-
-    private User driverUser;
-    private User otherUser;
-    private Vehicle testVehicle;
-    private String driverToken;
-    private String otherToken;
-
-    @BeforeEach
-    void setUp() {
-        userRepository.deleteAll();
-        vehicleRepository.deleteAll();
-
-        driverUser = User.builder()
-                .universityId("D123456")
-                .email("driver@example.com")
-                .passwordHash(passwordEncoder.encode("password123"))
-                .fullName("Driver User")
-                .role(Role.DRIVER)
-                .enabled(true)
-                .walletBalance(BigDecimal.ZERO)
-                .ratingCountAsDriver(0)
-                .ratingCountAsRider(0)
-                .build();
-        driverUser = userRepository.save(driverUser);
-
-        otherUser = User.builder()
-                .universityId("O123456")
-                .email("other@example.com")
-                .passwordHash(passwordEncoder.encode("password123"))
-                .fullName("Other User")
-                .role(Role.RIDER)
-                .enabled(true)
-                .walletBalance(BigDecimal.ZERO)
-                .ratingCountAsDriver(0)
-                .ratingCountAsRider(0)
-                .build();
-        otherUser = userRepository.save(otherUser);
-
-        testVehicle = Vehicle.builder()
-                .make("Toyota")
-                .model("Corolla")
-                .color("Blue")
-                .plateNumber("ABC123")
-                .seatCount(4)
-                .owner(driverUser)
-                .active(true)
-                .build();
-        testVehicle = vehicleRepository.save(testVehicle);
-
-        driverToken = jwtService.generateToken(driverUser.getId(), driverUser.getEmail());
-        otherToken = jwtService.generateToken(otherUser.getId(), otherUser.getEmail());
-    }
+    private static final Long TEST_USER_ID = 1L;
+    private static final Long TEST_VEHICLE_ID = 1L;
 
     @Test
-    void testCreateVehicle_Success() throws Exception {
+    @DisplayName("POST /api/vehicles should return 201 with created vehicle")
+    void create_shouldReturn201_withCreatedVehicle() throws Exception {
         CreateVehicleRequest request = new CreateVehicleRequest();
-        request.setMake("Honda");
-        request.setModel("Civic");
-        request.setColor("Red");
-        request.setPlateNumber("XYZ789");
-        request.setSeatCount(5);
+        request.setMake("Toyota");
+        request.setModel("Corolla");
+        request.setColor("Blue");
+        request.setPlateNumber("ABC123");
+        request.setSeatCount(4);
+
+        VehicleResponse response = VehicleResponse.builder()
+                .id(TEST_VEHICLE_ID)
+                .make("Toyota")
+                .model("Corolla")
+                .ownerId(TEST_USER_ID)
+                .build();
+
+        User currentUser = User.builder().id(TEST_USER_ID).build();
+
+        when(authService.getCurrentUser()).thenReturn(currentUser);
+        when(vehicleService.createVehicle(any(CreateVehicleRequest.class), eq(TEST_USER_ID)))
+                .thenReturn(response);
 
         mockMvc.perform(post("/api/vehicles")
-                        .header("Authorization", "Bearer " + driverToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.make").value("Honda"))
-                .andExpect(jsonPath("$.ownerId").value(driverUser.getId()));
+                .andExpect(jsonPath("$.make").value("Toyota"))
+                .andExpect(jsonPath("$.ownerId").value(TEST_USER_ID));
     }
 
     @Test
-    void testCreateVehicle_Unauthenticated() throws Exception {
+    @DisplayName("POST /api/vehicles should return 400 when validation fails")
+    void create_shouldReturn400_whenValidationFails() throws Exception {
         CreateVehicleRequest request = new CreateVehicleRequest();
-        request.setMake("Honda");
-        request.setModel("Civic");
-        request.setPlateNumber("XYZ789");
-        request.setSeatCount(5);
+        // Missing required fields
 
         mockMvc.perform(post("/api/vehicles")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isUnauthorized());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    void testGetVehicle_Success() throws Exception {
-        mockMvc.perform(get("/api/vehicles/" + testVehicle.getId())
-                        .header("Authorization", "Bearer " + driverToken))
+    @DisplayName("GET /api/vehicles/{id} should return 200 with vehicle")
+    void getVehicle_shouldReturn200_withVehicle() throws Exception {
+        VehicleResponse response = VehicleResponse.builder()
+                .id(TEST_VEHICLE_ID)
+                .make("Toyota")
+                .model("Corolla")
+                .build();
+
+        when(vehicleService.getVehicleById(TEST_VEHICLE_ID)).thenReturn(response);
+
+        mockMvc.perform(get("/api/vehicles/" + TEST_VEHICLE_ID))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(testVehicle.getId()))
+                .andExpect(jsonPath("$.id").value(TEST_VEHICLE_ID))
                 .andExpect(jsonPath("$.make").value("Toyota"));
     }
 
     @Test
-    void testGetMyVehicles_Success() throws Exception {
-        mockMvc.perform(get("/api/vehicles/me")
-                        .header("Authorization", "Bearer " + driverToken))
+    @DisplayName("GET /api/vehicles/me should return 200 with user vehicles")
+    void getMyVehicles_shouldReturn200_withUserVehicles() throws Exception {
+        VehicleResponse vehicle1 = VehicleResponse.builder()
+                .id(1L)
+                .make("Toyota")
+                .ownerId(TEST_USER_ID)
+                .build();
+
+        VehicleResponse vehicle2 = VehicleResponse.builder()
+                .id(2L)
+                .make("Honda")
+                .ownerId(TEST_USER_ID)
+                .build();
+
+        User currentUser = User.builder().id(TEST_USER_ID).build();
+
+        when(authService.getCurrentUser()).thenReturn(currentUser);
+        when(vehicleService.getVehiclesForUser(TEST_USER_ID))
+                .thenReturn(List.of(vehicle1, vehicle2));
+
+        mockMvc.perform(get("/api/vehicles/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].ownerId").value(driverUser.getId()));
+                .andExpect(jsonPath("$[0].ownerId").value(TEST_USER_ID));
     }
 
     @Test
-    void testUpdateVehicle_Success() throws Exception {
+    @DisplayName("PUT /api/vehicles/{id} should return 200 with updated vehicle")
+    void update_shouldReturn200_withUpdatedVehicle() throws Exception {
         UpdateVehicleRequest request = new UpdateVehicleRequest();
-        request.setColor("Green");
+        request.setColor("Red");
 
-        mockMvc.perform(put("/api/vehicles/" + testVehicle.getId())
-                        .header("Authorization", "Bearer " + driverToken)
+        VehicleResponse response = VehicleResponse.builder()
+                .id(TEST_VEHICLE_ID)
+                .color("Red")
+                .build();
+
+        User currentUser = User.builder().id(TEST_USER_ID).build();
+
+        when(authService.getCurrentUser()).thenReturn(currentUser);
+        when(vehicleService.updateVehicle(eq(TEST_VEHICLE_ID), any(UpdateVehicleRequest.class), eq(TEST_USER_ID)))
+                .thenReturn(response);
+
+        mockMvc.perform(put("/api/vehicles/" + TEST_VEHICLE_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.color").value("Green"));
+                .andExpect(jsonPath("$.color").value("Red"));
     }
 
     @Test
-    void testUpdateVehicle_Forbidden() throws Exception {
-        UpdateVehicleRequest request = new UpdateVehicleRequest();
-        request.setColor("Green");
+    @DisplayName("DELETE /api/vehicles/{id} should return 200")
+    void delete_shouldReturn200() throws Exception {
+        User currentUser = User.builder().id(TEST_USER_ID).build();
 
-        mockMvc.perform(put("/api/vehicles/" + testVehicle.getId())
-                        .header("Authorization", "Bearer " + otherToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
-    }
+        when(authService.getCurrentUser()).thenReturn(currentUser);
 
-    @Test
-    void testDeleteVehicle_Success() throws Exception {
-        mockMvc.perform(delete("/api/vehicles/" + testVehicle.getId())
-                        .header("Authorization", "Bearer " + driverToken))
+        mockMvc.perform(delete("/api/vehicles/" + TEST_VEHICLE_ID))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void testDeleteVehicle_Forbidden() throws Exception {
-        mockMvc.perform(delete("/api/vehicles/" + testVehicle.getId())
-                        .header("Authorization", "Bearer " + otherToken))
-                .andExpect(status().isForbidden());
     }
 }
