@@ -51,6 +51,10 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> _searchResults = [];
   List<Map<String, dynamic>> _startSearchResults = [];
   bool _isSelectingStart = false; // Track if we're in start location selection mode
+  bool _isEditingLocation = false; // Track if we're editing a location
+  String? _editingLocationType; // 'start' or 'destination'
+  TimeOfDay? _startTime;
+  TimeOfDay? _endTime;
 
   @override
   void initState() {
@@ -188,17 +192,21 @@ class _HomePageState extends State<HomePage> {
   void _selectSearchResult(Map<String, dynamic> result, {bool isStartLocation = false}) {
     final location = LatLng(result['lat'], result['lon']);
     setState(() {
-      if (isStartLocation) {
+      if (isStartLocation || _editingLocationType == 'start') {
         _startLocation = location;
         _startLocationName = result['name'];
         _startSearchController.clear();
         _startSearchResults = [];
         _isSelectingStart = false;
+        _isEditingLocation = false;
+        _editingLocationType = null;
       } else {
         _destinationLocation = location;
         _destinationName = result['name'];
         _searchController.clear();
         _searchResults = [];
+        _isEditingLocation = false;
+        _editingLocationType = null;
       }
     });
 
@@ -208,10 +216,17 @@ class _HomePageState extends State<HomePage> {
 
   void _onMapTap(TapPosition tapPosition, LatLng point) {
     setState(() {
-      if (_isSelectingStart) {
+      if (_isSelectingStart || _editingLocationType == 'start') {
         _startLocation = point;
         _startLocationName = null;
         _isSelectingStart = false;
+        _isEditingLocation = false;
+        _editingLocationType = null;
+      } else if (_editingLocationType == 'destination') {
+        _destinationLocation = point;
+        _destinationName = null;
+        _isEditingLocation = false;
+        _editingLocationType = null;
       } else {
         _destinationLocation = point;
         _destinationName = null;
@@ -233,9 +248,57 @@ class _HomePageState extends State<HomePage> {
   void _cancelStartSelection() {
     setState(() {
       _isSelectingStart = false;
+      _isEditingLocation = false;
+      _editingLocationType = null;
       _startSearchController.clear();
       _startSearchResults = [];
     });
+  }
+
+  void _startEditingLocation(String locationType) {
+    setState(() {
+      _isEditingLocation = true;
+      _editingLocationType = locationType;
+      if (locationType == 'start') {
+        _isSelectingStart = true;
+      }
+    });
+  }
+
+  void _cancelEditingLocation() {
+    setState(() {
+      _isEditingLocation = false;
+      _editingLocationType = null;
+      _isSelectingStart = false;
+      _startSearchController.clear();
+      _startSearchResults = [];
+      _searchController.clear();
+      _searchResults = [];
+    });
+  }
+
+  Future<void> _selectStartTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _startTime ?? const TimeOfDay(hour: 9, minute: 0),
+    );
+    if (picked != null) {
+      setState(() {
+        _startTime = picked;
+      });
+    }
+  }
+
+  Future<void> _selectEndTime() async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _endTime ?? const TimeOfDay(hour: 17, minute: 0),
+    );
+    if (picked != null) {
+      setState(() {
+        _endTime = picked;
+      });
+    }
   }
 
   @override
@@ -341,9 +404,11 @@ class _HomePageState extends State<HomePage> {
             left: 16,
             right: 16,
             bottom: 32,
-            child: _isSelectingStart
-                ? _buildStartLocationPanel(context)
-                : _buildDestinationPanel(context),
+            child: _shouldShowBothLocations()
+                ? _buildBothLocationsPanel(context)
+                : (_isSelectingStart || (_isEditingLocation && _editingLocationType == 'start'))
+                    ? _buildStartLocationPanel(context)
+                    : _buildDestinationPanel(context),
           ),
         ],
       ),
@@ -373,16 +438,23 @@ class _HomePageState extends State<HomePage> {
               children: [
                 const Icon(Icons.location_searching, color: Colors.deepPurple),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Enter Destination',
-                    style: TextStyle(
+                    _isEditingLocation && _editingLocationType == 'destination'
+                        ? 'Edit Destination'
+                        : 'Enter Destination',
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                if (_destinationLocation != null)
+                if (_isEditingLocation && _editingLocationType == 'destination')
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: _cancelEditingLocation,
+                  )
+                else if (_destinationLocation != null)
                   IconButton(
                     icon: const Icon(Icons.clear),
                     onPressed: () {
@@ -434,6 +506,11 @@ class _HomePageState extends State<HomePage> {
               ),
               onChanged: (value) {
                 _searchLocation(value);
+              },
+              onSubmitted: (value) {
+                if (value.isNotEmpty && _searchResults.isNotEmpty) {
+                  _selectSearchResult(_searchResults[0]);
+                }
               },
             ),
           ),
@@ -529,6 +606,202 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  bool _shouldShowBothLocations() {
+    return _startLocation != null && _destinationLocation != null && !_isSelectingStart && !_isEditingLocation;
+  }
+
+  Widget _buildBothLocationsPanel(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Start Location
+          InkWell(
+            onTap: () => _startEditingLocation('start'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.location_on, color: Colors.green, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Start Location',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _startLocationName ?? 'Pin dropped',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.edit, color: Colors.grey, size: 20),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          // Destination Location
+          InkWell(
+            onTap: () => _startEditingLocation('destination'),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.place, color: Colors.red, size: 24),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Destination',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _destinationName ?? 'Pin dropped',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.edit, color: Colors.grey, size: 20),
+                ],
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          // Time Range Selector
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Time Range',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: _selectStartTime,
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.grey[50],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.access_time, size: 20, color: Colors.deepPurple),
+                              const SizedBox(width: 8),
+                              Text(
+                                _startTime != null
+                                    ? _formatTime(_startTime!)
+                                    : 'Start Time',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: _startTime != null ? Colors.black87 : Colors.grey[600],
+                                  fontWeight: _startTime != null ? FontWeight.w500 : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'to',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: InkWell(
+                        onTap: _selectEndTime,
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey[300]!),
+                            borderRadius: BorderRadius.circular(8),
+                            color: Colors.grey[50],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.access_time, size: 20, color: Colors.deepPurple),
+                              const SizedBox(width: 8),
+                              Text(
+                                _endTime != null
+                                    ? _formatTime(_endTime!)
+                                    : 'End Time',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: _endTime != null ? Colors.black87 : Colors.grey[600],
+                                  fontWeight: _endTime != null ? FontWeight.w500 : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
   Widget _buildStartLocationPanel(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -552,10 +825,10 @@ class _HomePageState extends State<HomePage> {
               children: [
                 const Icon(Icons.my_location, color: Colors.green),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
-                    'Select Start Location',
-                    style: TextStyle(
+                    _isEditingLocation ? 'Edit Start Location' : 'Select Start Location',
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -563,7 +836,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: _cancelStartSelection,
+                  onPressed: _isEditingLocation ? _cancelEditingLocation : _cancelStartSelection,
                 ),
               ],
             ),
@@ -605,6 +878,11 @@ class _HomePageState extends State<HomePage> {
               ),
               onChanged: (value) {
                 _searchLocation(value, isStartLocation: true);
+              },
+              onSubmitted: (value) {
+                if (value.isNotEmpty && _startSearchResults.isNotEmpty) {
+                  _selectSearchResult(_startSearchResults[0], isStartLocation: true);
+                }
               },
             ),
           ),
