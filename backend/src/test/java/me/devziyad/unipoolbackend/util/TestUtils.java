@@ -1,101 +1,285 @@
 package me.devziyad.unipoolbackend.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import me.devziyad.unipoolbackend.common.BookingStatus;
+import me.devziyad.unipoolbackend.auth.dto.AuthResponse;
+import me.devziyad.unipoolbackend.auth.dto.LoginRequest;
+import me.devziyad.unipoolbackend.auth.dto.RegisterRequest;
+import me.devziyad.unipoolbackend.booking.dto.CreateBookingRequest;
 import me.devziyad.unipoolbackend.common.Role;
-import me.devziyad.unipoolbackend.common.RideStatus;
-import me.devziyad.unipoolbackend.location.Location;
-import me.devziyad.unipoolbackend.ride.Ride;
-import me.devziyad.unipoolbackend.user.User;
-import me.devziyad.unipoolbackend.vehicle.Vehicle;
+import me.devziyad.unipoolbackend.location.dto.CreateLocationRequest;
+import me.devziyad.unipoolbackend.location.dto.LocationResponse;
+import me.devziyad.unipoolbackend.ride.dto.CreateRideRequest;
+import me.devziyad.unipoolbackend.ride.dto.RideResponse;
+import me.devziyad.unipoolbackend.vehicle.dto.CreateVehicleRequest;
+import me.devziyad.unipoolbackend.vehicle.dto.VehicleResponse;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.client.RestTestClient;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * Utility class for test helpers
+ */
 public class TestUtils {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper()
+            .findAndRegisterModules(); // Auto-registers JavaTimeModule if available
+    
+    private static final AtomicLong emailCounter = new AtomicLong(0);
 
-    public static ObjectMapper getObjectMapper() {
-        return objectMapper;
+    /**
+     * Creates a RegisterRequest for testing with unique email
+     */
+    public static RegisterRequest createRegisterRequest(String email, String password, String fullName, Role role) {
+        RegisterRequest request = new RegisterRequest();
+        long counter = emailCounter.incrementAndGet();
+        request.setUniversityId("UNI" + System.currentTimeMillis() + "_" + counter);
+        // Make email unique by appending counter
+        String uniqueEmail = email.contains("@") 
+            ? email.replace("@", "+" + counter + "@")
+            : email + "+" + counter;
+        request.setEmail(uniqueEmail);
+        request.setPassword(password);
+        request.setFullName(fullName);
+        request.setRole(role != null ? role.name() : Role.RIDER.name());
+        return request;
     }
-
-    public static String toJson(Object obj) {
-        try {
-            return objectMapper.writeValueAsString(obj);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to convert object to JSON", e);
+    
+    /**
+     * Registration result containing token and the actual email used
+     */
+    public static class RegistrationResult {
+        private final String token;
+        private final String email;
+        
+        public RegistrationResult(String token, String email) {
+            this.token = token;
+            this.email = email;
+        }
+        
+        public String getToken() {
+            return token;
+        }
+        
+        public String getEmail() {
+            return email;
         }
     }
 
-    public static <T> T fromJson(String json, Class<T> clazz) {
+    /**
+     * Creates a LoginRequest for testing
+     */
+    public static LoginRequest createLoginRequest(String email, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setEmail(email);
+        request.setPassword(password);
+        return request;
+    }
+
+    /**
+     * Registers a user and returns the auth token
+     * Note: Email will be made unique automatically
+     */
+    public static String registerAndGetToken(RestTestClient restClient, String email, String password, String fullName, Role role) {
+        RegistrationResult result = registerAndGetResult(restClient, email, password, fullName, role);
+        return result.getToken();
+    }
+    
+    /**
+     * Registers a user and returns both token and the actual email used
+     */
+    public static RegistrationResult registerAndGetResult(RestTestClient restClient, String email, String password, String fullName, Role role) {
+        RegisterRequest registerRequest = createRegisterRequest(email, password, fullName, role);
+        String actualEmail = registerRequest.getEmail();
+        
+        byte[] responseBytes = restClient
+                .post()
+                .uri("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(registerRequest)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+        
         try {
-            return objectMapper.readValue(json, clazz);
+            String responseBody = new String(responseBytes);
+            AuthResponse authResponse = objectMapper.readValue(responseBody, AuthResponse.class);
+            return new RegistrationResult(authResponse.getToken(), actualEmail);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to convert JSON to object", e);
+            throw new RuntimeException("Failed to parse auth response", e);
         }
     }
 
-    public static User createTestUser(String email, Role role) {
-        return User.builder()
-                .universityId("S" + System.currentTimeMillis())
-                .email(email)
-                .passwordHash("$2a$10$encodedPassword")
-                .fullName("Test User")
-                .phoneNumber("1234567890")
-                .role(role)
-                .enabled(true)
-                .walletBalance(BigDecimal.ZERO)
-                .ratingCountAsDriver(0)
-                .ratingCountAsRider(0)
-                .build();
+    /**
+     * Logs in a user and returns the auth token
+     */
+    public static String loginAndGetToken(RestTestClient restClient, String email, String password) {
+        LoginRequest loginRequest = createLoginRequest(email, password);
+        
+        byte[] responseBytes = restClient
+                .post()
+                .uri("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(loginRequest)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+        
+        try {
+            String responseBody = new String(responseBytes);
+            AuthResponse authResponse = objectMapper.readValue(responseBody, AuthResponse.class);
+            return authResponse.getToken();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse auth response", e);
+        }
     }
 
-    public static User createTestUser(Long id, String email, Role role) {
-        User user = createTestUser(email, role);
-        user.setId(id);
-        return user;
+    /**
+     * Creates headers with authorization token
+     */
+    public static Map<String, String> authHeaders(String token) {
+        Map<String, String> headers = new HashMap<>();
+        headers.put("Authorization", "Bearer " + token);
+        return headers;
     }
 
-    public static Vehicle createTestVehicle(User owner) {
-        return Vehicle.builder()
-                .make("Toyota")
-                .model("Corolla")
-                .color("Blue")
-                .plateNumber("ABC" + System.currentTimeMillis())
-                .seatCount(4)
-                .owner(owner)
-                .active(true)
-                .build();
+    /**
+     * Creates a vehicle for a driver
+     */
+    public static VehicleResponse createVehicle(RestTestClient restClient, String token) {
+        CreateVehicleRequest request = new CreateVehicleRequest();
+        request.setMake("Toyota");
+        request.setModel("Camry");
+        request.setColor("Blue");
+        request.setPlateNumber("TEST" + System.currentTimeMillis());
+        request.setSeatCount(4);
+
+        byte[] responseBytes = restClient
+                .post()
+                .uri("/api/vehicles")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+
+        try {
+            String responseBody = new String(responseBytes);
+            return objectMapper.readValue(responseBody, VehicleResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse vehicle response", e);
+        }
     }
 
-    public static Location createTestLocation(User user, String label) {
-        return Location.builder()
-                .label(label)
-                .address("123 Test St")
-                .latitude(33.8938)
-                .longitude(35.5018)
-                .user(user)
-                .isFavorite(false)
-                .build();
+    /**
+     * Creates a location
+     */
+    public static LocationResponse createLocation(RestTestClient restClient, String token, String label, double lat, double lon) {
+        CreateLocationRequest request = new CreateLocationRequest();
+        request.setLabel(label);
+        request.setAddress("Test Address");
+        request.setLatitude(lat);
+        request.setLongitude(lon);
+        request.setIsFavorite(false);
+
+        byte[] responseBytes = restClient
+                .post()
+                .uri("/api/locations")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+
+        try {
+            String responseBody = new String(responseBytes);
+            return objectMapper.readValue(responseBody, LocationResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse location response", e);
+        }
     }
 
-    public static Ride createTestRide(User driver, Vehicle vehicle, Location pickup, Location destination) {
-        return Ride.builder()
-                .driver(driver)
-                .vehicle(vehicle)
-                .pickupLocation(pickup)
-                .destinationLocation(destination)
-                .departureTime(LocalDateTime.now().plusHours(2))
-                .totalSeats(4)
-                .availableSeats(3)
-                .estimatedDistanceKm(10.5)
-                .routeDistanceKm(11.0)
-                .estimatedDurationMinutes(20)
-                .basePrice(BigDecimal.valueOf(50.00))
-                .pricePerSeat(BigDecimal.valueOf(12.50))
-                .status(RideStatus.POSTED)
-                .build();
+    /**
+     * Creates a ride for a driver
+     */
+    public static RideResponse createRide(RestTestClient restClient, String driverToken, Long vehicleId, Long pickupLocationId, Long destinationLocationId) {
+        CreateRideRequest request = new CreateRideRequest();
+        request.setVehicleId(vehicleId);
+        request.setPickupLocationId(pickupLocationId);
+        request.setDestinationLocationId(destinationLocationId);
+        request.setDepartureTime(LocalDateTime.now().plusHours(2));
+        request.setTotalSeats(4);
+        request.setBasePrice(new BigDecimal("10.00"));
+        request.setPricePerSeat(new BigDecimal("2.50"));
+
+        byte[] responseBytes = restClient
+                .post()
+                .uri("/api/rides")
+                .header("Authorization", "Bearer " + driverToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+
+        try {
+            String responseBody = new String(responseBytes);
+            return objectMapper.readValue(responseBody, RideResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse ride response", e);
+        }
+    }
+
+    /**
+     * Creates a booking for a rider and returns the booking ID
+     */
+    public static Long createBooking(RestTestClient restClient, String riderToken, Long rideId, Integer seats) {
+        CreateBookingRequest request = new CreateBookingRequest();
+        request.setRideId(rideId);
+        request.setSeats(seats);
+
+        byte[] responseBytes = restClient
+                .post()
+                .uri("/api/bookings")
+                .header("Authorization", "Bearer " + riderToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+
+        try {
+            String responseBody = new String(responseBytes);
+            @SuppressWarnings("unchecked")
+            Map<String, Object> booking = objectMapper.readValue(responseBody, Map.class);
+            return Long.valueOf(booking.get("id").toString());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse booking response", e);
+        }
     }
 }
 
