@@ -1,0 +1,25 @@
+import 'dart:convert';
+import '../models/rating.dart';
+import 'api_client.dart';
+
+class RatingService {
+  static Future<Rating> createRating({
+    required int bookingId,
+    required int score,
+    String? comment,
+  }) async {
+    final response = await ApiClient.post('/ratings', {
+      'bookingId': bookingId,
+      'score': score,
+      if (comment != null) 'comment': comment,
+    });
+
+    return Rating.fromJson(jsonDecode(response.body));
+  }
+
+  static Future<List<Rating>> getRatingsForUser(int userId) async {
+    final response = await ApiClient.get('/ratings/user/$userId');
+    final List<dynamic> data = jsonDecode(response.body);
+    return data.map((json) => Rating.fromJson(json)).toList();
+  }
+}
