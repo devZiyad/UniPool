@@ -72,6 +72,6 @@ public class Ride {
     @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column
+    @Column(columnDefinition = "TEXT")
     private String routePolyline;
 }
