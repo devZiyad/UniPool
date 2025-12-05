@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:flutter_map/flutter_map.dart';
 import '../../providers/driver_provider.dart';
 import '../../services/location_service.dart';
 import '../../models/location.dart';
+import '../../widgets/map_widget.dart';
 
 class DriverPostRideDestinationScreen extends StatefulWidget {
   const DriverPostRideDestinationScreen({super.key});
@@ -17,7 +19,7 @@ class _DriverPostRideDestinationScreenState
     extends State<DriverPostRideDestinationScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Location> _suggestions = [];
-  GoogleMapController? _mapController;
+  MapController? _mapController;
   LatLng _currentLocation = const LatLng(26.0667, 50.5577);
 
   @override
@@ -35,12 +37,20 @@ class _DriverPostRideDestinationScreenState
     }
 
     try {
-      final locations = await LocationService.searchLocations(query);
+      final locations = await LocationService.searchLocations(
+        query,
+        latitude: _currentLocation.latitude,
+        longitude: _currentLocation.longitude,
+      );
       setState(() {
         _suggestions = locations;
       });
     } catch (e) {
-      // Handle error
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
+      }
     }
   }
 
@@ -57,11 +67,9 @@ class _DriverPostRideDestinationScreenState
     return Scaffold(
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: _currentLocation,
-              zoom: 14,
-            ),
+          MapWidget(
+            initialPosition: _currentLocation,
+            zoom: 14,
             onMapCreated: (controller) {
               _mapController = controller;
             },

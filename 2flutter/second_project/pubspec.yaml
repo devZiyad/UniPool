@@ -9,7 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # HTTP requests
   http: ^1.1.0
   
@@ -17,7 +17,8 @@ dependencies:
   provider: ^6.1.1
   
   # Maps
-  google_maps_flutter: ^2.5.0
+  flutter_map: ^7.0.2
+  latlong2: ^0.9.1
   geolocator: ^10.1.0
   
   # Image handling
@@ -44,6 +45,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
-  assets:
-    - assets/

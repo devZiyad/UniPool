@@ -23,7 +23,7 @@ class WelcomeScreen extends StatelessWidget {
                     painter: RoutePainter(),
                   ),
                   // Start marker
-                  const Positioned(
+                  Positioned(
                     left: 20,
                     top: 20,
                     child: Column(

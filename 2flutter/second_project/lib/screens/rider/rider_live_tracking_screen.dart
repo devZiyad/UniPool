@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:flutter_map/flutter_map.dart';
 import '../../services/tracking_service.dart';
 import '../../models/ride.dart';
+import '../../widgets/map_widget.dart';
 
 class RiderLiveTrackingScreen extends StatefulWidget {
   final Ride ride;
@@ -14,7 +16,7 @@ class RiderLiveTrackingScreen extends StatefulWidget {
 }
 
 class _RiderLiveTrackingScreenState extends State<RiderLiveTrackingScreen> {
-  GoogleMapController? _mapController;
+  MapController? _mapController;
   LatLng? _driverLocation;
 
   @override
@@ -44,41 +46,50 @@ class _RiderLiveTrackingScreenState extends State<RiderLiveTrackingScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          GoogleMap(
-            initialCameraPosition: CameraPosition(
-              target: LatLng(
-                widget.ride.pickupLatitude,
-                widget.ride.pickupLongitude,
-              ),
-              zoom: 14,
+          MapWidget(
+            initialPosition: LatLng(
+              widget.ride.pickupLatitude,
+              widget.ride.pickupLongitude,
             ),
+            zoom: 14,
             onMapCreated: (controller) {
               _mapController = controller;
             },
-            markers: {
+            markers: [
               if (_driverLocation != null)
                 Marker(
-                  markerId: const MarkerId('driver'),
-                  position: _driverLocation!,
-                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                    BitmapDescriptor.hueGreen,
+                  point: _driverLocation!,
+                  width: 40,
+                  height: 40,
+                  child: const Icon(
+                    Icons.directions_car,
+                    color: Colors.green,
+                    size: 40,
                   ),
                 ),
               Marker(
-                markerId: const MarkerId('pickup'),
-                position: LatLng(
+                point: LatLng(
                   widget.ride.pickupLatitude,
                   widget.ride.pickupLongitude,
                 ),
+                width: 40,
+                height: 40,
+                child: const Icon(
+                  Icons.location_on,
+                  color: Colors.blue,
+                  size: 40,
+                ),
               ),
               Marker(
-                markerId: const MarkerId('destination'),
-                position: LatLng(
+                point: LatLng(
                   widget.ride.destinationLatitude,
                   widget.ride.destinationLongitude,
                 ),
+                width: 40,
+                height: 40,
+                child: const Icon(Icons.place, color: Colors.red, size: 40),
               ),
-            },
+            ],
           ),
           Positioned(
             bottom: 0,

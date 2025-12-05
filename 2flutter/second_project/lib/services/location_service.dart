@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../models/location.dart';
 import 'api_client.dart';
+import 'serpapi_service.dart';
 
 class LocationService {
   static Future<Location> createLocation({
@@ -33,22 +34,28 @@ class LocationService {
     return data.map((json) => Location.fromJson(json)).toList();
   }
 
-  static Future<List<Location>> searchLocations(String query) async {
-    final response = await ApiClient.post('/locations/search', {
-      'query': query,
-    });
-    final List<dynamic> data = jsonDecode(response.body);
-    return data.map((json) => Location.fromJson(json)).toList();
+  /// Search locations using SerpApi Google Maps API
+  ///
+  /// [query] - The search query
+  /// [latitude] - Optional latitude for location-based search
+  /// [longitude] - Optional longitude for location-based search
+  static Future<List<Location>> searchLocations(
+    String query, {
+    double? latitude,
+    double? longitude,
+  }) async {
+    return await SerpApiService.searchLocations(
+      query: query,
+      latitude: latitude,
+      longitude: longitude,
+    );
   }
 
+  /// Reverse geocode coordinates to address using SerpApi
   static Future<String> reverseGeocode(
     double latitude,
     double longitude,
   ) async {
-    final response = await ApiClient.get(
-      '/locations/reverse-geocode?latitude=$latitude&longitude=$longitude',
-    );
-    final data = jsonDecode(response.body);
-    return data['address'] ?? '';
+    return await SerpApiService.reverseGeocode(latitude, longitude);
   }
 }

@@ -93,10 +93,11 @@ lib/
    - The app is configured to use the production backend: `https://unipool.devziyad.me/api`
    - To change the backend URL, update `baseUrl` in `lib/services/api_client.dart`
 
-3. **Google Maps Setup** (Required for map features)
-   - Get a Google Maps API key
+3. **Maps Setup** (Required for map display)
+   - Get a Google Maps API key for map display
    - For Android: Add to `android/app/src/main/AndroidManifest.xml`
    - For iOS: Add to `ios/Runner/AppDelegate.swift`
+   - **Note**: Location search uses SerpApi (already configured), not Google Maps API
 
 4. **Run the App**
    ```bash
@@ -146,7 +147,8 @@ The app uses the Provider package for state management:
 ## Notes
 
 - The app requires internet connection for API calls
-- Google Maps integration is required for location features
+- **Location Search**: Uses SerpApi Google Maps API for location search (configured with API key)
+- **Map Display**: Uses Google Maps Flutter for displaying maps (requires Google Maps API key)
 - Image picker is used for document uploads
 - JWT tokens are stored securely using SharedPreferences
 - The app polls for booking status updates every 5 seconds
