@@ -24,6 +24,10 @@ import 'screens/driver/driver_incoming_requests_screen.dart';
 import 'screens/driver/driver_accepted_riders_screen.dart';
 import 'screens/driver/driver_navigation_screen.dart';
 import 'screens/driver/driver_rate_passenger_screen.dart';
+import 'screens/vehicles/vehicles_management_screen.dart';
+import 'screens/vehicles/add_vehicle_screen.dart';
+import 'screens/profile/profile_settings_screen.dart';
+import 'widgets/app_drawer.dart';
 
 void main() {
   runApp(const UniPoolApp());
@@ -92,6 +96,10 @@ class UniPoolApp extends StatelessWidget {
             // This would need to get the booking from context or state
             throw UnimplementedError('Need to pass booking');
           },
+          // Profile & Settings
+          '/profile-settings': (context) => const ProfileSettingsScreen(),
+          '/vehicles': (context) => const VehiclesManagementScreen(),
+          '/vehicles/add': (context) => const AddVehicleScreen(),
         },
         onGenerateRoute: (settings) {
           // Handle routes with parameters

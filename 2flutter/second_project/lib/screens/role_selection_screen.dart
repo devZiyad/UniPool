@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
+import '../services/user_service.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
   const RoleSelectionScreen({super.key});
@@ -35,11 +38,25 @@ class RoleSelectionScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: InkWell(
-                  onTap: () {
-                    Navigator.pushReplacementNamed(
+                  onTap: () async {
+                    // Update role to BOTH so user can access both modes
+                    final authProvider = Provider.of<AuthProvider>(
                       context,
-                      '/rider/destination-search',
+                      listen: false,
                     );
+                    try {
+                      final updatedUser = await UserService.updateRole('BOTH');
+                      authProvider.setUser(updatedUser);
+                    } catch (e) {
+                      // If role update fails, still allow navigation
+                      // User might already have BOTH role
+                    }
+                    if (context.mounted) {
+                      Navigator.pushReplacementNamed(
+                        context,
+                        '/rider/destination-search',
+                      );
+                    }
                   },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(
@@ -73,11 +90,25 @@ class RoleSelectionScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: InkWell(
-                  onTap: () {
-                    Navigator.pushReplacementNamed(
+                  onTap: () async {
+                    // Update role to BOTH so user can access both modes
+                    final authProvider = Provider.of<AuthProvider>(
                       context,
-                      '/driver/post-ride/destination-search',
+                      listen: false,
                     );
+                    try {
+                      final updatedUser = await UserService.updateRole('BOTH');
+                      authProvider.setUser(updatedUser);
+                    } catch (e) {
+                      // If role update fails, still allow navigation
+                      // User might already have BOTH role
+                    }
+                    if (context.mounted) {
+                      Navigator.pushReplacementNamed(
+                        context,
+                        '/driver/post-ride/destination-search',
+                      );
+                    }
                   },
                   borderRadius: BorderRadius.circular(16),
                   child: Container(

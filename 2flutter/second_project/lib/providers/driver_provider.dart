@@ -54,18 +54,27 @@ class DriverProvider with ChangeNotifier {
 
     try {
       _myRides = await RideService.getMyRidesAsDriver();
-      _activeRide = _myRides.firstWhere(
-        (ride) => ride.status == 'POSTED' || ride.status == 'IN_PROGRESS',
-        orElse: () => _myRides.first,
-      );
+      // Find active ride (POSTED or IN_PROGRESS status)
+      try {
+        _activeRide = _myRides.firstWhere(
+          (ride) => ride.status == 'POSTED' || ride.status == 'IN_PROGRESS',
+        );
+      } catch (e) {
+        // No active ride found
+        _activeRide = null;
+      }
       if (_activeRide != null) {
         await loadBookingsForRide(_activeRide!.id);
+      } else {
+        _pendingBookings = [];
+        _acceptedBookings = [];
       }
       _isLoading = false;
       notifyListeners();
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
+      _activeRide = null;
       notifyListeners();
     }
   }

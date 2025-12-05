@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../providers/driver_provider.dart';
 import '../../services/location_service.dart';
 import '../../models/location.dart';
 import '../../widgets/map_widget.dart';
+import '../../widgets/app_drawer.dart';
 
 class DriverPostRideDestinationScreen extends StatefulWidget {
   const DriverPostRideDestinationScreen({super.key});
@@ -21,6 +23,42 @@ class _DriverPostRideDestinationScreenState
   List<Location> _suggestions = [];
   MapController? _mapController;
   LatLng _currentLocation = const LatLng(26.0667, 50.5577);
+  LatLng? _selectedLocation;
+  bool _isLoadingLocation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return;
+      }
+
+      if (permission == LocationPermission.deniedForever) return;
+
+      if (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always) {
+        Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        ).timeout(const Duration(seconds: 10));
+        setState(() {
+          _currentLocation = LatLng(position.latitude, position.longitude);
+          _mapController?.move(_currentLocation, 14);
+        });
+      }
+    } catch (e) {
+      // Use default Bahrain location
+    }
+  }
 
   @override
   void dispose() {
@@ -54,6 +92,31 @@ class _DriverPostRideDestinationScreenState
     }
   }
 
+  Future<void> _onMapTap(LatLng point) async {
+    setState(() {
+      _selectedLocation = point;
+      _isLoadingLocation = false; // No loading needed when pinning
+    });
+
+    // Create location directly from coordinates (skip SerpApi)
+    final location = Location(
+      id: null,
+      label: 'Selected Location',
+      address:
+          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}',
+      latitude: point.latitude,
+      longitude: point.longitude,
+      userId: null,
+      isFavorite: false,
+    );
+
+    setState(() {
+      _searchController.text =
+          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+      _suggestions = [location];
+    });
+  }
+
   void _selectDestination(Location location) {
     Provider.of<DriverProvider>(
       context,
@@ -65,6 +128,8 @@ class _DriverPostRideDestinationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(title: const Text('Select Destination')),
+      drawer: AppDrawer(),
       body: Stack(
         children: [
           MapWidget(
@@ -74,7 +139,27 @@ class _DriverPostRideDestinationScreenState
               _mapController = controller;
             },
             myLocationEnabled: true,
+            onTap: _onMapTap,
+            markers: _selectedLocation != null
+                ? [
+                    Marker(
+                      point: _selectedLocation!,
+                      width: 40,
+                      height: 40,
+                      child: const Icon(
+                        Icons.place,
+                        color: Colors.red,
+                        size: 40,
+                      ),
+                    ),
+                  ]
+                : null,
           ),
+          // Center pin indicator (only show when no location selected)
+          if (_selectedLocation == null)
+            const Center(
+              child: Icon(Icons.location_on, color: Colors.red, size: 40),
+            ),
           Positioned(
             bottom: 0,
             left: 0,
@@ -93,12 +178,29 @@ class _DriverPostRideDestinationScreenState
                     'Where are you going today?',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Tap on the map or search to select destination',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
                       hintText: 'Search destinations',
                       prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _isLoadingLocation
+                          ? const Padding(
+                              padding: EdgeInsets.all(12.0),
+                              child: SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            )
+                          : null,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

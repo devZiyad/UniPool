@@ -12,6 +12,7 @@ class MapWidget extends StatefulWidget {
   final bool myLocationButtonEnabled;
   final List<Marker>? markers;
   final List<Polyline>? polylines;
+  final Function(LatLng)? onTap;
 
   const MapWidget({
     super.key,
@@ -22,6 +23,7 @@ class MapWidget extends StatefulWidget {
     this.myLocationButtonEnabled = false,
     this.markers,
     this.polylines,
+    this.onTap,
   });
 
   @override
@@ -107,6 +109,11 @@ class _MapWidgetState extends State<MapWidget> {
         initialZoom: widget.zoom,
         minZoom: 3.0,
         maxZoom: 18.0,
+        onTap: widget.onTap != null
+            ? (tapPosition, point) {
+                widget.onTap!(point);
+              }
+            : null,
       ),
       children: [
         TileLayer(

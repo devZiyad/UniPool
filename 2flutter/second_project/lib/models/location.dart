@@ -1,5 +1,5 @@
 class Location {
-  final int id;
+  final int? id;
   final String label;
   final String? address;
   final double latitude;
@@ -8,7 +8,7 @@ class Location {
   final bool isFavorite;
 
   Location({
-    required this.id,
+    this.id,
     required this.label,
     this.address,
     required this.latitude,

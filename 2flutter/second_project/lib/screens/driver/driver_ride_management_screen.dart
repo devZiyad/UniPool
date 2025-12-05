@@ -1,19 +1,108 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../providers/driver_provider.dart';
+import '../../widgets/app_drawer.dart';
 
-class DriverRideManagementScreen extends StatelessWidget {
+class DriverRideManagementScreen extends StatefulWidget {
   const DriverRideManagementScreen({super.key});
+
+  @override
+  State<DriverRideManagementScreen> createState() =>
+      _DriverRideManagementScreenState();
+}
+
+class _DriverRideManagementScreenState
+    extends State<DriverRideManagementScreen> {
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkActiveRide();
+  }
+
+  Future<void> _checkActiveRide() async {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+
+    // Load rides to check for active one
+    await driverProvider.loadMyRides();
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      // Check if there's an active ride (POSTED or IN_PROGRESS)
+      final activeRide = driverProvider.activeRide;
+      if (activeRide == null ||
+          (activeRide.status != 'POSTED' &&
+              activeRide.status != 'IN_PROGRESS')) {
+        // No active ride, show dialog and navigate to homepage
+        _showNoRideDialog();
+      }
+    }
+  }
+
+  void _showNoRideDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('No Active Ride'),
+        content: const Text(
+          'You have no ride posted yet. Please post a ride first.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(
+                context,
+              ).pushReplacementNamed('/driver/post-ride/destination-search');
+            },
+            child: const Text('Go to Home'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTimeRange(DateTime departureTime) {
+    final timeFormat = DateFormat('h:mm a');
+    return timeFormat.format(departureTime);
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('MMM d, yyyy').format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
     final driverProvider = Provider.of<DriverProvider>(context);
+    final activeRide = driverProvider.activeRide;
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Ride Management')),
+        drawer: AppDrawer(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // If no active ride, show empty state (dialog already shown)
+    if (activeRide == null ||
+        (activeRide.status != 'POSTED' && activeRide.status != 'IN_PROGRESS')) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Ride Management')),
+        drawer: AppDrawer(),
+        body: const Center(child: Text('No active ride')),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ride Management'),
-        leading: IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
-      ),
+      appBar: AppBar(title: const Text('Ride Management')),
+      drawer: AppDrawer(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -28,18 +117,28 @@ class DriverRideManagementScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          const Text(
-                            '7-9am',
-                            style: TextStyle(
+                          Text(
+                            _formatTimeRange(activeRide.departureTime),
+                            style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            driverProvider.destinationLocation?.label ??
-                                'to WUBH',
+                            _formatDate(activeRide.departureTime),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            activeRide.destinationLocationLabel,
                             style: const TextStyle(fontSize: 14),
+                            textAlign: TextAlign.center,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ),
@@ -53,9 +152,9 @@ class DriverRideManagementScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          const Text(
-                            '2',
-                            style: TextStyle(
+                          Text(
+                            '${activeRide.availableSeats}',
+                            style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
@@ -65,6 +164,14 @@ class DriverRideManagementScreen extends StatelessWidget {
                             'Available Seats',
                             style: TextStyle(fontSize: 14),
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${activeRide.totalSeats - activeRide.availableSeats}/${activeRide.totalSeats} booked',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -73,12 +180,79 @@ class DriverRideManagementScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 24),
+            // Route information
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Route',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on, color: Colors.green),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            activeRide.pickupLocationLabel,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.place, color: Colors.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            activeRide.destinationLocationLabel,
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (activeRide.estimatedDistanceKm != null) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          const Icon(Icons.straighten, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${activeRide.estimatedDistanceKm!.toStringAsFixed(1)} km',
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          if (activeRide.estimatedDurationMinutes != null) ...[
+                            const SizedBox(width: 16),
+                            const Icon(Icons.access_time, color: Colors.blue),
+                            const SizedBox(width: 8),
+                            Text(
+                              '${activeRide.estimatedDurationMinutes} min',
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
             // Requests section
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'New Request',
+                  'New Requests',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 TextButton(
@@ -89,18 +263,94 @@ class DriverRideManagementScreen extends StatelessWidget {
                 ),
               ],
             ),
-            if (driverProvider.pendingBookings.isNotEmpty)
+            if (driverProvider.pendingBookings.isEmpty)
               Card(
-                child: ListTile(
-                  leading: const CircleAvatar(),
-                  title: Text(driverProvider.pendingBookings.first.riderName),
-                  subtitle: Text(
-                    '${driverProvider.pendingBookings.first.seatsBooked} seats',
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        const Icon(Icons.inbox, size: 48, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'No pending requests',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                      ],
+                    ),
                   ),
-                  trailing: const Icon(Icons.arrow_forward),
-                  onTap: () {
-                    Navigator.pushNamed(context, '/driver/incoming-requests');
-                  },
+                ),
+              )
+            else
+              ...driverProvider.pendingBookings.take(3).map((booking) {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      child: Text(
+                        booking.riderName.substring(0, 1).toUpperCase(),
+                      ),
+                    ),
+                    title: Text(booking.riderName),
+                    subtitle: Text(
+                      '${booking.seatsBooked} seat${booking.seatsBooked > 1 ? 's' : ''} requested',
+                    ),
+                    trailing: const Icon(Icons.arrow_forward),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/driver/incoming-requests');
+                    },
+                  ),
+                );
+              }),
+            const SizedBox(height: 24),
+            // Accepted riders section
+            if (driverProvider.acceptedBookings.isNotEmpty) ...[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Accepted Riders',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/driver/accepted-riders');
+                    },
+                    child: const Text('View all'),
+                  ),
+                ],
+              ),
+              ...driverProvider.acceptedBookings.take(3).map((booking) {
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: Colors.green,
+                      child: Icon(Icons.check, color: Colors.white),
+                    ),
+                    title: Text(booking.riderName),
+                    subtitle: Text(
+                      '${booking.seatsBooked} seat${booking.seatsBooked > 1 ? 's' : ''} confirmed',
+                    ),
+                    trailing: const Icon(Icons.arrow_forward),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/driver/accepted-riders');
+                    },
+                  ),
+                );
+              }),
+            ],
+            const SizedBox(height: 24),
+            // Action buttons
+            if (activeRide.status == 'POSTED')
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/driver/accepted-riders');
+                },
+                icon: const Icon(Icons.directions_car),
+                label: const Text('Start Ride'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
           ],

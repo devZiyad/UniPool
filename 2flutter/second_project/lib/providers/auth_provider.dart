@@ -88,4 +88,9 @@ class AuthProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+  void setUser(User user) {
+    _user = user;
+    notifyListeners();
+  }
 }

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/driver_provider.dart';
 import '../../services/ride_service.dart';
-import '../../models/vehicle.dart';
+import '../../services/location_service.dart';
+import '../../services/vehicle_service.dart';
+import '../../widgets/app_drawer.dart';
 
 class DriverPostRideRouteTimeScreen extends StatefulWidget {
   const DriverPostRideRouteTimeScreen({super.key});
@@ -19,7 +21,7 @@ class _DriverPostRideRouteTimeScreenState
   bool _isAMStart = true;
   bool _isAMEnd = true;
   int _totalSeats = 4;
-  Vehicle? _selectedVehicle;
+  bool _isPosting = false;
 
   Future<void> _selectStartTime() async {
     final TimeOfDay? picked = await showTimePicker(
@@ -62,21 +64,98 @@ class _DriverPostRideRouteTimeScreenState
       return;
     }
 
+    // Calculate hour correctly for AM/PM
+    int hour = _startTime!.hour;
+    if (!_isAMStart && hour != 12) {
+      hour = hour + 12;
+    } else if (_isAMStart && hour == 12) {
+      hour = 0;
+    }
+
     final now = DateTime.now();
-    final departureTime = DateTime(
+    var departureTime = DateTime(
       now.year,
       now.month,
       now.day,
-      _isAMStart ? _startTime!.hour : _startTime!.hour + 12,
+      hour,
       _startTime!.minute,
     );
 
+    // If departure time is in the past, add one day
+    if (departureTime.isBefore(now)) {
+      departureTime = departureTime.add(const Duration(days: 1));
+    }
+
+    setState(() {
+      _isPosting = true;
+    });
+
     try {
-      // TODO: Get vehicle ID from user's vehicles
+      // Get user's active vehicles
+      final vehicles = await VehicleService.getMyVehicles();
+      final activeVehicles = vehicles.where((v) => v.active).toList();
+
+      if (activeVehicles.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No active vehicles found. Please add a vehicle first.',
+              ),
+            ),
+          );
+        }
+        setState(() {
+          _isPosting = false;
+        });
+        return;
+      }
+
+      // Use the first active vehicle
+      final vehicle = activeVehicles.first;
+
+      // Create locations if they don't have IDs (e.g., selected from map)
+      var pickupLocation = driverProvider.pickupLocation!;
+      if (pickupLocation.id == null) {
+        pickupLocation = await LocationService.createLocation(
+          label: pickupLocation.label,
+          address: pickupLocation.address,
+          latitude: pickupLocation.latitude,
+          longitude: pickupLocation.longitude,
+        );
+      }
+
+      var destinationLocation = driverProvider.destinationLocation!;
+      if (destinationLocation.id == null) {
+        destinationLocation = await LocationService.createLocation(
+          label: destinationLocation.label,
+          address: destinationLocation.address,
+          latitude: destinationLocation.latitude,
+          longitude: destinationLocation.longitude,
+        );
+      }
+
+      // Validate total seats doesn't exceed vehicle capacity
+      if (_totalSeats > vehicle.seatCount) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Total seats ($_totalSeats) cannot exceed vehicle capacity (${vehicle.seatCount})',
+              ),
+            ),
+          );
+        }
+        setState(() {
+          _isPosting = false;
+        });
+        return;
+      }
+
       await RideService.createRide(
-        vehicleId: 1, // Should get from user's vehicles
-        pickupLocationId: driverProvider.pickupLocation!.id,
-        destinationLocationId: driverProvider.destinationLocation!.id,
+        vehicleId: vehicle.id,
+        pickupLocationId: pickupLocation.id!,
+        destinationLocationId: destinationLocation.id!,
         departureTime: departureTime,
         totalSeats: _totalSeats,
       );
@@ -86,9 +165,18 @@ class _DriverPostRideRouteTimeScreenState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString().replaceAll('Exception: ', '')),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPosting = false;
+        });
       }
     }
   }
@@ -100,6 +188,8 @@ class _DriverPostRideRouteTimeScreenState
     final destination = driverProvider.destinationLocation;
 
     return Scaffold(
+      appBar: AppBar(title: const Text('Post Ride')),
+      drawer: AppDrawer(),
       body: Stack(
         children: [
           Container(
@@ -331,7 +421,7 @@ class _DriverPostRideRouteTimeScreenState
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
-                    onPressed: _postRide,
+                    onPressed: _isPosting ? null : _postRide,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
@@ -340,13 +430,24 @@ class _DriverPostRideRouteTimeScreenState
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text(
-                      'Post Ride',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    child: _isPosting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Text(
+                            'Post Ride',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ],
               ),
