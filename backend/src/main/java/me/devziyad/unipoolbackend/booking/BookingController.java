@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.AuthService;
 import me.devziyad.unipoolbackend.booking.dto.BookingResponse;
 import me.devziyad.unipoolbackend.booking.dto.CreateBookingRequest;
+import me.devziyad.unipoolbackend.ride.dto.RideResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +23,7 @@ public class BookingController {
     private final AuthService authService;
 
     @PostMapping
-    public ResponseEntity<@NonNull BookingResponse> create(@Valid @RequestBody CreateBookingRequest request) {
+    public ResponseEntity<@NonNull RideResponse> create(@Valid @RequestBody CreateBookingRequest request) {
         Long riderId = authService.getCurrentUser().getId();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(bookingService.createBooking(request, riderId));

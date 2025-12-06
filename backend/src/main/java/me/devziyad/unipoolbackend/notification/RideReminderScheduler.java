@@ -35,8 +35,8 @@ public class RideReminderScheduler {
         // Find rides starting in the next 10 minutes
         List<Ride> upcomingRides = rideRepository.findAll().stream()
                 .filter(ride -> ride.getStatus() == RideStatus.POSTED)
-                .filter(ride -> ride.getDepartureTime().isAfter(now))
-                .filter(ride -> ride.getDepartureTime().isBefore(tenMinutesFromNow))
+                .filter(ride -> ride.getDepartureTimeStart().isAfter(now))
+                .filter(ride -> ride.getDepartureTimeStart().isBefore(tenMinutesFromNow))
                 .toList();
 
         for (Ride ride : upcomingRides) {

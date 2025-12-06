@@ -132,7 +132,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     public PeakTimesResponse getPeakTimes() {
         Map<Integer, Long> hourCounts = rideRepository.findAll().stream()
-                .map(r -> r.getDepartureTime().getHour())
+                .map(r -> r.getDepartureTimeStart().getHour())
                 .collect(Collectors.groupingBy(h -> h, Collectors.counting()));
 
         List<PeakTime> peakTimes = hourCounts.entrySet().stream()

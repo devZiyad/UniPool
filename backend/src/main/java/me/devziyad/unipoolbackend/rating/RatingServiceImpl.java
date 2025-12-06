@@ -11,6 +11,7 @@ import me.devziyad.unipoolbackend.rating.dto.CreateRatingRequest;
 import me.devziyad.unipoolbackend.rating.dto.RatingResponse;
 import me.devziyad.unipoolbackend.user.User;
 import me.devziyad.unipoolbackend.user.UserRepository;
+import me.devziyad.unipoolbackend.util.ContentFilter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class RatingServiceImpl implements RatingService {
     private final RatingRepository ratingRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
+    private final ContentFilter contentFilter;
 
     private RatingResponse toResponse(Rating rating) {
         return RatingResponse.builder()
@@ -71,12 +73,21 @@ public class RatingServiceImpl implements RatingService {
                     throw new BusinessException("You have already rated this booking");
                 });
 
+        // Filter and sanitize comment
+        String comment = request.getComment();
+        if (comment != null && !comment.trim().isEmpty()) {
+            comment = contentFilter.sanitize(comment);
+            if (contentFilter.containsProfanity(comment)) {
+                comment = contentFilter.filterProfanity(comment);
+            }
+        }
+
         Rating rating = Rating.builder()
                 .fromUser(fromUser)
                 .toUser(toUser)
                 .booking(booking)
                 .score(request.getScore())
-                .comment(request.getComment())
+                .comment(comment)
                 .build();
 
         rating = ratingRepository.save(rating);

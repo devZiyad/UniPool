@@ -225,7 +225,9 @@ public class TestUtils {
         request.setVehicleId(vehicleId);
         request.setPickupLocationId(pickupLocationId);
         request.setDestinationLocationId(destinationLocationId);
-        request.setDepartureTime(LocalDateTime.now().plusHours(2));
+        LocalDateTime departureStart = LocalDateTime.now().plusHours(2);
+        request.setDepartureTimeStart(departureStart);
+        request.setDepartureTimeEnd(departureStart.plusMinutes(30));
         request.setTotalSeats(4);
         request.setBasePrice(new BigDecimal("10.00"));
         request.setPricePerSeat(new BigDecimal("2.50"));

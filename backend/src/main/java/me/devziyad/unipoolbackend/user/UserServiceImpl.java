@@ -1,6 +1,9 @@
 package me.devziyad.unipoolbackend.user;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import me.devziyad.unipoolbackend.audit.ActionType;
+import me.devziyad.unipoolbackend.audit.AuditService;
 import me.devziyad.unipoolbackend.booking.BookingRepository;
 import me.devziyad.unipoolbackend.common.Role;
 import me.devziyad.unipoolbackend.exception.ResourceNotFoundException;
@@ -10,6 +13,8 @@ import me.devziyad.unipoolbackend.user.dto.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,6 +28,12 @@ public class UserServiceImpl implements UserService {
     private final PasswordEncoder passwordEncoder;
     private final RideRepository rideRepository;
     private final BookingRepository bookingRepository;
+    private final AuditService auditService;
+
+    private HttpServletRequest getCurrentRequest() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        return attributes != null ? attributes.getRequest() : null;
+    }
 
     private UserResponse toResponse(User user) {
         return UserResponse.builder()
@@ -62,7 +73,12 @@ public class UserServiceImpl implements UserService {
             user.setPhoneNumber(request.getPhoneNumber());
         }
 
-        return toResponse(userRepository.save(user));
+        user = userRepository.save(user);
+
+        // Audit log
+        auditService.logAction(ActionType.PROFILE_UPDATE, id, getCurrentRequest());
+
+        return toResponse(user);
     }
 
     @Override
@@ -77,6 +93,9 @@ public class UserServiceImpl implements UserService {
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
+
+        // Audit log
+        auditService.logAction(ActionType.PASSWORD_CHANGE, id, getCurrentRequest());
     }
 
     @Override

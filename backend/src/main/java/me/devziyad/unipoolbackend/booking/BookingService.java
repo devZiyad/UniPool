@@ -2,11 +2,12 @@ package me.devziyad.unipoolbackend.booking;
 
 import me.devziyad.unipoolbackend.booking.dto.BookingResponse;
 import me.devziyad.unipoolbackend.booking.dto.CreateBookingRequest;
+import me.devziyad.unipoolbackend.ride.dto.RideResponse;
 
 import java.util.List;
 
 public interface BookingService {
-    BookingResponse createBooking(CreateBookingRequest request, Long riderId);
+    RideResponse createBooking(CreateBookingRequest request, Long riderId);
     BookingResponse getBookingById(Long id);
     List<BookingResponse> getBookingsForRider(Long riderId);
     List<BookingResponse> getBookingsForRide(Long rideId, Long driverId);

@@ -11,7 +11,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "rides")
+@Table(name = "rides", indexes = {
+    @Index(name = "idx_ride_driver_id", columnList = "driver_id"),
+    @Index(name = "idx_ride_status", columnList = "status"),
+    @Index(name = "idx_ride_departure_time_start", columnList = "departureTimeStart"),
+    @Index(name = "idx_ride_departure_time_end", columnList = "departureTimeEnd")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -40,9 +45,13 @@ public class Ride {
     private Location destinationLocation;
 
     @Column(nullable = false)
-    private LocalDateTime departureTime;
+    private LocalDateTime departureTimeStart;
 
     @Column(nullable = false)
+    private LocalDateTime departureTimeEnd;
+
+    @Column(nullable = false)
+    @jakarta.validation.constraints.Min(value = 1, message = "Total seats must be at least 1")
     private Integer totalSeats;
 
     @Column(nullable = false)
@@ -74,4 +83,8 @@ public class Ride {
 
     @Column(columnDefinition = "TEXT")
     private String routePolyline;
+
+    @OneToMany(mappedBy = "ride", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @Builder.Default
+    private java.util.List<me.devziyad.unipoolbackend.booking.Booking> bookings = new java.util.ArrayList<>();
 }

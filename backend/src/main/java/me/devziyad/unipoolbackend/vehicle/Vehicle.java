@@ -7,7 +7,10 @@ import me.devziyad.unipoolbackend.user.User;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "vehicles")
+@Table(name = "vehicles", indexes = {
+    @Index(name = "idx_vehicle_plate_number", columnList = "plateNumber"),
+    @Index(name = "idx_vehicle_owner_id", columnList = "owner_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -19,22 +22,23 @@ public class Vehicle {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String make;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String model;
 
+    @Column(length = 100)
     private String color;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 50)
     private String plateNumber;
 
     @Column(nullable = false)
     private Integer seatCount;
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "owner_id")
+    @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
     @Column(nullable = false)

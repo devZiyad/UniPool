@@ -18,7 +18,19 @@ import me.devziyad.unipoolbackend.ride.dto.RideResponse;
 import me.devziyad.unipoolbackend.common.RideStatus;
 import me.devziyad.unipoolbackend.user.UserService;
 import me.devziyad.unipoolbackend.user.dto.UserResponse;
+import me.devziyad.unipoolbackend.rating.RatingRepository;
+import me.devziyad.unipoolbackend.notification.NotificationRepository;
+import me.devziyad.unipoolbackend.tracking.GpsTrackingRepository;
+import me.devziyad.unipoolbackend.route.RouteRepository;
+import me.devziyad.unipoolbackend.location.LocationRepository;
+import me.devziyad.unipoolbackend.vehicle.VehicleRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import me.devziyad.unipoolbackend.audit.ActionType;
+import me.devziyad.unipoolbackend.audit.AuditService;
+import me.devziyad.unipoolbackend.user.UserRepository;
+import me.devziyad.unipoolbackend.user.UserSettingsRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,6 +50,15 @@ public class AdminController {
     private final BookingRepository bookingRepository;
     private final PaymentService paymentService;
     private final PaymentRepository paymentRepository;
+    private final RatingRepository ratingRepository;
+    private final NotificationRepository notificationRepository;
+    private final GpsTrackingRepository gpsTrackingRepository;
+    private final RouteRepository routeRepository;
+    private final LocationRepository locationRepository;
+    private final VehicleRepository vehicleRepository;
+    private final UserRepository userRepository;
+    private final UserSettingsRepository userSettingsRepository;
+    private final AuditService auditService;
 
     private void checkAdmin() {
         if (authService.getCurrentUser().getRole() != Role.ADMIN) {
@@ -58,9 +79,18 @@ public class AdminController {
     }
 
     @PutMapping("/users/{id}/enable")
-    public ResponseEntity<@NonNull UserResponse> enableUser(@PathVariable Long id, @RequestBody EnableUserRequest request) {
+    public ResponseEntity<@NonNull UserResponse> enableUser(@PathVariable Long id, @RequestBody EnableUserRequest request, HttpServletRequest httpRequest) {
         checkAdmin();
-        return ResponseEntity.ok(userService.enableUser(id, request.getEnabled()));
+        Long adminId = authService.getCurrentUser().getId();
+        UserResponse response = userService.enableUser(id, request.getEnabled());
+        
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("targetUserId", id);
+        metadata.put("enabled", request.getEnabled());
+        auditService.logAction(request.getEnabled() ? ActionType.USER_ENABLE : ActionType.USER_DISABLE, adminId, metadata, httpRequest);
+        
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/rides")
@@ -79,7 +109,7 @@ public class AdminController {
     }
 
     @PutMapping("/rides/{id}/complete")
-    public ResponseEntity<@NonNull Void> forceCompleteRide(@PathVariable Long id) {
+    public ResponseEntity<Void> forceCompleteRide(@PathVariable Long id) {
         checkAdmin();
         Ride ride = rideRepository.findById(id)
                 .orElseThrow(() -> new me.devziyad.unipoolbackend.exception.ResourceNotFoundException("Ride not found"));
@@ -116,6 +146,32 @@ public class AdminController {
     public ResponseEntity<@NonNull PaymentResponse> getPayment(@PathVariable Long id) {
         checkAdmin();
         return ResponseEntity.ok(paymentService.getPaymentById(id));
+    }
+
+    @PostMapping("/database/reset")
+    @Transactional
+    public ResponseEntity<Void> resetDatabase(HttpServletRequest httpRequest) {
+        checkAdmin();
+        Long adminId = authService.getCurrentUser().getId();
+        
+        // Delete in order to respect foreign key constraints
+        // Delete dependent entities first
+        gpsTrackingRepository.deleteAll();
+        paymentRepository.deleteAll();
+        bookingRepository.deleteAll();
+        ratingRepository.deleteAll();
+        notificationRepository.deleteAll();
+        routeRepository.deleteAll();
+        rideRepository.deleteAll();
+        vehicleRepository.deleteAll();
+        locationRepository.deleteAll();
+        userSettingsRepository.deleteAll();
+        userRepository.deleteAll();
+        
+        // Audit log
+        auditService.logAction(ActionType.DATABASE_RESET, adminId, httpRequest);
+        
+        return ResponseEntity.ok().build();
     }
 
     @lombok.Data

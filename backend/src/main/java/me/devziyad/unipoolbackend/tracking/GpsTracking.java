@@ -7,7 +7,10 @@ import me.devziyad.unipoolbackend.ride.Ride;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "gps_tracking")
+@Table(name = "gps_tracking", indexes = {
+    @Index(name = "idx_gps_ride_id", columnList = "ride_id"),
+    @Index(name = "idx_gps_active", columnList = "isActive")
+})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,9 +27,13 @@ public class GpsTracking {
     private Ride ride;
 
     @Column(nullable = false)
+    @jakarta.validation.constraints.DecimalMin(value = "-90.0", message = "Latitude must be between -90 and 90")
+    @jakarta.validation.constraints.DecimalMax(value = "90.0", message = "Latitude must be between -90 and 90")
     private Double latitude;
 
     @Column(nullable = false)
+    @jakarta.validation.constraints.DecimalMin(value = "-180.0", message = "Longitude must be between -180 and 180")
+    @jakarta.validation.constraints.DecimalMax(value = "180.0", message = "Longitude must be between -180 and 180")
     private Double longitude;
 
     @Column(nullable = false)

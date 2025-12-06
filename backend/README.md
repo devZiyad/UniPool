@@ -1,194 +1,100 @@
 # UniPool Backend
 
+A comprehensive RESTful API service for university ride-sharing, enabling students to post rides, search for available rides, book seats, and manage the complete lifecycle of shared transportation within a university community.
+
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Installation](#installation)
+- [Database Setup](#database-setup)
+- [Running the Backend](#running-the-backend)
+- [Environment Variables](#environment-variables)
+- [Build Instructions](#build-instructions)
+- [Testing](#testing)
+- [API Authentication](#api-authentication)
+- [Contribution](#contribution)
+- [License](#license)
+- [Quick Start Examples](#quick-start-examples)
+
 ## Project Overview
 
-UniPool Backend is a comprehensive RESTful API service designed to facilitate ride-sharing among university students. The system enables students to post available rides, search for rides, book seats, and manage the complete lifecycle of shared transportation within a university community.
+UniPool Backend is a production-ready Spring Boot application that provides a secure, scalable foundation for a university ride-sharing platform. The system manages user authentication, ride postings, booking management, payment processing, GPS tracking, ratings, notifications, and comprehensive administrative tools.
 
-The backend is responsible for managing user authentication and authorization, ride postings and matching, booking management, payment processing simulation, GPS tracking, rating systems, and administrative analytics. It provides a secure, scalable foundation for a university ride-sharing platform.
-
-The architecture follows a layered approach with clear separation between controllers, services, repositories, and data models. The system uses Spring Boot's dependency injection and follows RESTful API design principles to ensure maintainability and extensibility.
+The backend follows RESTful API design principles with clear separation between controllers, services, repositories, and data models. It implements JWT-based authentication, role-based access control, content filtering, and comprehensive audit logging.
 
 ## Features
 
-### Authentication and Authorization
+### Core Functionality
 
-- JWT-based authentication system
-- User registration and login endpoints
+- **User Management**: Registration, authentication, profile management, role-based access control
+- **Vehicle Management**: Vehicle registration, activation, and ownership tracking
+- **Ride Management**: Post rides, search with advanced filters, status tracking, cancellation
+- **Booking System**: Seat booking, status management, cancellation, cost calculation
+- **Payment Processing**: Multiple payment methods (card, cash, wallet), platform fee calculation, wallet management
+- **Rating System**: Post-ride ratings with comments, average rating calculation
+- **GPS Tracking**: Real-time location updates for active rides, tracking start/stop
+- **Location Management**: Location creation, favorites, distance calculation, reverse geocoding
+- **Notifications**: In-app notifications, unread tracking, automated ride reminders
+- **Analytics**: Driver earnings, rider spending, ride statistics, popular destinations, peak times
+- **Content Moderation**: Profanity filtering, XSS protection, user reporting, admin moderation
+- **Administrative Tools**: User management, ride/booking oversight, database management
+
+### Security Features
+
+- JWT-based authentication with 24-hour token expiration
+- BCrypt password hashing
+- Rate limiting (100 req/min general, 5 req/min for auth endpoints)
+- Content filtering and sanitization
 - Role-based access control (RIDER, DRIVER, BOTH, ADMIN)
-- Secure password hashing using BCrypt
-- Token expiration and refresh handling
-- Protected endpoints with Spring Security
+- Audit logging for administrative actions
 
-### User Management
+## Architecture
 
-- User profile creation and management
-- University ID validation
-- User settings configuration
-- Password change functionality
-- Role management
-- User statistics and ratings tracking
-
-### Vehicle Management
-
-- Vehicle registration and ownership tracking
-- Vehicle activation and deactivation
-- Multiple vehicle support per user
-- Vehicle information retrieval
-
-### Ride Management
-
-- Ride posting with detailed information
-- Ride search with filtering capabilities
-- Location-based ride matching
-- Ride status updates (POSTED, IN_PROGRESS, COMPLETED, CANCELLED)
-- Available seats tracking
-- Route distance and duration estimation
-- Ride cancellation functionality
-
-### Location Handling and Routing
-
-- Location creation and management
-- Favorite locations support
-- Distance calculation between locations
-- Reverse geocoding functionality
-- Location search integration
-- Route polyline storage
-
-### GPS Tracking
-
-- Real-time location updates for active rides
-- GPS tracking start and stop functionality
-- Location history tracking
-- Active ride monitoring
-
-### Booking System
-
-- Seat booking for available rides
-- Booking status management (PENDING, CONFIRMED, CANCELLED)
-- Booking cancellation
-- Booking history tracking
-- Cost calculation per booking
-
-### Rating System
-
-- Post-ride rating submission
-- Driver and rider rating separation
-- Average rating calculation
-- Rating history retrieval
-- Comment support for ratings
-
-### Notification System
-
-- In-app notification generation
-- Notification types (BOOKING, RIDE, PAYMENT, RATING, SYSTEM)
-- Unread notification tracking
-- Notification marking as read
-- Bulk read operations
-- Automated ride reminder scheduling
-
-### Payment Simulation Module
-
-- Payment initiation and processing
-- Multiple payment methods (CARD_SIMULATED, CASH, WALLET)
-- Wallet balance management
-- Wallet top-up functionality
-- Platform fee calculation
-- Driver earnings tracking
-- Payment status management
-- Transaction reference generation
-
-### Analytics and Administrative Tools
-
-- Driver earnings analytics
-- Rider spending analytics
-- Ride statistics
-- Booking statistics
-- Popular destinations tracking
-- Peak times analysis
-- Dashboard statistics for administrators
-- User management tools
-- Ride and booking oversight
-
-### Health Check Endpoint
-
-- System health monitoring
-- Version information
-- Timestamp tracking
-- Public accessibility
-
-## Technology Stack
-
-- **Spring Boot 4.0.0**: Main application framework
-- **Java 17**: Programming language
-- **Spring Data JPA**: Data persistence abstraction
-- **Hibernate**: JPA implementation and ORM
-- **H2 Database**: In-memory database for development and testing
-- **Maven**: Build automation and dependency management
-- **Spring Security**: Authentication and authorization framework
-- **JWT (JSON Web Tokens)**: Token-based authentication using JJWT 0.13.0
-- **Lombok**: Code generation for reducing boilerplate
-- **Jakarta Validation**: Bean validation framework
-- **Spring WebFlux**: Reactive programming support
-- **JUnit 5**: Testing framework
-- **MockMvc**: Spring MVC testing support
-
-## Project Structure
+The application follows a layered architecture:
 
 ```
-src/
-├── main/
-│   ├── java/
-│   │   └── me/devziyad/unipoolbackend/
-│   │       ├── admin/              # Administrative endpoints and functionality
-│   │       ├── analytics/          # Analytics service and DTOs
-│   │       ├── auth/               # Authentication and authorization
-│   │       ├── booking/            # Booking management system
-│   │       ├── common/             # Shared enums (Role, Status, etc.)
-│   │       ├── controller/         # Health check endpoint
-│   │       ├── exception/          # Custom exception classes and global handler
-│   │       ├── location/           # Location management and geocoding
-│   │       ├── notification/       # Notification service and scheduling
-│   │       ├── payment/            # Payment processing simulation
-│   │       ├── rating/             # Rating system implementation
-│   │       ├── ride/               # Ride posting and management
-│   │       ├── route/               # Route information and stops
-│   │       ├── security/           # JWT filter, service, and security configuration
-│   │       ├── tracking/           # GPS tracking functionality
-│   │       ├── user/               # User management and settings
-│   │       ├── util/               # Utility classes (distance, routing, geocoding)
-│   │       ├── vehicle/            # Vehicle management
-│   │       └── UniPoolBackendApplication.java
-│   └── resources/
-│       └── application.properties  # Application configuration
-├── test/
-│   └── java/
-│       └── me/devziyad/unipoolbackend/
-│           └── controller/         # Integration tests for all controllers
-└── docs/
-    └── API_DOCUMENTATION.md        # Complete API reference documentation
+┌─────────────────────────────────────┐
+│      REST Controllers (API Layer)   │
+├─────────────────────────────────────┤
+│      Service Layer (Business Logic)  │
+├─────────────────────────────────────┤
+│      Repository Layer (Data Access)  │
+├─────────────────────────────────────┤
+│      Entity Models (Domain Layer)    │
+└─────────────────────────────────────┘
 ```
 
-### Directory Descriptions
+### Key Components
 
-- **controller**: REST controllers handling HTTP requests and responses
-- **service**: Service interfaces defining business logic contracts
-- **service.impl**: Service implementations containing business logic
-- **repository**: Spring Data JPA repositories for database operations
-- **model**: Entity classes representing database tables (User, Ride, Booking, etc.)
-- **common**: Enum classes for status types, roles, and payment methods
-- **dto**: Data Transfer Objects for request and response payloads
-- **security**: JWT authentication filter, JWT service, and Spring Security configuration
-- **exception**: Custom exception classes and global exception handler
-- **util**: Utility classes for distance calculations, routing, and geocoding
-- **tests**: Comprehensive integration tests using MockMvc and JUnit 5
+- **Controllers**: Handle HTTP requests and responses, validate input
+- **Services**: Implement business logic, orchestrate operations
+- **Repositories**: Data access layer using Spring Data JPA
+- **Security**: JWT authentication filter, rate limiting filter, security configuration
+- **Utilities**: Distance calculation, routing, geocoding, content filtering
 
-## Installation and Setup
+## Tech Stack
 
-### Requirements
+- **Framework**: Spring Boot 4.0.0
+- **Language**: Java 17
+- **Build Tool**: Maven
+- **Database**: H2 Database (file-based for development)
+- **ORM**: Spring Data JPA with Hibernate
+- **Security**: Spring Security with JWT (JJWT 0.13.0)
+- **Validation**: Jakarta Bean Validation
+- **Rate Limiting**: Bucket4j 8.10.1
+- **Testing**: JUnit 5, MockMvc
+- **Utilities**: Lombok, Jackson (JSR310 support)
+
+## Installation
+
+### Prerequisites
 
 - Java 17 or higher
 - Maven 3.6 or higher
-- Git (for cloning the repository)
+- Git
 
 ### Clone the Repository
 
@@ -211,41 +117,49 @@ Or using Maven directly:
 mvn clean install
 ```
 
-### Configuration
+## Database Setup
 
-The application configuration is located in `src/main/resources/application.properties`. Key configuration options include:
+The application uses H2 Database configured as a file-based database. The database file is automatically created at `./data/unipool.mv.db` on first run.
 
-- **Database**: H2 in-memory database (configured by default)
-- **Server Port**: 8080 (default)
-- **JWT Secret**: Configured in application.properties
-- **JWT Expiration**: 86400000 milliseconds (24 hours)
-- **CORS**: Configured to allow all origins (adjust for production)
-- **Platform Fee**: 10% (configurable)
+### H2 Console
 
-To modify these settings, edit the `application.properties` file before running the application.
+Access the H2 database console at:
 
-### Run the Application
-
-Using Maven wrapper:
-
-```bash
-./mvnw spring-boot:run
+```
+http://localhost:8080/h2-console
 ```
 
-Or using Maven directly:
+**Connection Settings:**
+- JDBC URL: `jdbc:h2:file:./data/unipool`
+- Username: `sa`
+- Password: (empty)
 
-```bash
-mvn spring-boot:run
-```
+### Database Schema
 
-Or run the main class `UniPoolBackendApplication` from your IDE.
+The schema is automatically created/updated by Hibernate based on entity classes. No manual schema setup is required.
 
-## Running the Application
+### Default Admin Account
+
+A default admin account is automatically created on application startup:
+
+- **Email**: `admin@unipool.edu`
+- **Password**: `admin123`
+- **University ID**: `ADMIN001`
+
+**Note**: Change the default admin password immediately in production environments.
+
+## Running the Backend
 
 ### Using Maven Wrapper
 
 ```bash
 ./mvnw spring-boot:run
+```
+
+### Using Maven
+
+```bash
+mvn spring-boot:run
 ```
 
 ### Using IDE
@@ -254,9 +168,9 @@ Or run the main class `UniPoolBackendApplication` from your IDE.
 2. Locate `UniPoolBackendApplication.java`
 3. Run the main method
 
-### Expected Startup Logs
+### Expected Startup
 
-Upon successful startup, you should see logs indicating:
+Upon successful startup, you should see:
 
 - Spring Boot application starting
 - H2 database initialization
@@ -266,42 +180,112 @@ Upon successful startup, you should see logs indicating:
 
 ### Default Port
 
-The application runs on port **8080** by default. The base URL is:
+The application runs on port **8080** by default.
 
+**Base URL**: `http://localhost:8080`
+
+**API Base URL**: `http://localhost:8080/api`
+
+## Environment Variables
+
+The application configuration is located in `src/main/resources/application.properties`. Key configuration options:
+
+### Database Configuration
+
+```properties
+spring.datasource.url=jdbc:h2:file:./data/unipool
+spring.datasource.username=sa
+spring.datasource.password=
+spring.h2.console.enabled=true
+spring.h2.console.path=/h2-console
+spring.jpa.hibernate.ddl-auto=update
 ```
-http://localhost:8080
+
+### JWT Configuration
+
+```properties
+jwt.secret=y9OkM2UnHNKLK0pc4HuQ/BuxOsCxliwstKvJxJAh5d4=
+jwt.expiration=86400000  # 24 hours in milliseconds
 ```
 
-API endpoints are available at:
+### Server Configuration
 
-```
-http://localhost:8080/api
-```
-
-### H2 Console
-
-The H2 database console is available at:
-
-```
-http://localhost:8080/h2-console
+```properties
+server.port=8080
 ```
 
-Default connection settings:
-- JDBC URL: `jdbc:h2:mem:unipool`
-- Username: `sa`
-- Password: (empty)
+### CORS Configuration
 
-## Running Tests
+```properties
+cors.allowed-origins=*
+```
+
+**Note**: Adjust CORS settings for production to restrict origins.
+
+### Payment Configuration
+
+```properties
+payment.platform-fee-percentage=10  # 10% platform fee
+```
+
+### GPS Tracking Configuration
+
+```properties
+gps.tracking.update-interval-seconds=30
+```
+
+### Application Version
+
+```properties
+app.version=0.0.1-SNAPSHOT
+```
+
+### Default Admin Account
+
+```properties
+admin.default.email=admin@unipool.edu
+admin.default.password=admin123
+admin.default.universityId=ADMIN001
+admin.default.fullName=System Administrator
+```
+
+## Build Instructions
+
+### Build JAR File
+
+```bash
+./mvnw clean package
+```
+
+The JAR file will be created in `target/UniPoolBackend-0.0.1-SNAPSHOT.jar`
+
+### Run JAR File
+
+```bash
+java -jar target/UniPoolBackend-0.0.1-SNAPSHOT.jar
+```
+
+### Build with Tests
+
+```bash
+./mvnw clean install
+```
+
+### Skip Tests During Build
+
+```bash
+./mvnw clean install -DskipTests
+```
+
+## Testing
 
 ### Run All Tests
-
-Using Maven wrapper:
 
 ```bash
 ./mvnw test
 ```
 
-Or using Maven directly:
+Or:
 
 ```bash
 mvn test
@@ -309,66 +293,91 @@ mvn test
 
 ### Test Suite Structure
 
-The test suite is located in `src/test/java/me/devziyad/unipoolbackend/controller/` and includes:
+Integration tests are located in `src/test/java/me/devziyad/unipoolbackend/`:
 
-- **AuthControllerTest**: Authentication and registration tests
-- **UserControllerTest**: User management endpoint tests
-- **VehicleControllerTest**: Vehicle CRUD operation tests
-- **RideControllerTest**: Ride posting and search tests
-- **BookingControllerTest**: Booking creation and management tests
-- **PaymentControllerTest**: Payment processing tests
-- **RatingControllerTest**: Rating submission tests
-- **NotificationControllerTest**: Notification retrieval tests
-- **LocationControllerTest**: Location management tests
-- **GpsTrackingControllerTest**: GPS tracking functionality tests
-- **AnalyticsControllerTest**: Analytics endpoint tests
-- **AdminControllerTest**: Administrative endpoint tests
-- **HealthControllerTest**: Health check endpoint tests
+- `AuthControllerIT`: Authentication and registration tests
+- `UserControllerIT`: User management endpoint tests
+- `BookingControllerIT`: Booking creation and management tests
+- `RideControllerIT`: Ride posting and search tests
+- `PaymentControllerIT`: Payment processing tests
+- `AdminControllerIT`: Administrative endpoint tests
+- `HealthControllerIT`: Health check endpoint tests
 
 ### Test Configuration
 
 Tests use:
-- **MockMvc**: For simulating HTTP requests and validating responses
-- **ObjectMapper**: For JSON serialization and deserialization
-- **JWT Service**: For generating test authentication tokens
+- **MockMvc**: For simulating HTTP requests
 - **H2 In-Memory Database**: For isolated test data
-- **@AutoConfigureMockMvc**: For automatic MockMvc configuration
+- **JWT Service**: For generating test authentication tokens
 - **@Transactional**: For test data isolation
 
-### Interpreting Test Results
+## API Authentication
 
-- All tests should pass for a successful build
-- Test output shows individual test execution status
-- Failed tests display error messages and stack traces
-- Test coverage includes both positive and negative test cases
+### JWT Authentication
 
-## API Documentation
+The API uses JSON Web Tokens (JWT) for authentication. Most endpoints require a valid JWT token in the Authorization header.
 
-Complete API documentation is available in the project repository at:
+### Getting a Token
 
-**`docs/API_DOCUMENTATION.md`**
+**Register a new user:**
 
-This documentation includes:
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "universityId": "S123456",
+    "email": "user@university.edu",
+    "password": "SecurePass123!",
+    "fullName": "John Doe",
+    "phoneNumber": "+1234567890",
+    "role": "RIDER"
+  }'
+```
 
-- All available endpoints with request and response examples
-- Authentication requirements for each endpoint
-- Request and response DTO structures
-- Error codes and error response formats
-- Status codes and their meanings
-- Frontend integration guidelines
-- Data model descriptions
+**Login:**
 
-### Using the API Documentation
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@university.edu",
+    "password": "SecurePass123!"
+  }'
+```
 
-1. Open `docs/API_DOCUMENTATION.md` in a Markdown viewer
-2. Navigate to the relevant endpoint section
-3. Review request examples and required fields
-4. Implement API calls in your frontend application
-5. Handle responses according to the documented structure
+Both endpoints return a JWT token in the response:
 
-The API documentation is designed to be comprehensive and self-contained, providing all necessary information for frontend developers to integrate with the backend service.
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": { ... }
+}
+```
 
-## Contributing
+### Using the Token
+
+Include the token in the `Authorization` header for protected endpoints:
+
+```bash
+curl -X GET http://localhost:8080/api/users/me \
+  -H "Authorization: Bearer <your-token>"
+```
+
+### Token Expiration
+
+Tokens expire after 24 hours (86400000 milliseconds). When a token expires, you'll receive a `401 Unauthorized` response. Re-authenticate to get a new token.
+
+### Public Endpoints
+
+The following endpoints do not require authentication:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/health`
+
+All other endpoints require a valid JWT token.
+
+## Contribution
 
 ### Guidelines
 
@@ -396,9 +405,9 @@ Follow conventional commit message format:
 [optional footer]
 ```
 
-Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
+**Types**: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
 
-Example:
+**Example:**
 
 ```
 feat: Add user settings endpoint
@@ -414,11 +423,109 @@ and ride preferences.
 - Check for linter warnings and resolve them
 - Maintain null-safety annotations where applicable
 
+### Pull Request Process
+
+1. Create a feature branch
+2. Make your changes
+3. Write/update tests
+4. Update documentation
+5. Ensure all tests pass
+6. Submit a pull request with a clear description
+
 ## License
 
 This project is developed for academic purposes. License information will be added as needed.
 
-## Contact
+## Quick Start Examples
 
-For academic inquiries or collaboration opportunities, please contact the development team through the appropriate university channels.
+### 1. Register and Get Token
 
+```bash
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "universityId": "S123456",
+    "email": "john.doe@university.edu",
+    "password": "SecurePass123!",
+    "fullName": "John Doe",
+    "role": "RIDER"
+  }'
+```
+
+### 2. Get Current User Profile
+
+```bash
+TOKEN="<your-token>"
+curl -X GET http://localhost:8080/api/users/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### 3. Create a Vehicle (Driver)
+
+```bash
+curl -X POST http://localhost:8080/api/vehicles \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "make": "Toyota",
+    "model": "Camry",
+    "color": "Blue",
+    "plateNumber": "ABC-1234",
+    "seatCount": 4
+  }'
+```
+
+### 4. Create a Ride
+
+```bash
+curl -X POST http://localhost:8080/api/rides \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vehicleId": 1,
+    "pickupLocationId": 1,
+    "destinationLocationId": 2,
+    "departureTimeStart": "2024-12-15T14:30:00",
+    "departureTimeEnd": "2024-12-15T14:45:00",
+    "totalSeats": 4,
+    "pricePerSeat": 5.00
+  }'
+```
+
+### 5. Search for Rides
+
+```bash
+curl -X POST http://localhost:8080/api/rides/search \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "pickupLocationId": 1,
+    "destinationLocationId": 2,
+    "departureTimeFrom": "2024-12-15T00:00:00",
+    "minAvailableSeats": 1
+  }'
+```
+
+### 6. Book a Ride
+
+```bash
+curl -X POST http://localhost:8080/api/bookings \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rideId": 1,
+    "seats": 2,
+    "pickupLocationId": 1,
+    "dropoffLocationId": 2,
+    "pickupTimeStart": "2024-12-15T14:30:00",
+    "pickupTimeEnd": "2024-12-15T14:45:00"
+  }'
+```
+
+### 7. Check Health
+
+```bash
+curl -X GET http://localhost:8080/api/health
+```
+
+For complete API documentation with all endpoints, request/response examples, and validation rules, see [API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md).

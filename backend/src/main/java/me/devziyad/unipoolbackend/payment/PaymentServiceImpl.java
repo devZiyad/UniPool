@@ -1,6 +1,9 @@
 package me.devziyad.unipoolbackend.payment;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import me.devziyad.unipoolbackend.audit.ActionType;
+import me.devziyad.unipoolbackend.audit.AuditService;
 import me.devziyad.unipoolbackend.booking.Booking;
 import me.devziyad.unipoolbackend.booking.BookingRepository;
 import me.devziyad.unipoolbackend.common.PaymentMethod;
@@ -16,6 +19,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -33,9 +38,15 @@ public class PaymentServiceImpl implements PaymentService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final AuditService auditService;
 
     @Value("${payment.platform-fee-percentage:10}")
     private double platformFeePercentage;
+
+    private HttpServletRequest getCurrentRequest() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        return attributes != null ? attributes.getRequest() : null;
+    }
 
     private PaymentResponse toResponse(Payment payment) {
         return PaymentResponse.builder()
@@ -112,6 +123,14 @@ public class PaymentServiceImpl implements PaymentService {
 
         payment = paymentRepository.save(payment);
 
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("paymentId", payment.getId());
+        metadata.put("bookingId", booking.getId());
+        metadata.put("amount", amount.toString());
+        metadata.put("method", request.getMethod().name());
+        auditService.logAction(ActionType.PAYMENT_INITIATE, payerId, metadata, getCurrentRequest());
+
         // Simulate async payment processing
         if (request.getMethod() != PaymentMethod.CASH) {
             processPaymentAsync(payment.getId());
@@ -120,6 +139,10 @@ public class PaymentServiceImpl implements PaymentService {
             payment.setStatus(PaymentStatus.SETTLED);
             payment.setUpdatedAt(LocalDateTime.now());
             payment = paymentRepository.save(payment);
+
+            // Audit log payment completion
+            metadata.put("status", PaymentStatus.SETTLED.name());
+            auditService.logAction(ActionType.PAYMENT_COMPLETE, payerId, metadata, getCurrentRequest());
 
             // Update driver wallet
             driver.setWalletBalance(driver.getWalletBalance().add(driverEarnings));
@@ -178,6 +201,13 @@ public class PaymentServiceImpl implements PaymentService {
         User driver = payment.getDriver();
         driver.setWalletBalance(driver.getWalletBalance().add(payment.getDriverEarnings()));
         userRepository.save(driver);
+
+        // Audit log payment completion
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("paymentId", payment.getId());
+        metadata.put("bookingId", payment.getBooking().getId());
+        metadata.put("status", PaymentStatus.SETTLED.name());
+        auditService.logAction(ActionType.PAYMENT_COMPLETE, payment.getPayer().getId(), metadata, getCurrentRequest());
 
         // Create notification
         notificationService.createNotification(

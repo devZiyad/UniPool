@@ -44,6 +44,14 @@ public class LocationServiceImpl implements LocationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
+        // Validate coordinates
+        if (request.getLatitude() < -90 || request.getLatitude() > 90) {
+            throw new me.devziyad.unipoolbackend.exception.BusinessException("Latitude must be between -90 and 90");
+        }
+        if (request.getLongitude() < -180 || request.getLongitude() > 180) {
+            throw new me.devziyad.unipoolbackend.exception.BusinessException("Longitude must be between -180 and 180");
+        }
+
         Location location = Location.builder()
                 .label(request.getLabel())
                 .address(request.getAddress())
@@ -91,8 +99,18 @@ public class LocationServiceImpl implements LocationService {
 
         if (request.getLabel() != null) location.setLabel(request.getLabel());
         if (request.getAddress() != null) location.setAddress(request.getAddress());
-        if (request.getLatitude() != null) location.setLatitude(request.getLatitude());
-        if (request.getLongitude() != null) location.setLongitude(request.getLongitude());
+        if (request.getLatitude() != null) {
+            if (request.getLatitude() < -90 || request.getLatitude() > 90) {
+                throw new me.devziyad.unipoolbackend.exception.BusinessException("Latitude must be between -90 and 90");
+            }
+            location.setLatitude(request.getLatitude());
+        }
+        if (request.getLongitude() != null) {
+            if (request.getLongitude() < -180 || request.getLongitude() > 180) {
+                throw new me.devziyad.unipoolbackend.exception.BusinessException("Longitude must be between -180 and 180");
+            }
+            location.setLongitude(request.getLongitude());
+        }
         if (request.getIsFavorite() != null) location.setIsFavorite(request.getIsFavorite());
 
         return toResponse(locationRepository.save(location));

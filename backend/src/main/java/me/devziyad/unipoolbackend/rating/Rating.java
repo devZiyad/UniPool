@@ -10,6 +10,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "ratings", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"booking_id", "from_user_id"})
+}, indexes = {
+    @Index(name = "idx_rating_from_user_id", columnList = "from_user_id"),
+    @Index(name = "idx_rating_to_user_id", columnList = "to_user_id"),
+    @Index(name = "idx_rating_booking_id", columnList = "booking_id")
 })
 @Getter
 @Setter
@@ -31,10 +35,12 @@ public class Rating {
     private User toUser;
 
     @OneToOne(optional = false)
-    @JoinColumn(name = "booking_id", unique = true)
+    @JoinColumn(name = "booking_id", unique = true, nullable = false)
     private Booking booking;
 
     @Column(nullable = false)
+    @jakarta.validation.constraints.Min(value = 1, message = "Score must be at least 1")
+    @jakarta.validation.constraints.Max(value = 5, message = "Score must be at most 5")
     private Integer score;
 
     @Column(columnDefinition = "TEXT")

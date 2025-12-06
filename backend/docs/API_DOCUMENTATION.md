@@ -120,7 +120,8 @@ Register a new user account.
 - `password` (required): User password
 - `fullName` (required): User's full name
 - `phoneNumber` (optional): Phone number
-- `role` (optional): User role - `RIDER`, `DRIVER`, `BOTH`, or `ADMIN` (default: `RIDER`)
+- `role` (optional): User role - `RIDER`, `DRIVER`, or `BOTH` (default: `RIDER`)
+  - **Note:** `ADMIN` role cannot be assigned during registration. Admin accounts must be created by existing administrators or through system initialization.
 
 **Response:** `201 Created`
 ```json
@@ -146,7 +147,7 @@ Register a new user account.
 
 **Status Codes:**
 - `201 Created` - Registration successful
-- `400 Bad Request` - Validation errors or duplicate email/university ID
+- `400 Bad Request` - Validation errors, duplicate email/university ID, or attempting to register as ADMIN
 
 ---
 
@@ -370,7 +371,8 @@ Update user role.
 ```
 
 **Field Descriptions:**
-- `role` (required): New role - `RIDER`, `DRIVER`, `BOTH`, or `ADMIN`
+- `role` (required): New role - `RIDER`, `DRIVER`, or `BOTH`
+  - **Note:** `ADMIN` role cannot be assigned through this endpoint. Admin accounts must be created by existing administrators or through system initialization.
 
 **Response:** `200 OK`
 ```json
@@ -393,7 +395,7 @@ Update user role.
 
 **Status Codes:**
 - `200 OK` - Role updated successfully
-- `403 Forbidden` - Invalid role value
+- `403 Forbidden` - Invalid role value (including attempts to set ADMIN role)
 
 ---
 
@@ -862,13 +864,14 @@ Create a new ride.
 ```
 
 **Field Descriptions:**
-- `vehicleId` (required): Vehicle ID
+- `vehicleId` (required): Vehicle ID (must belong to the authenticated driver)
 - `pickupLocationId` (required): Pickup location ID
 - `destinationLocationId` (required): Destination location ID
 - `departureTime` (required): Departure date/time (must be in the future)
-- `totalSeats` (required): Total available seats (must be positive)
-- `basePrice` (optional): Base price for the ride
-- `pricePerSeat` (optional): Price per seat
+  - **Note:** Cannot overlap with existing active rides. The system checks if the new ride's time window (departure time + estimated duration) overlaps with any of the driver's existing active rides (excluding CANCELLED and COMPLETED rides).
+- `totalSeats` (required): Total available seats (must be positive and cannot exceed vehicle capacity)
+- `basePrice` (optional): Base price for the ride (defaults to 0.5 per km if not provided)
+- `pricePerSeat` (optional): Price per seat (defaults to basePrice / totalSeats if not provided)
 
 **Response:** `201 Created`
 ```json
@@ -903,6 +906,18 @@ Create a new ride.
   "routePolyline": "encoded_polyline_string"
 }
 ```
+
+**Status Codes:**
+- `201 Created` - Ride created successfully
+- `400 Bad Request` - Validation errors, invalid vehicle, or overlapping departure time
+- `403 Forbidden` - Vehicle does not belong to the authenticated driver
+- `404 Not Found` - Vehicle or location not found
+
+**Error Cases:**
+- **Overlapping Departure Time:** If the new ride's time window overlaps with an existing active ride, the request will be rejected with a 400 Bad Request error and message: "Cannot create ride with overlapping departure time. You have another active ride scheduled during this time period."
+- **Invalid Vehicle:** Vehicle must belong to the authenticated driver and be active
+- **Past Departure Time:** Departure time must be in the future
+- **Exceeded Capacity:** Total seats cannot exceed the vehicle's seat count
 
 ---
 
@@ -1918,6 +1933,34 @@ Get payment by ID.
 
 ---
 
+### POST /api/admin/database/reset
+
+Reset the entire database by deleting all data.
+
+**Authentication:** Required (Admin role)
+
+**Warning:** This operation is irreversible and will delete all data from the database including:
+- All users (except the default admin account will be recreated on next startup)
+- All rides
+- All bookings
+- All payments
+- All ratings
+- All notifications
+- All locations
+- All vehicles
+- All GPS tracking data
+- All routes
+
+**Response:** `200 OK` (empty body)
+
+**Status Codes:**
+- `200 OK` - Database reset successfully
+- `403 Forbidden` - Admin access required
+
+**Note:** After resetting the database, the default admin account (configured in `application.properties`) will be automatically recreated on the next application startup if it doesn't exist.
+
+---
+
 ## Data Models
 
 ### Enums
@@ -1970,7 +2013,7 @@ Get payment by ID.
   "password": "string (required)",
   "fullName": "string (required)",
   "phoneNumber": "string (optional)",
-  "role": "string (optional: RIDER, DRIVER, BOTH, ADMIN)"
+  "role": "string (optional: RIDER, DRIVER, BOTH) - ADMIN role is not allowed during registration"
 }
 ```
 

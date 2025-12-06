@@ -64,7 +64,7 @@ public class AdminControllerIT {
                 pickupLocation.getId(),
                 destinationLocation.getId()
         );
-        rideId = ride.getId();
+        rideId = ride.getRideId();
     }
 
     @Test
@@ -80,7 +80,7 @@ public class AdminControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$").isArray()
-                .jsonPath("$[0].id").exists();
+                .jsonPath("$[0].rideId").exists();
     }
 
     @Test
@@ -105,7 +105,7 @@ public class AdminControllerIT {
                 .expectStatus()
                 .isOk()
                 .expectBody()
-                .jsonPath("$.id").exists()
+                .jsonPath("$.rideId").exists()
                 .jsonPath("$.email").exists();
     }
 

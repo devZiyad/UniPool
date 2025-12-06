@@ -1,12 +1,17 @@
 package me.devziyad.unipoolbackend.ride;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import me.devziyad.unipoolbackend.audit.ActionType;
+import me.devziyad.unipoolbackend.audit.AuditService;
 import me.devziyad.unipoolbackend.common.RideStatus;
 import me.devziyad.unipoolbackend.exception.BusinessException;
 import me.devziyad.unipoolbackend.exception.ForbiddenException;
 import me.devziyad.unipoolbackend.exception.ResourceNotFoundException;
 import me.devziyad.unipoolbackend.location.Location;
 import me.devziyad.unipoolbackend.location.LocationRepository;
+import me.devziyad.unipoolbackend.booking.Booking;
+import me.devziyad.unipoolbackend.booking.dto.BookingResponse;
 import me.devziyad.unipoolbackend.ride.dto.*;
 import me.devziyad.unipoolbackend.user.User;
 import me.devziyad.unipoolbackend.user.UserRepository;
@@ -17,10 +22,13 @@ import me.devziyad.unipoolbackend.vehicle.Vehicle;
 import me.devziyad.unipoolbackend.vehicle.VehicleRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -34,10 +42,27 @@ public class RideServiceImpl implements RideService {
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
     private final RoutingService routingService;
+    private final AuditService auditService;
+
+    private HttpServletRequest getCurrentRequest() {
+        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        return attributes != null ? attributes.getRequest() : null;
+    }
 
     private RideResponse toResponse(Ride ride) {
+        // Calculate latest allowable departure time (departure time end + 15 minutes buffer)
+        LocalDateTime latestAllowableDepartureTime = ride.getDepartureTimeEnd().plusMinutes(15);
+
+        // Map bookings to BookingResponse
+        List<BookingResponse> bookings = new ArrayList<>();
+        if (ride.getBookings() != null && !ride.getBookings().isEmpty()) {
+            bookings = ride.getBookings().stream()
+                    .map(this::toBookingResponse)
+                    .collect(Collectors.toList());
+        }
+
         return RideResponse.builder()
-                .id(ride.getId())
+                .rideId(ride.getId())
                 .driverId(ride.getDriver().getId())
                 .driverName(ride.getDriver().getFullName())
                 .driverRating(ride.getDriver().getAvgRatingAsDriver())
@@ -54,7 +79,9 @@ public class RideServiceImpl implements RideService {
                 .destinationLocationLabel(ride.getDestinationLocation().getLabel())
                 .destinationLatitude(ride.getDestinationLocation().getLatitude())
                 .destinationLongitude(ride.getDestinationLocation().getLongitude())
-                .departureTime(ride.getDepartureTime())
+                .departureTimeStart(ride.getDepartureTimeStart())
+                .departureTimeEnd(ride.getDepartureTimeEnd())
+                .latestAllowableDepartureTime(latestAllowableDepartureTime)
                 .totalSeats(ride.getTotalSeats())
                 .availableSeats(ride.getAvailableSeats())
                 .estimatedDistanceKm(ride.getEstimatedDistanceKm())
@@ -65,6 +92,30 @@ public class RideServiceImpl implements RideService {
                 .status(ride.getStatus())
                 .createdAt(ride.getCreatedAt())
                 .routePolyline(ride.getRoutePolyline())
+                .bookings(bookings)
+                .build();
+    }
+
+    private BookingResponse toBookingResponse(Booking booking) {
+        return BookingResponse.builder()
+                .bookingId(booking.getId())
+                .passengerId(booking.getRider().getId())
+                .passengerName(booking.getRider().getFullName())
+                .seatsBooked(booking.getSeatsBooked())
+                .pickupLocationId(booking.getPickupLocation().getId())
+                .pickupLocationLabel(booking.getPickupLocation().getLabel())
+                .pickupLatitude(booking.getPickupLocation().getLatitude())
+                .pickupLongitude(booking.getPickupLocation().getLongitude())
+                .dropoffLocationId(booking.getDropoffLocation().getId())
+                .dropoffLocationLabel(booking.getDropoffLocation().getLabel())
+                .dropoffLatitude(booking.getDropoffLocation().getLatitude())
+                .dropoffLongitude(booking.getDropoffLocation().getLongitude())
+                .pickupTimeStart(booking.getPickupTimeStart())
+                .pickupTimeEnd(booking.getPickupTimeEnd())
+                .createdAt(booking.getCreatedAtInstant() != null ? booking.getCreatedAtInstant() : booking.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant())
+                .status(booking.getStatus())
+                .costForThisRider(booking.getCostForThisRider())
+                .cancelledAt(booking.getCancelledAt())
                 .build();
     }
 
@@ -91,12 +142,44 @@ public class RideServiceImpl implements RideService {
         Location destinationLocation = locationRepository.findById(request.getDestinationLocationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Destination location not found"));
 
-        if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
-            throw new BusinessException("Departure time must be in the future");
+        // Validate coordinates
+        if (pickupLocation.getLatitude() < -90 || pickupLocation.getLatitude() > 90 ||
+            pickupLocation.getLongitude() < -180 || pickupLocation.getLongitude() > 180) {
+            throw new BusinessException("Invalid pickup location coordinates");
+        }
+
+        if (destinationLocation.getLatitude() < -90 || destinationLocation.getLatitude() > 90 ||
+            destinationLocation.getLongitude() < -180 || destinationLocation.getLongitude() > 180) {
+            throw new BusinessException("Invalid destination location coordinates");
+        }
+
+        // Validation is handled in the time range validation below
+
+        // Validate departure time range
+        if (request.getDepartureTimeStart().isAfter(request.getDepartureTimeEnd())) {
+            throw new BusinessException("Departure time start must be before departure time end");
+        }
+
+        if (request.getDepartureTimeStart().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("Departure time start must be in the future");
+        }
+
+        if (request.getDepartureTimeEnd().isAfter(LocalDateTime.now().plusYears(1))) {
+            throw new BusinessException("Departure time end cannot be more than 1 year in the future");
+        }
+
+        // Validate time range is reasonable (not more than 24 hours)
+        long hoursBetween = java.time.Duration.between(request.getDepartureTimeStart(), request.getDepartureTimeEnd()).toHours();
+        if (hoursBetween > 24) {
+            throw new BusinessException("Departure time range cannot exceed 24 hours");
         }
 
         if (request.getTotalSeats() > vehicle.getSeatCount()) {
             throw new BusinessException("Total seats cannot exceed vehicle capacity");
+        }
+
+        if (request.getTotalSeats() < 1) {
+            throw new BusinessException("Total seats must be at least 1");
         }
 
         // Calculate distance and route
@@ -110,17 +193,60 @@ public class RideServiceImpl implements RideService {
                 destinationLocation.getLatitude(), destinationLocation.getLongitude()
         );
 
+        // Validate distance is reasonable (not negative or unrealistic)
+        if (routeInfo.getDistanceKm() < 0) {
+            throw new BusinessException("Invalid route distance");
+        }
+        if (routeInfo.getDistanceKm() > 10000) { // 10,000 km max
+            throw new BusinessException("Route distance exceeds maximum allowed distance");
+        }
+
         // Calculate pricing
         BigDecimal basePrice = request.getBasePrice();
         if (basePrice == null) {
             // Default pricing: 0.5 per km
             basePrice = BigDecimal.valueOf(routeInfo.getDistanceKm() * 0.5)
                     .setScale(2, RoundingMode.HALF_UP);
+        } else {
+            // Validate provided price is positive and reasonable
+            if (basePrice.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException("Base price must be positive");
+            }
+            if (basePrice.compareTo(BigDecimal.valueOf(10000)) > 0) {
+                throw new BusinessException("Base price cannot exceed 10000.00");
+            }
         }
 
         BigDecimal pricePerSeat = request.getPricePerSeat();
         if (pricePerSeat == null) {
             pricePerSeat = basePrice.divide(BigDecimal.valueOf(request.getTotalSeats()), 2, RoundingMode.HALF_UP);
+        } else {
+            // Validate provided price per seat is positive and reasonable
+            if (pricePerSeat.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException("Price per seat must be positive");
+            }
+            if (pricePerSeat.compareTo(BigDecimal.valueOf(5000)) > 0) {
+                throw new BusinessException("Price per seat cannot exceed 5000.00");
+            }
+        }
+
+        // Check for overlapping departure times with existing active rides
+        List<Ride> activeRides = rideRepository.findActiveRidesByDriver(driverId);
+        LocalDateTime newDepartureTimeStart = request.getDepartureTimeStart();
+        LocalDateTime newDepartureTimeEnd = request.getDepartureTimeEnd();
+        int newEstimatedDuration = routeInfo.getDurationMinutes();
+        LocalDateTime newEndTime = newDepartureTimeEnd.plusMinutes(newEstimatedDuration);
+
+        for (Ride existingRide : activeRides) {
+            LocalDateTime existingDepartureTimeStart = existingRide.getDepartureTimeStart();
+            LocalDateTime existingDepartureTimeEnd = existingRide.getDepartureTimeEnd();
+            LocalDateTime existingEndTime = existingDepartureTimeEnd.plusMinutes(existingRide.getEstimatedDurationMinutes());
+
+            // Check if time ranges overlap
+            // Two time ranges overlap if: newStart < existingEnd AND newEnd > existingStart
+            if (newDepartureTimeStart.isBefore(existingEndTime) && newEndTime.isAfter(existingDepartureTimeStart)) {
+                throw new BusinessException("Cannot create ride with overlapping departure time. You have another active ride scheduled during this time period.");
+            }
         }
 
         Ride ride = Ride.builder()
@@ -128,7 +254,8 @@ public class RideServiceImpl implements RideService {
                 .vehicle(vehicle)
                 .pickupLocation(pickupLocation)
                 .destinationLocation(destinationLocation)
-                .departureTime(request.getDepartureTime())
+                .departureTimeStart(request.getDepartureTimeStart())
+                .departureTimeEnd(request.getDepartureTimeEnd())
                 .totalSeats(request.getTotalSeats())
                 .availableSeats(request.getTotalSeats())
                 .estimatedDistanceKm(haversineDistance)
@@ -140,19 +267,35 @@ public class RideServiceImpl implements RideService {
                 .routePolyline(routeInfo.getPolyline())
                 .build();
 
-        return toResponse(rideRepository.save(ride));
-    }
+        ride = rideRepository.save(ride);
 
-    @Override
-    public RideResponse getRideById(Long id) {
-        Ride ride = rideRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Ride not found"));
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("rideId", ride.getId());
+        metadata.put("vehicleId", vehicle.getId());
+        metadata.put("departureTimeStart", request.getDepartureTimeStart().toString());
+        metadata.put("departureTimeEnd", request.getDepartureTimeEnd().toString());
+        auditService.logAction(ActionType.RIDE_CREATE, driverId, metadata, getCurrentRequest());
+
         return toResponse(ride);
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public RideResponse getRideById(Long id) {
+        Ride ride = rideRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ride not found"));
+        // Initialize bookings if lazy loaded
+        if (ride.getBookings() != null) {
+            ride.getBookings().size(); // Force initialization
+        }
+        return toResponse(ride);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<RideResponse> searchRides(SearchRidesRequest request) {
-        List<Ride> rides = rideRepository.findAvailableRides(
+        List<Ride> rides = rideRepository.findAvailableRidesWithBookings(
                 request.getMinAvailableSeats() != null ? request.getMinAvailableSeats() : 1,
                 request.getDepartureTimeFrom() != null ? request.getDepartureTimeFrom() : LocalDateTime.now()
         );
@@ -190,7 +333,7 @@ public class RideServiceImpl implements RideService {
         // Filter by time window
         if (request.getDepartureTimeTo() != null) {
             rides = rides.stream()
-                    .filter(r -> r.getDepartureTime().isBefore(request.getDepartureTimeTo()))
+                    .filter(r -> r.getDepartureTimeStart().isBefore(request.getDepartureTimeTo()))
                     .collect(Collectors.toList());
         }
 
@@ -208,7 +351,7 @@ public class RideServiceImpl implements RideService {
                     rides.sort(Comparator.comparing(Ride::getPricePerSeat));
                     break;
                 case "departuretime":
-                    rides.sort(Comparator.comparing(Ride::getDepartureTime));
+                    rides.sort(Comparator.comparing(Ride::getDepartureTimeStart));
                     break;
                 case "distance":
                 default:
@@ -221,13 +364,15 @@ public class RideServiceImpl implements RideService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RideResponse> getRidesByDriver(Long driverId) {
-        return rideRepository.findByDriverId(driverId).stream()
+        return rideRepository.findByDriverIdWithBookings(driverId).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<RideResponse> getMyRidesAsDriver(Long driverId) {
         return getRidesByDriver(driverId);
     }
@@ -258,14 +403,37 @@ public class RideServiceImpl implements RideService {
             ride.setDestinationLocation(location);
         }
 
-        if (request.getDepartureTime() != null) {
-            if (request.getDepartureTime().isBefore(LocalDateTime.now())) {
-                throw new BusinessException("Departure time must be in the future");
+        if (request.getPickupLocationId() != null) {
+            Location location = locationRepository.findById(request.getPickupLocationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Pickup location not found"));
+            // Validate coordinates
+            if (location.getLatitude() < -90 || location.getLatitude() > 90 ||
+                location.getLongitude() < -180 || location.getLongitude() > 180) {
+                throw new BusinessException("Invalid pickup location coordinates");
             }
-            ride.setDepartureTime(request.getDepartureTime());
+            ride.setPickupLocation(location);
         }
 
+        if (request.getDestinationLocationId() != null) {
+            Location location = locationRepository.findById(request.getDestinationLocationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Destination location not found"));
+            // Validate coordinates
+            if (location.getLatitude() < -90 || location.getLatitude() > 90 ||
+                location.getLongitude() < -180 || location.getLongitude() > 180) {
+                throw new BusinessException("Invalid destination location coordinates");
+            }
+            ride.setDestinationLocation(location);
+        }
+
+        // Departure time range update is handled above
+
         if (request.getTotalSeats() != null) {
+            if (request.getTotalSeats() < 1) {
+                throw new BusinessException("Total seats must be at least 1");
+            }
+            if (request.getTotalSeats() > ride.getVehicle().getSeatCount()) {
+                throw new BusinessException("Total seats cannot exceed vehicle capacity");
+            }
             if (request.getTotalSeats() < ride.getTotalSeats() - ride.getAvailableSeats()) {
                 throw new BusinessException("Cannot reduce seats below booked seats");
             }
@@ -275,6 +443,12 @@ public class RideServiceImpl implements RideService {
         }
 
         if (request.getBasePrice() != null) {
+            if (request.getBasePrice().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException("Base price must be positive");
+            }
+            if (request.getBasePrice().compareTo(BigDecimal.valueOf(10000)) > 0) {
+                throw new BusinessException("Base price cannot exceed 10000.00");
+            }
             ride.setBasePrice(request.getBasePrice());
             if (request.getPricePerSeat() == null) {
                 ride.setPricePerSeat(ride.getBasePrice().divide(
@@ -283,6 +457,12 @@ public class RideServiceImpl implements RideService {
         }
 
         if (request.getPricePerSeat() != null) {
+            if (request.getPricePerSeat().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException("Price per seat must be positive");
+            }
+            if (request.getPricePerSeat().compareTo(BigDecimal.valueOf(5000)) > 0) {
+                throw new BusinessException("Price per seat cannot exceed 5000.00");
+            }
             ride.setPricePerSeat(request.getPricePerSeat());
         }
 
@@ -316,7 +496,15 @@ public class RideServiceImpl implements RideService {
         }
 
         ride.setStatus(status);
-        return toResponse(rideRepository.save(ride));
+        ride = rideRepository.save(ride);
+
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("rideId", ride.getId());
+        metadata.put("status", status.name());
+        auditService.logAction(ActionType.RIDE_UPDATE, driverId, metadata, getCurrentRequest());
+
+        return toResponse(ride);
     }
 
     @Override
@@ -335,6 +523,11 @@ public class RideServiceImpl implements RideService {
 
         ride.setStatus(RideStatus.CANCELLED);
         rideRepository.save(ride);
+
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("rideId", ride.getId());
+        auditService.logAction(ActionType.RIDE_CANCEL, driverId, metadata, getCurrentRequest());
     }
 
     @Override

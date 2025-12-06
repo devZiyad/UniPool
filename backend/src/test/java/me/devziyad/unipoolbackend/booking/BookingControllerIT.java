@@ -60,7 +60,7 @@ public class BookingControllerIT {
                 pickupLocation.getId(),
                 destinationLocation.getId()
         );
-        rideId = ride.getId();
+        rideId = ride.getRideId();
     }
 
     @Test
@@ -81,7 +81,7 @@ public class BookingControllerIT {
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
-                .jsonPath("$.id").exists()
+                .jsonPath("$.rideId").exists()
                 .jsonPath("$.rideId").isEqualTo(rideId.intValue())
                 .jsonPath("$.seats").isEqualTo(2);
     }

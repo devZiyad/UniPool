@@ -12,8 +12,11 @@ public class UpdateRideRequest {
     private Long pickupLocationId;
     private Long destinationLocationId;
     
-    @Future(message = "Departure time must be in the future")
-    private LocalDateTime departureTime;
+    @Future(message = "Departure time start must be in the future")
+    private LocalDateTime departureTimeStart;
+    
+    @Future(message = "Departure time end must be in the future")
+    private LocalDateTime departureTimeEnd;
     
     @Positive(message = "Total seats must be positive")
     private Integer totalSeats;

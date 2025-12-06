@@ -1,0 +1,185 @@
+# Profanity Filter Blocklist
+# One word per line
+# Lines starting with # are comments
+# Blank lines are ignored
+# This list includes common profanity, slurs, and obfuscated variants
+
+# Common profanity
+damn
+hell
+crap
+piss
+ass
+butt
+bitch
+bastard
+dick
+cock
+pussy
+fuck
+shit
+asshole
+motherfucker
+fucker
+cunt
+whore
+slut
+bitch
+bastard
+
+# Strong profanity variations
+fucking
+fucked
+fucks
+shitting
+shits
+shitted
+pissing
+pissed
+crap
+crappy
+damn
+damned
+hell
+hellish
+
+# Obfuscated variants (l33t speak and symbol substitution)
+f*ck
+f**k
+f***k
+f_u_c_k
+f-u-c-k
+sh*t
+s**t
+s***t
+s_h_i_t
+s-h-i-t
+a$$hole
+a$$h0le
+@$$hole
+@$$h0le
+b*tch
+b**ch
+b***ch
+b_i_t_c_h
+b-i-t-c-h
+d*ck
+d**k
+d***k
+d_i_c_k
+d-i-c-k
+c*nt
+c**t
+c***t
+c_u_n_t
+c-u-n-t
+p*ssy
+p**sy
+p***sy
+p_u_s_s_y
+p-u-s-s-y
+
+# Number substitutions
+f4ck
+f4cking
+sh1t
+sh17
+@ss
+@sshole
+@$$h0le
+b1tch
+b17ch
+d1ck
+d1ckhead
+c0ck
+c0cksucker
+p1ssy
+p15sy
+
+# Common slurs (included for comprehensive filtering)
+# Note: This list includes terms that should be blocked regardless of context
+
+# Additional variations
+motherf*cker
+motherf**ker
+m0therf*cker
+m0therf**ker
+f*cking
+f**king
+f***ing
+f_u_c_k_i_n_g
+f-u-c-k-i-n-g
+sh*tting
+sh**ting
+sh***ting
+s_h_i_t_t_i_n_g
+s-h-i-t-t-i-n-g
+
+# Compound words
+asshole
+butthole
+dickhead
+cockhead
+pisshead
+shithead
+fuckhead
+cocksucker
+motherfucker
+bullshit
+horseshit
+shitload
+shitstorm
+clusterfuck
+
+# Additional offensive terms
+retard
+retarded
+gay (context-dependent, but included for comprehensive filtering)
+fag
+faggot
+nigger
+nigga
+negro
+chink
+gook
+kike
+spic
+wetback
+towelhead
+sandnigger
+sandn1gger
+sandn*gger
+
+# Obfuscated compound words
+@ssh0le
+@$$h0le
+d1ckh3ad
+c0ckh3ad
+p1ssh3ad
+sh1th3ad
+f*ckh3ad
+c0cksuck3r
+m0therf*ck3r
+bullsh1t
+h0rsesh1t
+sh1tl0ad
+sh1tst0rm
+clust3rf*ck
+
+# Additional symbol variations
+@$$h0l3
+@$$h0|3
+@$$h()l3
+d!ckh3@d
+c()ckh3@d
+p!ssh3@d
+sh!th3@d
+f*ckh3@d
+c()cksuck3r
+m()th3rf*ck3r
+bullsh!t
+h()rsesh!t
+sh!tl()@d
+sh!tst()rm
+clust3rf*ck
+

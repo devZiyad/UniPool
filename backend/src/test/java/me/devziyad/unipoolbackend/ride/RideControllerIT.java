@@ -42,7 +42,9 @@ public class RideControllerIT {
         request.setVehicleId(1L);
         request.setPickupLocationId(1L);
         request.setDestinationLocationId(2L);
-        request.setDepartureTime(LocalDateTime.now().plusHours(2));
+        LocalDateTime departureStart = LocalDateTime.now().plusHours(2);
+        request.setDepartureTimeStart(departureStart);
+        request.setDepartureTimeEnd(departureStart.plusMinutes(30));
         request.setTotalSeats(4);
         request.setBasePrice(new BigDecimal("10.00"));
         request.setPricePerSeat(new BigDecimal("5.00"));
@@ -59,7 +61,7 @@ public class RideControllerIT {
                 .expectHeader()
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
-                .jsonPath("$.id").exists()
+                .jsonPath("$.rideId").exists()
                 .jsonPath("$.driverId").exists()
                 .jsonPath("$.totalSeats").isEqualTo(4);
     }
@@ -70,7 +72,9 @@ public class RideControllerIT {
         request.setVehicleId(1L);
         request.setPickupLocationId(1L);
         request.setDestinationLocationId(2L);
-        request.setDepartureTime(LocalDateTime.now().plusHours(2));
+        LocalDateTime departureStart = LocalDateTime.now().plusHours(2);
+        request.setDepartureTimeStart(departureStart);
+        request.setDepartureTimeEnd(departureStart.plusMinutes(30));
         request.setTotalSeats(4);
 
         restClient
@@ -93,7 +97,7 @@ public class RideControllerIT {
                 .expectStatus()
                 .isOk()
                 .expectBody()
-                .jsonPath("$.id").exists();
+                .jsonPath("$.rideId").exists();
     }
 
     @Test
