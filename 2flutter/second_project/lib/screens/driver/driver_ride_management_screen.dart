@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/driver_provider.dart';
 import '../../widgets/app_drawer.dart';
+import '../../services/ride_service.dart';
+import '../../models/ride.dart';
 
 class DriverRideManagementScreen extends StatefulWidget {
   const DriverRideManagementScreen({super.key});
@@ -15,17 +17,20 @@ class DriverRideManagementScreen extends StatefulWidget {
 class _DriverRideManagementScreenState
     extends State<DriverRideManagementScreen> {
   bool _isLoading = true;
+  int _currentRideIndex = 0;
+  Ride? _currentRideDetails;
+  bool _isLoadingDetails = false;
+  bool _isDeleting = false;
 
   @override
   void initState() {
     super.initState();
-    _checkActiveRide();
+    _loadRides();
   }
 
-  Future<void> _checkActiveRide() async {
+  Future<void> _loadRides() async {
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
 
-    // Load rides to check for active one
     try {
       await driverProvider.loadMyRides();
 
@@ -33,6 +38,16 @@ class _DriverRideManagementScreenState
         setState(() {
           _isLoading = false;
         });
+        // Filter out cancelled rides and load details for the first ride
+        final activeRides = driverProvider.myRides
+            .where((ride) => ride.status != 'CANCELLED')
+            .toList();
+        if (activeRides.isNotEmpty) {
+          setState(() {
+            _currentRideIndex = 0;
+          });
+          _loadRideDetails(activeRides[0].id);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -41,8 +56,169 @@ class _DriverRideManagementScreenState
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error loading ride: ${e.toString()}'),
+            content: Text('Error loading rides: ${e.toString()}'),
             duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _loadRideDetails(int rideId) async {
+    setState(() {
+      _isLoadingDetails = true;
+    });
+
+    try {
+      final rideDetails = await RideService.getRide(rideId);
+      if (mounted) {
+        setState(() {
+          _currentRideDetails = rideDetails;
+          _isLoadingDetails = false;
+        });
+        // Load bookings for this ride
+        final driverProvider = Provider.of<DriverProvider>(
+          context,
+          listen: false,
+        );
+        await driverProvider.loadBookingsForRide(rideId);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingDetails = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading ride details: ${e.toString()}'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  void _navigateToPreviousRide() {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    final activeRides = driverProvider.myRides
+        .where((ride) => ride.status != 'CANCELLED')
+        .toList();
+    if (activeRides.isEmpty) return;
+
+    setState(() {
+      _currentRideIndex =
+          (_currentRideIndex - 1 + activeRides.length) % activeRides.length;
+    });
+    _loadRideDetails(activeRides[_currentRideIndex].id);
+  }
+
+  void _navigateToNextRide() {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    final activeRides = driverProvider.myRides
+        .where((ride) => ride.status != 'CANCELLED')
+        .toList();
+    if (activeRides.isEmpty) return;
+
+    setState(() {
+      _currentRideIndex = (_currentRideIndex + 1) % activeRides.length;
+    });
+    _loadRideDetails(activeRides[_currentRideIndex].id);
+  }
+
+  Future<void> _cancelRide() async {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    final activeRides = driverProvider.myRides
+        .where((ride) => ride.status != 'CANCELLED')
+        .toList();
+
+    if (activeRides.isEmpty) return;
+
+    final rideToDelete = _currentRideDetails ?? activeRides[_currentRideIndex];
+    final rideId = rideToDelete.id;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel Ride'),
+        content: const Text(
+          'Are you sure you want to cancel this ride? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('No'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Yes, Cancel'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    try {
+      print('Attempting to delete ride with ID: $rideId');
+      await RideService.deleteRide(rideId);
+      print('Ride deleted successfully');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ride cancelled successfully'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        // Reload rides
+        await _loadRides();
+        // Adjust index if needed
+        final updatedProvider = Provider.of<DriverProvider>(
+          context,
+          listen: false,
+        );
+        final updatedActiveRides = updatedProvider.myRides
+            .where((ride) => ride.status != 'CANCELLED')
+            .toList();
+        if (mounted) {
+          if (updatedActiveRides.isEmpty) {
+            setState(() {
+              _currentRideIndex = 0;
+              _currentRideDetails = null;
+              _isDeleting = false;
+            });
+          } else {
+            // Adjust index if we deleted the last ride
+            if (_currentRideIndex >= updatedActiveRides.length) {
+              setState(() {
+                _currentRideIndex = updatedActiveRides.length - 1;
+              });
+            }
+            // Load details for the current ride
+            await _loadRideDetails(updatedActiveRides[_currentRideIndex].id);
+            if (mounted) {
+              setState(() {
+                _isDeleting = false;
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      print('Error deleting ride: $e');
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error cancelling ride: ${e.toString()}'),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -61,7 +237,10 @@ class _DriverRideManagementScreenState
   @override
   Widget build(BuildContext context) {
     final driverProvider = Provider.of<DriverProvider>(context);
-    final activeRide = driverProvider.activeRide;
+    // Filter out cancelled rides
+    final activeRides = driverProvider.myRides
+        .where((ride) => ride.status != 'CANCELLED')
+        .toList();
 
     if (_isLoading) {
       return Scaffold(
@@ -71,296 +250,599 @@ class _DriverRideManagementScreenState
       );
     }
 
-    // If no rides at all, show "no current rides" message
-    if (driverProvider.myRides.isEmpty) {
+    if (activeRides.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Ride Management')),
         drawer: AppDrawer(),
         body: const Center(
           child: Text(
-            'No current rides',
+            'No rides available',
             style: TextStyle(fontSize: 18, color: Colors.grey),
           ),
         ),
       );
     }
 
-    // If no active ride, show empty state
-    if (activeRide == null ||
-        (activeRide.status != 'POSTED' && activeRide.status != 'IN_PROGRESS')) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Ride Management')),
-        drawer: AppDrawer(),
-        body: const Center(
-          child: Text(
-            'No current rides',
-            style: TextStyle(fontSize: 18, color: Colors.grey),
-          ),
-        ),
-      );
+    // Ensure index is within bounds
+    int safeIndex = _currentRideIndex;
+    if (safeIndex >= activeRides.length) {
+      safeIndex = 0;
+      if (mounted) {
+        setState(() {
+          _currentRideIndex = 0;
+        });
+      }
     }
+    final currentRide = activeRides[safeIndex];
+    final rideToDisplay = _currentRideDetails ?? currentRide;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Ride Management')),
       drawer: AppDrawer(),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Ride summary cards
-            Row(
-              children: [
-                Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Text(
-                            _formatTimeRange(activeRide.departureTime),
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _formatDate(activeRide.departureTime),
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            activeRide.destinationLocationLabel.isNotEmpty
-                                ? activeRide.destinationLocationLabel
-                                : 'Destination',
-                            style: const TextStyle(fontSize: 14),
-                            textAlign: TextAlign.center,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        children: [
-                          Text(
-                            '${activeRide.availableSeats}',
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Available Seats',
-                            style: TextStyle(fontSize: 14),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${activeRide.totalSeats - activeRide.availableSeats}/${activeRide.totalSeats} booked',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Route information
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Route',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
+      body: Column(
+        children: [
+          Expanded(
+            child: _isLoadingDetails
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Icon(Icons.location_on, color: Colors.green),
-                        const SizedBox(width: 8),
-                        Expanded(
+                        // Ride counter
+                        Center(
                           child: Text(
-                            activeRide.pickupLocationLabel.isNotEmpty
-                                ? activeRide.pickupLocationLabel
-                                : 'Pickup location',
-                            style: const TextStyle(fontSize: 16),
+                            'Ride ${safeIndex + 1} of ${activeRides.length}',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.place, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            activeRide.destinationLocationLabel.isNotEmpty
-                                ? activeRide.destinationLocationLabel
-                                : 'Destination location',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (activeRide.estimatedDistanceKm != null) ...[
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          const Icon(Icons.straighten, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${activeRide.estimatedDistanceKm!.toStringAsFixed(1)} km',
-                            style: const TextStyle(fontSize: 14),
-                          ),
-                          if (activeRide.estimatedDurationMinutes != null) ...[
+                        const SizedBox(height: 16),
+                        // Ride summary cards
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        _formatTimeRange(
+                                          rideToDisplay.departureTime,
+                                        ),
+                                        style: const TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        _formatDate(
+                                          rideToDisplay.departureTime,
+                                        ),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        rideToDisplay
+                                                .destinationLocationLabel
+                                                .isNotEmpty
+                                            ? rideToDisplay
+                                                  .destinationLocationLabel
+                                            : 'Destination',
+                                        style: const TextStyle(fontSize: 14),
+                                        textAlign: TextAlign.center,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
                             const SizedBox(width: 16),
-                            const Icon(Icons.access_time, color: Colors.blue),
-                            const SizedBox(width: 8),
-                            Text(
-                              '${activeRide.estimatedDurationMinutes} min',
-                              style: const TextStyle(fontSize: 14),
+                            Expanded(
+                              child: Card(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    children: [
+                                      Text(
+                                        '${rideToDisplay.availableSeats}',
+                                        style: const TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text(
+                                        'Available Seats',
+                                        style: TextStyle(fontSize: 14),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '${rideToDisplay.totalSeats - rideToDisplay.availableSeats}/${rideToDisplay.totalSeats} booked',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            // Requests section
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'New Requests',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/driver/incoming-requests');
-                  },
-                  child: const Text('View all'),
-                ),
-              ],
-            ),
-            if (driverProvider.pendingBookings.isEmpty)
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Center(
-                    child: Column(
-                      children: [
-                        const Icon(Icons.inbox, size: 48, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'No pending requests',
-                          style: TextStyle(fontSize: 16, color: Colors.grey),
                         ),
+                        const SizedBox(height: 24),
+                        // Route information
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Route',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.location_on,
+                                      color: Colors.green,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        rideToDisplay
+                                                .pickupLocationLabel
+                                                .isNotEmpty
+                                            ? rideToDisplay.pickupLocationLabel
+                                            : 'Pickup location',
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.place, color: Colors.red),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        rideToDisplay
+                                                .destinationLocationLabel
+                                                .isNotEmpty
+                                            ? rideToDisplay
+                                                  .destinationLocationLabel
+                                            : 'Destination location',
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (rideToDisplay.estimatedDistanceKm !=
+                                    null) ...[
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.straighten,
+                                        color: Colors.blue,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '${rideToDisplay.estimatedDistanceKm!.toStringAsFixed(1)} km',
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                      if (rideToDisplay
+                                              .estimatedDurationMinutes !=
+                                          null) ...[
+                                        const SizedBox(width: 16),
+                                        const Icon(
+                                          Icons.access_time,
+                                          color: Colors.blue,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          '${rideToDisplay.estimatedDurationMinutes} min',
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Vehicle information
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Vehicle',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.directions_car,
+                                      color: Colors.blue,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        '${rideToDisplay.vehicleMake} ${rideToDisplay.vehicleModel}',
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.confirmation_number,
+                                      color: Colors.grey,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      rideToDisplay.vehiclePlateNumber,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Status and pricing
+                        Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Details',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      'Status:',
+                                      style: TextStyle(fontSize: 14),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            rideToDisplay.status == 'POSTED' ||
+                                                rideToDisplay.status ==
+                                                    'IN_PROGRESS'
+                                            ? Colors.green.withOpacity(0.2)
+                                            : Colors.grey.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        rideToDisplay.status,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color:
+                                              rideToDisplay.status ==
+                                                      'POSTED' ||
+                                                  rideToDisplay.status ==
+                                                      'IN_PROGRESS'
+                                              ? Colors.green
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                if (rideToDisplay.basePrice != null ||
+                                    rideToDisplay.pricePerSeat != null) ...[
+                                  const SizedBox(height: 12),
+                                  if (rideToDisplay.basePrice != null)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'Base Price:',
+                                          style: TextStyle(fontSize: 14),
+                                        ),
+                                        Text(
+                                          '\$${rideToDisplay.basePrice!.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  if (rideToDisplay.pricePerSeat != null)
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'Price per Seat:',
+                                          style: TextStyle(fontSize: 14),
+                                        ),
+                                        Text(
+                                          '\$${rideToDisplay.pricePerSeat!.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        // Requests section (only for active rides)
+                        if (rideToDisplay.status == 'POSTED' ||
+                            rideToDisplay.status == 'IN_PROGRESS') ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'New Requests',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/driver/incoming-requests',
+                                  );
+                                },
+                                child: const Text('View all'),
+                              ),
+                            ],
+                          ),
+                          if (driverProvider.pendingBookings.isEmpty)
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24),
+                                child: Center(
+                                  child: Column(
+                                    children: [
+                                      const Icon(
+                                        Icons.inbox,
+                                        size: 48,
+                                        color: Colors.grey,
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Text(
+                                        'No pending requests',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            )
+                          else
+                            ...driverProvider.pendingBookings.take(3).map((
+                              booking,
+                            ) {
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  leading: CircleAvatar(
+                                    child: Text(
+                                      booking.riderName
+                                          .substring(0, 1)
+                                          .toUpperCase(),
+                                    ),
+                                  ),
+                                  title: Text(booking.riderName),
+                                  subtitle: Text(
+                                    '${booking.seatsBooked} seat${booking.seatsBooked > 1 ? 's' : ''} requested',
+                                  ),
+                                  trailing: const Icon(Icons.arrow_forward),
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/driver/incoming-requests',
+                                    );
+                                  },
+                                ),
+                              );
+                            }),
+                          const SizedBox(height: 24),
+                          // Accepted riders section
+                          if (driverProvider.acceptedBookings.isNotEmpty) ...[
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Text(
+                                  'Accepted Riders',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/driver/accepted-riders',
+                                    );
+                                  },
+                                  child: const Text('View all'),
+                                ),
+                              ],
+                            ),
+                            ...driverProvider.acceptedBookings.take(3).map((
+                              booking,
+                            ) {
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  leading: const CircleAvatar(
+                                    backgroundColor: Colors.green,
+                                    child: Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  title: Text(booking.riderName),
+                                  subtitle: Text(
+                                    '${booking.seatsBooked} seat${booking.seatsBooked > 1 ? 's' : ''} confirmed',
+                                  ),
+                                  trailing: const Icon(Icons.arrow_forward),
+                                  onTap: () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/driver/accepted-riders',
+                                    );
+                                  },
+                                ),
+                              );
+                            }),
+                            const SizedBox(height: 24),
+                          ],
+                          // Action buttons
+                          if (rideToDisplay.status == 'POSTED')
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/driver/accepted-riders',
+                                );
+                              },
+                              icon: const Icon(Icons.directions_car),
+                              label: const Text('Start Ride'),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                        ],
+                        // Cancel ride button
+                        OutlinedButton.icon(
+                          onPressed: _isDeleting ? null : _cancelRide,
+                          icon: _isDeleting
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.cancel, color: Colors.red),
+                          label: Text(
+                            _isDeleting ? 'Cancelling...' : 'Cancel Ride',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            side: const BorderSide(color: Colors.red),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                       ],
                     ),
                   ),
+          ),
+          // Navigation buttons at bottom
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, -2),
                 ),
-              )
-            else
-              ...driverProvider.pendingBookings.take(3).map((booking) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Text(
-                        booking.riderName.substring(0, 1).toUpperCase(),
-                      ),
-                    ),
-                    title: Text(booking.riderName),
-                    subtitle: Text(
-                      '${booking.seatsBooked} seat${booking.seatsBooked > 1 ? 's' : ''} requested',
-                    ),
-                    trailing: const Icon(Icons.arrow_forward),
-                    onTap: () {
-                      Navigator.pushNamed(context, '/driver/incoming-requests');
-                    },
-                  ),
-                );
-              }),
-            const SizedBox(height: 24),
-            // Accepted riders section
-            if (driverProvider.acceptedBookings.isNotEmpty) ...[
-              Row(
+              ],
+            ),
+            child: SafeArea(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Accepted Riders',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  // Left button
+                  ElevatedButton.icon(
+                    onPressed: activeRides.length > 1
+                        ? _navigateToPreviousRide
+                        : null,
+                    icon: const Icon(Icons.arrow_back),
+                    label: const Text('Previous'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/driver/accepted-riders');
-                    },
-                    child: const Text('View all'),
+                  // Right button
+                  ElevatedButton.icon(
+                    onPressed: activeRides.length > 1
+                        ? _navigateToNextRide
+                        : null,
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Next'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 12,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              ...driverProvider.acceptedBookings.take(3).map((booking) {
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  child: ListTile(
-                    leading: const CircleAvatar(
-                      backgroundColor: Colors.green,
-                      child: Icon(Icons.check, color: Colors.white),
-                    ),
-                    title: Text(booking.riderName),
-                    subtitle: Text(
-                      '${booking.seatsBooked} seat${booking.seatsBooked > 1 ? 's' : ''} confirmed',
-                    ),
-                    trailing: const Icon(Icons.arrow_forward),
-                    onTap: () {
-                      Navigator.pushNamed(context, '/driver/accepted-riders');
-                    },
-                  ),
-                );
-              }),
-            ],
-            const SizedBox(height: 24),
-            // Action buttons
-            if (activeRide.status == 'POSTED')
-              ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/driver/accepted-riders');
-                },
-                icon: const Icon(Icons.directions_car),
-                label: const Text('Start Ride'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }

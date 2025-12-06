@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../providers/driver_provider.dart';
 import '../../providers/ride_provider.dart';
 import '../../services/location_service.dart';
 import '../../models/location.dart';
@@ -89,8 +90,12 @@ class _RiderStartLocationScreenState extends State<RiderStartLocationScreen> {
           _isInitializing = false;
         });
 
-        // Set as pickup location by default
+        // Set as pickup location by default for both providers
         Provider.of<RideProvider>(
+          context,
+          listen: false,
+        ).setPickupLocation(location);
+        Provider.of<DriverProvider>(
           context,
           listen: false,
         ).setPickupLocation(location);
@@ -166,7 +171,12 @@ class _RiderStartLocationScreenState extends State<RiderStartLocationScreen> {
   }
 
   void _selectStartLocation(Location location) {
+    // Set for both providers
     Provider.of<RideProvider>(
+      context,
+      listen: false,
+    ).setPickupLocation(location);
+    Provider.of<DriverProvider>(
       context,
       listen: false,
     ).setPickupLocation(location);

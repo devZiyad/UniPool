@@ -92,4 +92,15 @@ class RideService {
     });
     return Ride.fromJson(jsonDecode(response.body));
   }
+
+  static Future<void> deleteRide(int id) async {
+    final response = await ApiClient.delete('/rides/$id');
+    print('DELETE /api/rides/$id - Response Status: ${response.statusCode}');
+    print('DELETE /api/rides/$id - Response Body: ${response.body}');
+    // The API returns 200 OK with empty body on success
+    // Also accept 204 No Content as success (common for DELETE operations)
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete ride: ${response.statusCode}');
+    }
+  }
 }

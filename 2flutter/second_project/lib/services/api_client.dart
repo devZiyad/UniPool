@@ -97,9 +97,14 @@ class ApiClient {
     }
     if (response.statusCode >= 400) {
       try {
-        final error = jsonDecode(response.body);
-        throw Exception(error['message'] ?? 'An error occurred');
+        if (response.body.isNotEmpty) {
+          final error = jsonDecode(response.body);
+          throw Exception(error['message'] ?? 'An error occurred');
+        } else {
+          throw Exception('An error occurred: ${response.statusCode}');
+        }
       } catch (e) {
+        if (e is Exception) rethrow;
         throw Exception('An error occurred: ${response.statusCode}');
       }
     }

@@ -15,9 +15,6 @@ import 'screens/rider/rider_ride_list_screen.dart';
 import 'screens/rider/rider_pending_approval_screen.dart';
 import 'screens/rider/rider_live_tracking_screen.dart';
 import 'screens/rider/rider_rating_screen.dart';
-import 'screens/driver/driver_post_ride_destination_screen.dart';
-import 'screens/driver/driver_post_ride_start_location_screen.dart';
-import 'screens/driver/driver_post_ride_route_time_screen.dart';
 import 'screens/driver/driver_ride_posted_confirmation_screen.dart';
 import 'screens/driver/driver_ride_management_screen.dart';
 import 'screens/driver/driver_incoming_requests_screen.dart';
@@ -27,7 +24,6 @@ import 'screens/driver/driver_rate_passenger_screen.dart';
 import 'screens/vehicles/vehicles_management_screen.dart';
 import 'screens/vehicles/add_vehicle_screen.dart';
 import 'screens/profile/profile_settings_screen.dart';
-import 'widgets/app_drawer.dart';
 
 void main() {
   runApp(const UniPoolApp());
@@ -55,7 +51,7 @@ class UniPoolApp extends StatelessWidget {
           '/register': (context) => const RegisterScreen(),
           '/my-information': (context) => const MyInformationScreen(),
           '/role-selection': (context) => const RoleSelectionScreen(),
-          // Rider routes
+          // Rider routes (using unified screens)
           '/rider/destination-search': (context) =>
               const RiderDestinationSearchScreen(),
           '/rider/start-location': (context) =>
@@ -73,13 +69,13 @@ class UniPoolApp extends StatelessWidget {
             // This would need to get the booking from context or state
             throw UnimplementedError('Need to pass booking');
           },
-          // Driver routes
+          // Driver routes (using unified screens - same as rider)
           '/driver/post-ride/destination-search': (context) =>
-              const DriverPostRideDestinationScreen(),
+              const RiderDestinationSearchScreen(),
           '/driver/post-ride/start-location': (context) =>
-              const DriverPostRideStartLocationScreen(),
+              const RiderStartLocationScreen(),
           '/driver/post-ride/route-time': (context) =>
-              const DriverPostRideRouteTimeScreen(),
+              const RiderTimeFiltersScreen(),
           '/driver/ride-posted-confirmation': (context) =>
               const DriverRidePostedConfirmationScreen(),
           '/driver/ride-management': (context) =>

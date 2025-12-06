@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../providers/driver_provider.dart';
 import '../../providers/ride_provider.dart';
 import '../../services/location_service.dart';
 import '../../models/location.dart';
@@ -22,7 +23,7 @@ class _RiderDestinationSearchScreenState
   final TextEditingController _searchController = TextEditingController();
   List<Location> _suggestions = [];
   MapController? _mapController;
-  LatLng _currentLocation = const LatLng(26.0667, 50.5577); // Bahrain default
+  LatLng _currentLocation = const LatLng(26.0667, 50.5577);
   LatLng? _selectedLocation;
   bool _isLoadingLocation = false;
 
@@ -118,7 +119,12 @@ class _RiderDestinationSearchScreenState
   }
 
   void _selectDestination(Location location) {
+    // Use RideProvider for rider, DriverProvider for driver
     Provider.of<RideProvider>(
+      context,
+      listen: false,
+    ).setDestinationLocation(location);
+    Provider.of<DriverProvider>(
       context,
       listen: false,
     ).setDestinationLocation(location);
@@ -132,7 +138,6 @@ class _RiderDestinationSearchScreenState
       drawer: AppDrawer(),
       body: Stack(
         children: [
-          // Map
           MapWidget(
             initialPosition: _currentLocation,
             zoom: 14,
@@ -140,7 +145,6 @@ class _RiderDestinationSearchScreenState
               _mapController = controller;
             },
             myLocationEnabled: true,
-            myLocationButtonEnabled: false,
             onTap: _onMapTap,
             markers: _selectedLocation != null
                 ? [
@@ -162,7 +166,6 @@ class _RiderDestinationSearchScreenState
             const Center(
               child: Icon(Icons.location_on, color: Colors.red, size: 40),
             ),
-          // Search overlay
           Positioned(
             bottom: 0,
             left: 0,
