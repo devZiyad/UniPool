@@ -26,46 +26,27 @@ class _DriverRideManagementScreenState
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
 
     // Load rides to check for active one
-    await driverProvider.loadMyRides();
+    try {
+      await driverProvider.loadMyRides();
 
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Check if there's an active ride (POSTED or IN_PROGRESS)
-      final activeRide = driverProvider.activeRide;
-      if (activeRide == null ||
-          (activeRide.status != 'POSTED' &&
-              activeRide.status != 'IN_PROGRESS')) {
-        // No active ride, show dialog and navigate to homepage
-        _showNoRideDialog();
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading ride: ${e.toString()}'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
       }
     }
-  }
-
-  void _showNoRideDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('No Active Ride'),
-        content: const Text(
-          'You have no ride posted yet. Please post a ride first.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(
-                context,
-              ).pushReplacementNamed('/driver/post-ride/destination-search');
-            },
-            child: const Text('Go to Home'),
-          ),
-        ],
-      ),
-    );
   }
 
   String _formatTimeRange(DateTime departureTime) {
@@ -90,13 +71,32 @@ class _DriverRideManagementScreenState
       );
     }
 
-    // If no active ride, show empty state (dialog already shown)
+    // If no rides at all, show "no current rides" message
+    if (driverProvider.myRides.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Ride Management')),
+        drawer: AppDrawer(),
+        body: const Center(
+          child: Text(
+            'No current rides',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    // If no active ride, show empty state
     if (activeRide == null ||
         (activeRide.status != 'POSTED' && activeRide.status != 'IN_PROGRESS')) {
       return Scaffold(
         appBar: AppBar(title: const Text('Ride Management')),
         drawer: AppDrawer(),
-        body: const Center(child: Text('No active ride')),
+        body: const Center(
+          child: Text(
+            'No current rides',
+            style: TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+        ),
       );
     }
 
@@ -134,7 +134,9 @@ class _DriverRideManagementScreenState
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            activeRide.destinationLocationLabel,
+                            activeRide.destinationLocationLabel.isNotEmpty
+                                ? activeRide.destinationLocationLabel
+                                : 'Destination',
                             style: const TextStyle(fontSize: 14),
                             textAlign: TextAlign.center,
                             maxLines: 2,
@@ -201,7 +203,9 @@ class _DriverRideManagementScreenState
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            activeRide.pickupLocationLabel,
+                            activeRide.pickupLocationLabel.isNotEmpty
+                                ? activeRide.pickupLocationLabel
+                                : 'Pickup location',
                             style: const TextStyle(fontSize: 16),
                           ),
                         ),
@@ -214,7 +218,9 @@ class _DriverRideManagementScreenState
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            activeRide.destinationLocationLabel,
+                            activeRide.destinationLocationLabel.isNotEmpty
+                                ? activeRide.destinationLocationLabel
+                                : 'Destination location',
                             style: const TextStyle(fontSize: 16),
                           ),
                         ),

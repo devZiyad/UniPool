@@ -74,8 +74,16 @@ class RideService {
 
   static Future<List<Ride>> getMyRidesAsDriver() async {
     final response = await ApiClient.get('/rides/me/driver');
+    print('GET /api/rides/me/driver - Response Status: ${response.statusCode}');
+    print('GET /api/rides/me/driver - Response Body: ${response.body}');
     final List<dynamic> data = jsonDecode(response.body);
-    return data.map((json) => Ride.fromJson(json)).toList();
+    print('GET /api/rides/me/driver - Parsed Data Count: ${data.length}');
+    if (data.isNotEmpty) {
+      print('GET /api/rides/me/driver - First Ride: ${data[0]}');
+    }
+    final rides = data.map((json) => Ride.fromJson(json)).toList();
+    print('GET /api/rides/me/driver - Parsed Rides Count: ${rides.length}');
+    return rides;
   }
 
   static Future<Ride> updateRideStatus(int id, String status) async {

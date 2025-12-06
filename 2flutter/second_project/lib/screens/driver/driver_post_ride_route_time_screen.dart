@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import '../../providers/driver_provider.dart';
 import '../../services/ride_service.dart';
 import '../../services/location_service.dart';
@@ -18,10 +19,21 @@ class _DriverPostRideRouteTimeScreenState
     extends State<DriverPostRideRouteTimeScreen> {
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
+  DateTime? _startDate;
+  DateTime? _endDate;
   bool _isAMStart = true;
   bool _isAMEnd = true;
   int _totalSeats = 4;
   bool _isPosting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize dates to today
+    final now = DateTime.now();
+    _startDate = DateTime(now.year, now.month, now.day);
+    _endDate = DateTime(now.year, now.month, now.day);
+  }
 
   Future<void> _selectStartTime() async {
     final TimeOfDay? picked = await showTimePicker(
@@ -47,6 +59,47 @@ class _DriverPostRideRouteTimeScreenState
     }
   }
 
+  Future<void> _selectStartDate() async {
+    final now = DateTime.now();
+    final maxDate = now.add(const Duration(days: 2));
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _startDate ?? now,
+      firstDate: now,
+      lastDate: maxDate,
+      helpText: 'Select start date',
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = DateTime(picked.year, picked.month, picked.day);
+        // If end date is before start date, update it
+        if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+          _endDate = _startDate;
+        }
+      });
+    }
+  }
+
+  Future<void> _selectEndDate() async {
+    final now = DateTime.now();
+    final maxDate = now.add(const Duration(days: 2));
+    final firstDate = _startDate ?? now;
+
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? firstDate,
+      firstDate: firstDate,
+      lastDate: maxDate,
+      helpText: 'Select end date',
+    );
+    if (picked != null) {
+      setState(() {
+        _endDate = DateTime(picked.year, picked.month, picked.day);
+      });
+    }
+  }
+
   Future<void> _postRide() async {
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
     if (driverProvider.pickupLocation == null ||
@@ -64,6 +117,32 @@ class _DriverPostRideRouteTimeScreenState
       return;
     }
 
+    if (_startDate == null || _endDate == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select dates')));
+      return;
+    }
+
+    // Validate dates are within 2 days
+    final now = DateTime.now();
+    final maxDate = now.add(const Duration(days: 2));
+    if (_startDate!.isAfter(maxDate) || _endDate!.isAfter(maxDate)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Dates cannot be more than 2 days in advance'),
+        ),
+      );
+      return;
+    }
+
+    if (_endDate!.isBefore(_startDate!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('End date cannot be before start date')),
+      );
+      return;
+    }
+
     // Calculate hour correctly for AM/PM
     int hour = _startTime!.hour;
     if (!_isAMStart && hour != 12) {
@@ -72,17 +151,26 @@ class _DriverPostRideRouteTimeScreenState
       hour = 0;
     }
 
-    final now = DateTime.now();
+    // Use selected date instead of today
     var departureTime = DateTime(
-      now.year,
-      now.month,
-      now.day,
+      _startDate!.year,
+      _startDate!.month,
+      _startDate!.day,
       hour,
       _startTime!.minute,
     );
 
-    // If departure time is in the past, add one day
-    if (departureTime.isBefore(now)) {
+    // If departure time is in the past and it's today, add one day
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDate = DateTime(
+      _startDate!.year,
+      _startDate!.month,
+      _startDate!.day,
+    );
+    if (departureTime.isBefore(now) &&
+        selectedDate.year == today.year &&
+        selectedDate.month == today.month &&
+        selectedDate.day == today.day) {
       departureTime = departureTime.add(const Duration(days: 1));
     }
 
@@ -251,6 +339,90 @@ class _DriverPostRideRouteTimeScreenState
                   Text(pickup?.label ?? 'Start location'),
                   Text(destination?.label ?? 'Destination'),
                   const SizedBox(height: 24),
+                  // Date selection
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Start Date'),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: _selectStartDate,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.calendar_today, size: 16),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _startDate != null
+                                          ? DateFormat(
+                                              'MMM dd, yyyy',
+                                            ).format(_startDate!)
+                                          : 'Select date',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('End Date'),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: _selectEndDate,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.calendar_today, size: 16),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _endDate != null
+                                          ? DateFormat(
+                                              'MMM dd, yyyy',
+                                            ).format(_endDate!)
+                                          : 'Select date',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'You can select dates up to 2 days in advance',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   // Time selection
                   Row(
                     children: [
@@ -258,7 +430,7 @@ class _DriverPostRideRouteTimeScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Start'),
+                            const Text('Start Time'),
                             const SizedBox(height: 8),
                             InkWell(
                               onTap: _selectStartTime,
@@ -323,7 +495,7 @@ class _DriverPostRideRouteTimeScreenState
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('End'),
+                            const Text('End Time'),
                             const SizedBox(height: 8),
                             InkWell(
                               onTap: _selectEndTime,

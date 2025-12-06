@@ -60,35 +60,77 @@ class Ride {
   });
 
   factory Ride.fromJson(Map<String, dynamic> json) {
+    // Helper function to safely convert to int
+    int _toInt(dynamic value) {
+      if (value == null) throw Exception('Required field is null');
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      return int.parse(value.toString());
+    }
+
+    // Helper function to safely convert to double
+    double _toDouble(dynamic value) {
+      if (value == null) throw Exception('Required field is null');
+      if (value is double) return value;
+      if (value is num) return value.toDouble();
+      return double.parse(value.toString());
+    }
+
+    // Helper function to safely convert nullable to double
+    double? _toDoubleNullable(dynamic value) {
+      if (value == null) return null;
+      if (value is double) return value;
+      if (value is num) return value.toDouble();
+      return double.parse(value.toString());
+    }
+
+    // Helper function to safely convert status (handle enum strings)
+    String _toString(dynamic value) {
+      if (value == null) throw Exception('Required field is null');
+      return value.toString();
+    }
+
     return Ride(
-      id: json['id'],
-      driverId: json['driverId'],
-      driverName: json['driverName'],
-      driverRating: json['driverRating']?.toDouble(),
-      vehicleId: json['vehicleId'],
-      vehicleMake: json['vehicleMake'],
-      vehicleModel: json['vehicleModel'],
-      vehiclePlateNumber: json['vehiclePlateNumber'],
-      vehicleSeatCount: json['vehicleSeatCount'],
-      pickupLocationId: json['pickupLocationId'],
-      pickupLocationLabel: json['pickupLocationLabel'],
-      pickupLatitude: json['pickupLatitude'].toDouble(),
-      pickupLongitude: json['pickupLongitude'].toDouble(),
-      destinationLocationId: json['destinationLocationId'],
-      destinationLocationLabel: json['destinationLocationLabel'],
-      destinationLatitude: json['destinationLatitude'].toDouble(),
-      destinationLongitude: json['destinationLongitude'].toDouble(),
-      departureTime: DateTime.parse(json['departureTime']),
-      totalSeats: json['totalSeats'],
-      availableSeats: json['availableSeats'],
-      estimatedDistanceKm: json['estimatedDistanceKm']?.toDouble(),
-      routeDistanceKm: json['routeDistanceKm']?.toDouble(),
-      estimatedDurationMinutes: json['estimatedDurationMinutes'],
-      basePrice: json['basePrice']?.toDouble(),
-      pricePerSeat: json['pricePerSeat']?.toDouble(),
-      status: json['status'],
-      createdAt: DateTime.parse(json['createdAt']),
-      routePolyline: json['routePolyline'],
+      id: _toInt(json['id']),
+      driverId: _toInt(json['driverId']),
+      driverName: _toString(json['driverName']),
+      driverRating: json['driverRating'] != null
+          ? _toDoubleNullable(json['driverRating'])
+          : null,
+      vehicleId: _toInt(json['vehicleId']),
+      vehicleMake: _toString(json['vehicleMake']),
+      vehicleModel: _toString(json['vehicleModel']),
+      vehiclePlateNumber: _toString(json['vehiclePlateNumber']),
+      vehicleSeatCount: _toInt(json['vehicleSeatCount']),
+      pickupLocationId: _toInt(json['pickupLocationId']),
+      pickupLocationLabel: _toString(json['pickupLocationLabel']),
+      pickupLatitude: _toDouble(json['pickupLatitude']),
+      pickupLongitude: _toDouble(json['pickupLongitude']),
+      destinationLocationId: _toInt(json['destinationLocationId']),
+      destinationLocationLabel: _toString(json['destinationLocationLabel']),
+      destinationLatitude: _toDouble(json['destinationLatitude']),
+      destinationLongitude: _toDouble(json['destinationLongitude']),
+      departureTime: DateTime.parse(_toString(json['departureTime'])).toLocal(),
+      totalSeats: _toInt(json['totalSeats']),
+      availableSeats: _toInt(json['availableSeats']),
+      estimatedDistanceKm: json['estimatedDistanceKm'] != null
+          ? _toDoubleNullable(json['estimatedDistanceKm'])
+          : null,
+      routeDistanceKm: json['routeDistanceKm'] != null
+          ? _toDoubleNullable(json['routeDistanceKm'])
+          : null,
+      estimatedDurationMinutes: json['estimatedDurationMinutes'] != null
+          ? _toInt(json['estimatedDurationMinutes'])
+          : null,
+      basePrice: json['basePrice'] != null
+          ? _toDoubleNullable(json['basePrice'])
+          : null,
+      pricePerSeat: json['pricePerSeat'] != null
+          ? _toDoubleNullable(json['pricePerSeat'])
+          : null,
+      status: _toString(json['status']),
+      createdAt: DateTime.parse(_toString(json['createdAt'])).toLocal(),
+      routePolyline: json['routePolyline']?.toString(),
     );
   }
 
