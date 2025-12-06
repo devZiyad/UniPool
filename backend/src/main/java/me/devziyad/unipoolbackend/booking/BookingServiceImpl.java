@@ -62,6 +62,8 @@ public class BookingServiceImpl implements BookingService {
                 .dropoffLocationLabel(booking.getDropoffLocation().getLabel())
                 .dropoffLatitude(booking.getDropoffLocation().getLatitude())
                 .dropoffLongitude(booking.getDropoffLocation().getLongitude())
+                .pickupTimeStart(booking.getPickupTimeStart())
+                .pickupTimeEnd(booking.getPickupTimeEnd())
                 .createdAt(booking.getCreatedAtInstant() != null ? booking.getCreatedAtInstant() : booking.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant())
                 .status(booking.getStatus())
                 .costForThisRider(booking.getCostForThisRider())

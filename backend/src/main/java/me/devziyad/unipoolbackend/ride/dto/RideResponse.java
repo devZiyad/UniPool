@@ -35,7 +35,6 @@ public class RideResponse {
     private Double destinationLongitude;
     private LocalDateTime departureTimeStart;
     private LocalDateTime departureTimeEnd;
-    private LocalDateTime latestAllowableDepartureTime;
     private Integer totalSeats;
     private Integer availableSeats;
     private Double estimatedDistanceKm;

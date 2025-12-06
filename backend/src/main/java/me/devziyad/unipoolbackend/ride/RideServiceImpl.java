@@ -50,9 +50,6 @@ public class RideServiceImpl implements RideService {
     }
 
     private RideResponse toResponse(Ride ride) {
-        // Calculate latest allowable departure time (departure time end + 15 minutes buffer)
-        LocalDateTime latestAllowableDepartureTime = ride.getDepartureTimeEnd().plusMinutes(15);
-
         // Map bookings to BookingResponse
         List<BookingResponse> bookings = new ArrayList<>();
         if (ride.getBookings() != null && !ride.getBookings().isEmpty()) {
@@ -81,7 +78,6 @@ public class RideServiceImpl implements RideService {
                 .destinationLongitude(ride.getDestinationLocation().getLongitude())
                 .departureTimeStart(ride.getDepartureTimeStart())
                 .departureTimeEnd(ride.getDepartureTimeEnd())
-                .latestAllowableDepartureTime(latestAllowableDepartureTime)
                 .totalSeats(ride.getTotalSeats())
                 .availableSeats(ride.getAvailableSeats())
                 .estimatedDistanceKm(ride.getEstimatedDistanceKm())

@@ -926,11 +926,13 @@ Create a new ride.
 - `vehicleId` (required): Vehicle ID (must belong to user)
 - `pickupLocationId` (required): Location ID
 - `destinationLocationId` (required): Location ID
-- `departureTimeStart` (required): Future datetime (ISO format)
-- `departureTimeEnd` (required): Future datetime (ISO format), must be after start
+- `departureTimeStart` (required): Start of departure time window - Future datetime (ISO format)
+- `departureTimeEnd` (required): End of departure time window - Future datetime (ISO format), must be after start
 - `totalSeats` (required): Positive integer
 - `basePrice` (optional): Positive decimal
 - `pricePerSeat` (optional): Positive decimal
+
+**Note:** Rides require both `departureTimeStart` and `departureTimeEnd` to define the departure time window.
 
 **Response:** `201 Created` (RideResponse)
 
@@ -1288,8 +1290,10 @@ Create a booking for a ride.
 - `seats` (required): Positive integer (must not exceed available seats)
 - `pickupLocationId` (required): Location ID
 - `dropoffLocationId` (required): Location ID
-- `pickupTimeStart` (required): Future datetime (ISO format)
-- `pickupTimeEnd` (required): Future datetime (ISO format), must be after start
+- `pickupTimeStart` (required): Start of pickup time window - Future datetime (ISO format)
+- `pickupTimeEnd` (required): End of pickup time window - Future datetime (ISO format), must be after start
+
+**Note:** Bookings require both `pickupTimeStart` and `pickupTimeEnd` to define the pickup time window. The pickup time window must be within the ride's departure time window.
 
 **Response:** `201 Created` (RideResponse)
 
