@@ -7,20 +7,29 @@ class RideService {
     required int vehicleId,
     required int pickupLocationId,
     required int destinationLocationId,
-    required DateTime departureTime,
+    required DateTime departureTimeStart,
+    required DateTime departureTimeEnd,
     required int totalSeats,
     double? basePrice,
     double? pricePerSeat,
   }) async {
-    final response = await ApiClient.post('/rides', {
+    final requestBody = {
       'vehicleId': vehicleId,
       'pickupLocationId': pickupLocationId,
       'destinationLocationId': destinationLocationId,
-      'departureTime': departureTime.toIso8601String(),
+      'departureTimeStart': departureTimeStart.toIso8601String(),
+      'departureTimeEnd': departureTimeEnd.toIso8601String(),
       'totalSeats': totalSeats,
       if (basePrice != null) 'basePrice': basePrice,
       if (pricePerSeat != null) 'pricePerSeat': pricePerSeat,
-    });
+    };
+
+    print('POST /api/rides - Request Body: ${jsonEncode(requestBody)}');
+
+    final response = await ApiClient.post('/rides', requestBody);
+
+    print('POST /api/rides - Response Status: ${response.statusCode}');
+    print('POST /api/rides - Response Body: ${response.body}');
 
     return Ride.fromJson(jsonDecode(response.body));
   }
@@ -76,13 +85,48 @@ class RideService {
     final response = await ApiClient.get('/rides/me/driver');
     print('GET /api/rides/me/driver - Response Status: ${response.statusCode}');
     print('GET /api/rides/me/driver - Response Body: ${response.body}');
-    final List<dynamic> data = jsonDecode(response.body);
+
+    final decoded = jsonDecode(response.body);
+    List<dynamic> data;
+
+    // Handle different response formats
+    if (decoded is List) {
+      data = decoded;
+    } else if (decoded is Map && decoded.containsKey('rides')) {
+      data = decoded['rides'] as List<dynamic>;
+    } else if (decoded is Map && decoded.containsKey('data')) {
+      data = decoded['data'] as List<dynamic>;
+    } else {
+      // Try to parse as array directly
+      data = [decoded];
+    }
+
     print('GET /api/rides/me/driver - Parsed Data Count: ${data.length}');
     if (data.isNotEmpty) {
       print('GET /api/rides/me/driver - First Ride: ${data[0]}');
+      // Log status of all rides
+      for (var rideData in data) {
+        if (rideData is Map) {
+          final rideId = rideData['rideId'] ?? rideData['id'];
+          print('  Ride ID: $rideId, Status: ${rideData['status']}');
+        }
+      }
     }
-    final rides = data.map((json) => Ride.fromJson(json)).toList();
+
+    final rides = data.map((json) {
+      try {
+        return Ride.fromJson(json as Map<String, dynamic>);
+      } catch (e) {
+        print('Error parsing ride: $e');
+        print('Ride data: $json');
+        rethrow;
+      }
+    }).toList();
+
     print('GET /api/rides/me/driver - Parsed Rides Count: ${rides.length}');
+    print(
+      'GET /api/rides/me/driver - Ride statuses: ${rides.map((r) => '${r.id}:${r.status}').join(', ')}',
+    );
     return rides;
   }
 

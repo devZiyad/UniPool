@@ -38,10 +38,19 @@ class _DriverRideManagementScreenState
         setState(() {
           _isLoading = false;
         });
-        // Filter out cancelled rides and load details for the first ride
+        // Filter out cancelled rides and load details for the first ride (case-insensitive)
         final activeRides = driverProvider.myRides
-            .where((ride) => ride.status != 'CANCELLED')
+            .where((ride) => ride.status.toUpperCase() != 'CANCELLED')
             .toList();
+        print(
+          'RideManagementScreen._loadRides - Total rides: ${driverProvider.myRides.length}',
+        );
+        print(
+          'RideManagementScreen._loadRides - Active rides (non-cancelled): ${activeRides.length}',
+        );
+        print(
+          'RideManagementScreen._loadRides - Ride statuses: ${driverProvider.myRides.map((r) => '${r.id}:${r.status}').join(', ')}',
+        );
         if (activeRides.isNotEmpty) {
           setState(() {
             _currentRideIndex = 0;
@@ -50,6 +59,7 @@ class _DriverRideManagementScreenState
         }
       }
     } catch (e) {
+      print('RideManagementScreen._loadRides - Error: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -225,9 +235,28 @@ class _DriverRideManagementScreenState
     }
   }
 
-  String _formatTimeRange(DateTime departureTime) {
+  String _formatTimeRangeWithEnd(
+    DateTime? startTime,
+    DateTime? endTime,
+    DateTime fallbackTime,
+  ) {
     final timeFormat = DateFormat('h:mm a');
-    return timeFormat.format(departureTime);
+    final dateFormat = DateFormat('MMM d');
+    if (startTime != null && endTime != null) {
+      // Check if start and end are on the same day
+      final sameDay =
+          startTime.year == endTime.year &&
+          startTime.month == endTime.month &&
+          startTime.day == endTime.day;
+
+      if (sameDay) {
+        return '${timeFormat.format(startTime)} - ${timeFormat.format(endTime)}';
+      } else {
+        // Different days - show date and time
+        return '${dateFormat.format(startTime)} ${timeFormat.format(startTime)} - ${dateFormat.format(endTime)} ${timeFormat.format(endTime)}';
+      }
+    }
+    return timeFormat.format(fallbackTime);
   }
 
   String _formatDate(DateTime date) {
@@ -237,9 +266,9 @@ class _DriverRideManagementScreenState
   @override
   Widget build(BuildContext context) {
     final driverProvider = Provider.of<DriverProvider>(context);
-    // Filter out cancelled rides
+    // Filter out cancelled rides (case-insensitive comparison)
     final activeRides = driverProvider.myRides
-        .where((ride) => ride.status != 'CANCELLED')
+        .where((ride) => ride.status.toUpperCase() != 'CANCELLED')
         .toList();
 
     if (_isLoading) {
@@ -311,7 +340,9 @@ class _DriverRideManagementScreenState
                                   child: Column(
                                     children: [
                                       Text(
-                                        _formatTimeRange(
+                                        _formatTimeRangeWithEnd(
+                                          rideToDisplay.departureTimeStart,
+                                          rideToDisplay.departureTimeEnd,
                                           rideToDisplay.departureTime,
                                         ),
                                         style: const TextStyle(
@@ -322,7 +353,8 @@ class _DriverRideManagementScreenState
                                       const SizedBox(height: 4),
                                       Text(
                                         _formatDate(
-                                          rideToDisplay.departureTime,
+                                          rideToDisplay.departureTimeStart ??
+                                              rideToDisplay.departureTime,
                                         ),
                                         style: const TextStyle(
                                           fontSize: 12,

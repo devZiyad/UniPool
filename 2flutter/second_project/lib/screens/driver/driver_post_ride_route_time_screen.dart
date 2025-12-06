@@ -144,34 +144,56 @@ class _DriverPostRideRouteTimeScreenState
     }
 
     // Calculate hour correctly for AM/PM
-    int hour = _startTime!.hour;
-    if (!_isAMStart && hour != 12) {
-      hour = hour + 12;
-    } else if (_isAMStart && hour == 12) {
-      hour = 0;
+    int startHour = _startTime!.hour;
+    if (!_isAMStart && startHour != 12) {
+      startHour = startHour + 12;
+    } else if (_isAMStart && startHour == 12) {
+      startHour = 0;
     }
 
-    // Use selected date instead of today
-    var departureTime = DateTime(
+    int endHour = _endTime!.hour;
+    if (!_isAMEnd && endHour != 12) {
+      endHour = endHour + 12;
+    } else if (_isAMEnd && endHour == 12) {
+      endHour = 0;
+    }
+
+    // Calculate departure time start
+    var departureTimeStart = DateTime(
       _startDate!.year,
       _startDate!.month,
       _startDate!.day,
-      hour,
+      startHour,
       _startTime!.minute,
     );
 
-    // If departure time is in the past and it's today, add one day
+    // Calculate departure time end
+    var departureTimeEnd = DateTime(
+      _endDate!.year,
+      _endDate!.month,
+      _endDate!.day,
+      endHour,
+      _endTime!.minute,
+    );
+
+    // If departure time start is in the past and it's today, add one day
     final today = DateTime(now.year, now.month, now.day);
-    final selectedDate = DateTime(
+    final selectedStartDate = DateTime(
       _startDate!.year,
       _startDate!.month,
       _startDate!.day,
     );
-    if (departureTime.isBefore(now) &&
-        selectedDate.year == today.year &&
-        selectedDate.month == today.month &&
-        selectedDate.day == today.day) {
-      departureTime = departureTime.add(const Duration(days: 1));
+    if (departureTimeStart.isBefore(now) &&
+        selectedStartDate.year == today.year &&
+        selectedStartDate.month == today.month &&
+        selectedStartDate.day == today.day) {
+      departureTimeStart = departureTimeStart.add(const Duration(days: 1));
+      // Also adjust end time if it's on the same day
+      if (_endDate!.year == _startDate!.year &&
+          _endDate!.month == _startDate!.month &&
+          _endDate!.day == _startDate!.day) {
+        departureTimeEnd = departureTimeEnd.add(const Duration(days: 1));
+      }
     }
 
     setState(() {
@@ -244,7 +266,8 @@ class _DriverPostRideRouteTimeScreenState
         vehicleId: vehicle.id,
         pickupLocationId: pickupLocation.id!,
         destinationLocationId: destinationLocation.id!,
-        departureTime: departureTime,
+        departureTimeStart: departureTimeStart,
+        departureTimeEnd: departureTimeEnd,
         totalSeats: _totalSeats,
       );
 

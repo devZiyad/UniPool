@@ -54,14 +54,19 @@ class DriverProvider with ChangeNotifier {
 
     try {
       _myRides = await RideService.getMyRidesAsDriver();
-      // Find active ride (POSTED or IN_PROGRESS status)
+      print('DriverProvider.loadMyRides - Loaded ${_myRides.length} rides');
+      print('DriverProvider.loadMyRides - Ride statuses: ${_myRides.map((r) => '${r.id}:${r.status}').join(', ')}');
+      
+      // Find active ride (POSTED or IN_PROGRESS status) - case-insensitive
       try {
         _activeRide = _myRides.firstWhere(
-          (ride) => ride.status == 'POSTED' || ride.status == 'IN_PROGRESS',
+          (ride) => ride.status.toUpperCase() == 'POSTED' || ride.status.toUpperCase() == 'IN_PROGRESS',
         );
+        print('DriverProvider.loadMyRides - Found active ride: ${_activeRide!.id} with status ${_activeRide!.status}');
       } catch (e) {
         // No active ride found
         _activeRide = null;
+        print('DriverProvider.loadMyRides - No active ride found');
       }
       if (_activeRide != null) {
         await loadBookingsForRide(_activeRide!.id);
@@ -72,6 +77,7 @@ class DriverProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     } catch (e) {
+      print('DriverProvider.loadMyRides - Error: $e');
       _error = e.toString();
       _isLoading = false;
       _activeRide = null;

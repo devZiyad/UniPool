@@ -21,8 +21,6 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
   TimeOfDay? _endTime;
   DateTime? _startDate;
   DateTime? _endDate;
-  bool _isAMStart = true;
-  bool _isAMEnd = true;
   int _totalSeats = 1; // For rider: seats needed, for driver: seats available
   bool _isPosting = false;
   bool _isSearching = false;
@@ -40,6 +38,24 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final role = authProvider.user?.role ?? '';
     return role == 'DRIVER' || role == 'BOTH';
+  }
+
+  String _formatTimeOfDay(TimeOfDay time) {
+    int hour = time.hour;
+    final String period;
+    if (hour == 0) {
+      hour = 12;
+      period = 'AM';
+    } else if (hour < 12) {
+      period = 'AM';
+    } else if (hour == 12) {
+      period = 'PM';
+    } else {
+      hour = hour - 12;
+      period = 'PM';
+    }
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour : $minute $period';
   }
 
   Future<void> _selectStartTime() async {
@@ -150,35 +166,43 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
       return;
     }
 
-    // Calculate hour correctly for AM/PM
-    int hour = _startTime!.hour;
-    if (!_isAMStart && hour != 12) {
-      hour = hour + 12;
-    } else if (_isAMStart && hour == 12) {
-      hour = 0;
-    }
-
-    // Use selected date instead of today
-    var departureTime = DateTime(
+    // TimeOfDay already stores hour in 24-hour format (0-23)
+    // Calculate departure time start
+    var departureTimeStart = DateTime(
       _startDate!.year,
       _startDate!.month,
       _startDate!.day,
-      hour,
+      _startTime!.hour,
       _startTime!.minute,
     );
 
-    // If departure time is in the past and it's today, add one day
+    // Calculate departure time end
+    var departureTimeEnd = DateTime(
+      _endDate!.year,
+      _endDate!.month,
+      _endDate!.day,
+      _endTime!.hour,
+      _endTime!.minute,
+    );
+
+    // If departure time start is in the past and it's today, add one day
     final today = DateTime(now.year, now.month, now.day);
-    final selectedDate = DateTime(
+    final selectedStartDate = DateTime(
       _startDate!.year,
       _startDate!.month,
       _startDate!.day,
     );
-    if (departureTime.isBefore(now) &&
-        selectedDate.year == today.year &&
-        selectedDate.month == today.month &&
-        selectedDate.day == today.day) {
-      departureTime = departureTime.add(const Duration(days: 1));
+    if (departureTimeStart.isBefore(now) &&
+        selectedStartDate.year == today.year &&
+        selectedStartDate.month == today.month &&
+        selectedStartDate.day == today.day) {
+      departureTimeStart = departureTimeStart.add(const Duration(days: 1));
+      // Also adjust end time if it's on the same day
+      if (_endDate!.year == _startDate!.year &&
+          _endDate!.month == _startDate!.month &&
+          _endDate!.day == _startDate!.day) {
+        departureTimeEnd = departureTimeEnd.add(const Duration(days: 1));
+      }
     }
 
     setState(() {
@@ -212,22 +236,75 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
       // Create locations if they don't have IDs (e.g., selected from map)
       var pickupLocation = driverProvider.pickupLocation!;
       if (pickupLocation.id == null) {
-        pickupLocation = await LocationService.createLocation(
-          label: pickupLocation.label,
-          address: pickupLocation.address,
-          latitude: pickupLocation.latitude,
-          longitude: pickupLocation.longitude,
-        );
+        try {
+          pickupLocation = await LocationService.createLocation(
+            label: pickupLocation.label,
+            address: pickupLocation.address,
+            latitude: pickupLocation.latitude,
+            longitude: pickupLocation.longitude,
+          );
+          print('Created pickup location with ID: ${pickupLocation.id}');
+        } catch (e) {
+          print('Error creating pickup location: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error creating pickup location: ${e.toString()}'),
+                duration: const Duration(seconds: 5),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          setState(() {
+            _isPosting = false;
+          });
+          return;
+        }
       }
 
       var destinationLocation = driverProvider.destinationLocation!;
       if (destinationLocation.id == null) {
-        destinationLocation = await LocationService.createLocation(
-          label: destinationLocation.label,
-          address: destinationLocation.address,
-          latitude: destinationLocation.latitude,
-          longitude: destinationLocation.longitude,
-        );
+        try {
+          destinationLocation = await LocationService.createLocation(
+            label: destinationLocation.label,
+            address: destinationLocation.address,
+            latitude: destinationLocation.latitude,
+            longitude: destinationLocation.longitude,
+          );
+          print('Created destination location with ID: ${destinationLocation.id}');
+        } catch (e) {
+          print('Error creating destination location: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error creating destination location: ${e.toString()}'),
+                duration: const Duration(seconds: 5),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+          setState(() {
+            _isPosting = false;
+          });
+          return;
+        }
+      }
+
+      // Ensure both locations have IDs
+      if (pickupLocation.id == null || destinationLocation.id == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Location IDs are missing. Please try selecting locations again.'),
+              duration: Duration(seconds: 5),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        setState(() {
+          _isPosting = false;
+        });
+        return;
       }
 
       // Validate total seats doesn't exceed vehicle capacity
@@ -247,11 +324,20 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
         return;
       }
 
+      print('Creating ride with:');
+      print('  vehicleId: ${vehicle.id}');
+      print('  pickupLocationId: ${pickupLocation.id}');
+      print('  destinationLocationId: ${destinationLocation.id}');
+      print('  departureTimeStart: ${departureTimeStart.toIso8601String()}');
+      print('  departureTimeEnd: ${departureTimeEnd.toIso8601String()}');
+      print('  totalSeats: $_totalSeats');
+
       await RideService.createRide(
         vehicleId: vehicle.id,
         pickupLocationId: pickupLocation.id!,
         destinationLocationId: destinationLocation.id!,
-        departureTime: departureTime,
+        departureTimeStart: departureTimeStart,
+        departureTimeEnd: departureTimeEnd,
         totalSeats: _totalSeats,
       );
 
@@ -259,11 +345,13 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
         Navigator.pushNamed(context, '/driver/ride-posted-confirmation');
       }
     } catch (e) {
+      print('Error creating ride: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(e.toString().replaceAll('Exception: ', '')),
             duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -278,14 +366,7 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
 
   Future<void> _searchRides() async {
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
-    if (rideProvider.pickupLocation == null ||
-        rideProvider.destinationLocation == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select locations')));
-      return;
-    }
-
+    // Locations are no longer required for rider search - only time is needed
     if (_startTime == null || _endTime == null) {
       ScaffoldMessenger.of(
         context,
@@ -294,18 +375,19 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
     }
 
     final now = DateTime.now();
+    // TimeOfDay already stores hour in 24-hour format (0-23)
     final startDateTime = DateTime(
       _startDate?.year ?? now.year,
       _startDate?.month ?? now.month,
       _startDate?.day ?? now.day,
-      _isAMStart ? _startTime!.hour : (_startTime!.hour == 12 ? 12 : _startTime!.hour + 12),
+      _startTime!.hour,
       _startTime!.minute,
     );
     final endDateTime = DateTime(
       _endDate?.year ?? now.year,
       _endDate?.month ?? now.month,
       _endDate?.day ?? now.day,
-      _isAMEnd ? _endTime!.hour : (_endTime!.hour == 12 ? 12 : _endTime!.hour + 12),
+      _endTime!.hour,
       _endTime!.minute,
     );
 
@@ -514,47 +596,11 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
                                 ),
                                 child: Text(
                                   _startTime != null
-                                      ? '${_startTime!.hour.toString().padLeft(2, '0')} : ${_startTime!.minute.toString().padLeft(2, '0')}'
-                                      : '07 : 00',
+                                      ? _formatTimeOfDay(_startTime!)
+                                      : '07 : 00 AM',
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isAMStart = true;
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _isAMStart
-                                          ? Colors.green
-                                          : Colors.grey[300],
-                                    ),
-                                    child: const Text('AM'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isAMStart = false;
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: !_isAMStart
-                                          ? Colors.green
-                                          : Colors.grey[300],
-                                    ),
-                                    child: const Text('PM'),
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
                         ),
@@ -579,47 +625,11 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
                                 ),
                                 child: Text(
                                   _endTime != null
-                                      ? '${_endTime!.hour.toString().padLeft(2, '0')} : ${_endTime!.minute.toString().padLeft(2, '0')}'
-                                      : '09 : 00',
+                                      ? _formatTimeOfDay(_endTime!)
+                                      : '09 : 00 AM',
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isAMEnd = true;
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _isAMEnd
-                                          ? Colors.green
-                                          : Colors.grey[300],
-                                    ),
-                                    child: const Text('AM'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isAMEnd = false;
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: !_isAMEnd
-                                          ? Colors.green
-                                          : Colors.grey[300],
-                                    ),
-                                    child: const Text('PM'),
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
                         ),

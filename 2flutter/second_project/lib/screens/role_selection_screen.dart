@@ -39,17 +39,17 @@ class RoleSelectionScreen extends StatelessWidget {
                 ),
                 child: InkWell(
                   onTap: () async {
-                    // Update role to BOTH so user can access both modes
+                    // Update role to RIDER when rider mode is selected
                     final authProvider = Provider.of<AuthProvider>(
                       context,
                       listen: false,
                     );
                     try {
-                      final updatedUser = await UserService.updateRole('BOTH');
+                      final updatedUser = await UserService.updateRole('RIDER');
                       authProvider.setUser(updatedUser);
                     } catch (e) {
                       // If role update fails, still allow navigation
-                      // User might already have BOTH role
+                      // User might already have RIDER role
                     }
                     if (context.mounted) {
                       Navigator.pushReplacementNamed(
@@ -91,17 +91,17 @@ class RoleSelectionScreen extends StatelessWidget {
                 ),
                 child: InkWell(
                   onTap: () async {
-                    // Update role to BOTH so user can access both modes
+                    // Update role to DRIVER when driver mode is selected
                     final authProvider = Provider.of<AuthProvider>(
                       context,
                       listen: false,
                     );
                     try {
-                      final updatedUser = await UserService.updateRole('BOTH');
+                      final updatedUser = await UserService.updateRole('DRIVER');
                       authProvider.setUser(updatedUser);
                     } catch (e) {
                       // If role update fails, still allow navigation
-                      // User might already have BOTH role
+                      // User might already have DRIVER role
                     }
                     if (context.mounted) {
                       Navigator.pushReplacementNamed(

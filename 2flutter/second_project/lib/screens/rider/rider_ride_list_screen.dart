@@ -200,9 +200,46 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                 ? null
                                 : () async {
                                     try {
+                                      // Get required data from ride
+                                      final ride = _selectedRide!;
+                                      final pickupLocationId = ride.pickupLocationId;
+                                      final dropoffLocationId = ride.destinationLocationId;
+                                      
+                                      // Use the ride's departure time range for pickup time
+                                      // The pickup time must be within the ride's departure time range
+                                      var pickupTimeStart = ride.departureTimeStart ?? ride.departureTime;
+                                      var pickupTimeEnd = ride.departureTimeEnd ?? ride.departureTime;
+                                      
+                                      // If both times are the same (no time range), add a small buffer
+                                      // to ensure pickupTimeEnd is after pickupTimeStart
+                                      if (pickupTimeStart.isAtSameMomentAs(pickupTimeEnd)) {
+                                        pickupTimeEnd = pickupTimeEnd.add(const Duration(minutes: 1));
+                                      }
+                                      
+                                      // Ensure pickupTimeEnd is after pickupTimeStart
+                                      if (pickupTimeEnd.isBefore(pickupTimeStart)) {
+                                        // Swap if they're in wrong order
+                                        final temp = pickupTimeStart;
+                                        pickupTimeStart = pickupTimeEnd;
+                                        pickupTimeEnd = temp;
+                                      }
+                                      
+                                      print('Creating booking with:');
+                                      print('  rideId: ${ride.id}');
+                                      print('  pickupLocationId: $pickupLocationId');
+                                      print('  dropoffLocationId: $dropoffLocationId');
+                                      print('  pickupTimeStart: ${pickupTimeStart.toIso8601String()}');
+                                      print('  pickupTimeEnd: ${pickupTimeEnd.toIso8601String()}');
+                                      print('  Ride departureTimeStart: ${ride.departureTimeStart?.toIso8601String()}');
+                                      print('  Ride departureTimeEnd: ${ride.departureTimeEnd?.toIso8601String()}');
+                                      
                                       await BookingService.createBooking(
-                                        rideId: _selectedRide!.id,
+                                        rideId: ride.id,
                                         seats: _seatsNeeded,
+                                        pickupLocationId: pickupLocationId,
+                                        dropoffLocationId: dropoffLocationId,
+                                        pickupTimeStart: pickupTimeStart,
+                                        pickupTimeEnd: pickupTimeEnd,
                                       );
                                       if (mounted) {
                                         Navigator.pushNamed(
@@ -215,7 +252,10 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
-                                          SnackBar(content: Text(e.toString())),
+                                          SnackBar(
+                                            content: Text(e.toString()),
+                                            backgroundColor: Colors.red,
+                                          ),
                                         );
                                       }
                                     }

@@ -6,11 +6,30 @@ class BookingService {
   static Future<Booking> createBooking({
     required int rideId,
     required int seats,
+    required int pickupLocationId,
+    required int dropoffLocationId,
+    required DateTime pickupTimeStart,
+    required DateTime pickupTimeEnd,
   }) async {
-    final response = await ApiClient.post('/bookings', {
+    // Convert to UTC for API
+    final pickupTimeStartUtc = pickupTimeStart.toUtc();
+    final pickupTimeEndUtc = pickupTimeEnd.toUtc();
+    
+    final requestBody = {
       'rideId': rideId,
       'seats': seats,
-    });
+      'pickupLocationId': pickupLocationId,
+      'dropoffLocationId': dropoffLocationId,
+      'pickupTimeStart': pickupTimeStartUtc.toIso8601String(),
+      'pickupTimeEnd': pickupTimeEndUtc.toIso8601String(),
+    };
+    
+    print('POST /api/bookings - Request Body: ${jsonEncode(requestBody)}');
+    
+    final response = await ApiClient.post('/bookings', requestBody);
+    
+    print('POST /api/bookings - Response Status: ${response.statusCode}');
+    print('POST /api/bookings - Response Body: ${response.body}');
 
     return Booking.fromJson(jsonDecode(response.body));
   }

@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import '../models/ride.dart';
 import '../models/location.dart';
 import '../services/ride_service.dart';
-import '../services/location_service.dart';
 
 class RideProvider with ChangeNotifier {
   List<Ride> _availableRides = [];
@@ -52,8 +51,9 @@ class RideProvider with ChangeNotifier {
   }
 
   Future<void> searchRides() async {
-    if (_pickupLocation == null || _destinationLocation == null) {
-      _error = 'Please select pickup and destination locations';
+    // No longer require pickup and destination locations
+    if (_departureTimeFrom == null || _departureTimeTo == null) {
+      _error = 'Please select departure time range';
       notifyListeners();
       return;
     }
@@ -63,18 +63,66 @@ class RideProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      _availableRides = await RideService.searchRides(
-        pickupLatitude: _pickupLocation!.latitude,
-        pickupLongitude: _pickupLocation!.longitude,
-        pickupRadiusKm: 5.0,
-        destinationLatitude: _destinationLocation!.latitude,
-        destinationLongitude: _destinationLocation!.longitude,
-        destinationRadiusKm: 5.0,
+      // Search without location filters - only by time
+      final allRides = await RideService.searchRides(
         departureTimeFrom: _departureTimeFrom,
         departureTimeTo: _departureTimeTo,
         minAvailableSeats: _seatsNeeded,
-        sortBy: 'distance',
+        sortBy: 'departureTime',
       );
+
+      final now = DateTime.now();
+      final searchStart = _departureTimeFrom!;
+      final searchEnd = _departureTimeTo!;
+
+      // Filter rides: show ride if its departureTime falls anywhere between
+      // departureTimeFrom and departureTimeTo (inclusive)
+      // Condition: departureTimeFrom <= ride.departureTime <= departureTimeTo
+      print(
+        'RideProvider.searchRides - Search time range: ${searchStart.toIso8601String()} to ${searchEnd.toIso8601String()}',
+      );
+      print(
+        'RideProvider.searchRides - Total rides from API: ${allRides.length}',
+      );
+
+      _availableRides = allRides.where((ride) {
+        // Check if ride is in the future
+        final rideStartTime = ride.departureTimeStart ?? ride.departureTime;
+        if (!rideStartTime.isAfter(now)) {
+          return false;
+        }
+
+        // Get ride's departure time (use departureTimeStart if available, otherwise departureTime)
+        final rideDepartureTime = ride.departureTimeStart ?? ride.departureTime;
+
+        // Show ride if its departureTime falls within the search time range (inclusive)
+        // Condition: searchStart <= rideDepartureTime <= searchEnd
+        final matches =
+            rideDepartureTime.compareTo(searchStart) >= 0 &&
+            rideDepartureTime.compareTo(searchEnd) <= 0;
+
+        if (matches) {
+          print(
+            '  Ride ${ride.id}: MATCH - Ride departureTime: ${rideDepartureTime.toIso8601String()} is within search range [${searchStart.toIso8601String()}, ${searchEnd.toIso8601String()}]',
+          );
+        } else {
+          print(
+            '  Ride ${ride.id}: NO MATCH - Ride departureTime: ${rideDepartureTime.toIso8601String()} is outside search range [${searchStart.toIso8601String()}, ${searchEnd.toIso8601String()}]',
+          );
+        }
+
+        return matches;
+      }).toList();
+
+      print(
+        'RideProvider.searchRides - Rides after intersection filter: ${_availableRides.length}',
+      );
+
+      // Sort by available seats (descending - most seats first)
+      _availableRides.sort(
+        (a, b) => b.availableSeats.compareTo(a.availableSeats),
+      );
+
       _isLoading = false;
       notifyListeners();
     } catch (e) {

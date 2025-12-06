@@ -99,7 +99,31 @@ class ApiClient {
       try {
         if (response.body.isNotEmpty) {
           final error = jsonDecode(response.body);
-          throw Exception(error['message'] ?? 'An error occurred');
+          // Handle different error response formats
+          String errorMessage = 'An error occurred';
+          
+          if (error is Map<String, dynamic>) {
+            // Check for message field
+            if (error.containsKey('message')) {
+              errorMessage = error['message'].toString();
+            } 
+            // Check for field-specific validation errors
+            else if (error.keys.isNotEmpty) {
+              final fieldErrors = error.entries
+                  .where((e) => e.key != 'status' && e.key != 'timestamp')
+                  .map((e) => '${e.key}: ${e.value}')
+                  .join(', ');
+              if (fieldErrors.isNotEmpty) {
+                errorMessage = fieldErrors;
+              }
+            }
+          } else if (error is String) {
+            errorMessage = error;
+          }
+          
+          print('API Error (${response.statusCode}): $errorMessage');
+          print('Full error response: ${response.body}');
+          throw Exception(errorMessage);
         } else {
           throw Exception('An error occurred: ${response.statusCode}');
         }

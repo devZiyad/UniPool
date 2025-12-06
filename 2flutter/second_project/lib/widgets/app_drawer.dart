@@ -75,6 +75,24 @@ class AppDrawer extends StatelessWidget {
               Navigator.pushReplacementNamed(context, '/role-selection');
             },
           ),
+          // Rider-specific options (show for RIDER or BOTH roles)
+          if (user != null &&
+              (user.role.toUpperCase() == 'RIDER' ||
+                  user.role.toUpperCase() == 'BOTH')) ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.search),
+              title: const Text('Search for Ride'),
+              subtitle: const Text('Find rides by destination and start location'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(
+                  context,
+                  '/rider/destination-search',
+                );
+              },
+            ),
+          ],
           // Driver-specific options (show for DRIVER or BOTH roles)
           if (user != null &&
               (user.role.toUpperCase() == 'DRIVER' ||
