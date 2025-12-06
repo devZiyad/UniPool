@@ -7,6 +7,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -33,11 +34,20 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private static final int AUTH_LIMIT = 5;
     private static final Duration AUTH_WINDOW = Duration.ofMinutes(1);
 
+    @Value("${rate.limiting.enabled:true}")
+    private boolean rateLimitingEnabled;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
+
+        // Skip rate limiting if disabled
+        if (!rateLimitingEnabled) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String clientIp = getClientIpAddress(request);
         String path = request.getRequestURI();

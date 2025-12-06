@@ -53,6 +53,14 @@ The API implements rate limiting using Bucket4j:
 - **General API endpoints**: 100 requests per minute per IP address
 - **Authentication endpoints** (`/api/auth/login`, `/api/auth/register`): 5 requests per minute per IP address
 
+Rate limiting can be enabled or disabled via configuration:
+
+```properties
+rate.limiting.enabled=true  # Set to false to disable rate limiting
+```
+
+**Note:** Rate limiting is enabled by default. Set `rate.limiting.enabled=false` in `application.properties` to disable it during testing.
+
 When rate limit is exceeded, the API returns:
 
 **Status Code:** `429 Too Many Requests`

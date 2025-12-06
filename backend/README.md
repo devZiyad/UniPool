@@ -234,6 +234,14 @@ payment.platform-fee-percentage=10  # 10% platform fee
 gps.tracking.update-interval-seconds=30
 ```
 
+### Rate Limiting Configuration
+
+```properties
+rate.limiting.enabled=true  # Set to false to disable rate limiting (useful for testing)
+```
+
+**Note:** Set `rate.limiting.enabled=false` to disable rate limiting during testing.
+
 ### Application Version
 
 ```properties
