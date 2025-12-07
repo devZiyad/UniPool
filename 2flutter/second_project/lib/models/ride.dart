@@ -65,9 +65,11 @@ class Ride {
 
   factory Ride.fromJson(Map<String, dynamic> json) {
     // Helper function to safely convert to int with field name for errors
-    int _toInt(dynamic value, String fieldName) {
+    int toInt(dynamic value, String fieldName) {
       if (value == null) {
-        throw Exception('Required field "$fieldName" is null. Available keys: ${json.keys.join(", ")}');
+        throw Exception(
+          'Required field "$fieldName" is null. Available keys: ${json.keys.join(", ")}',
+        );
       }
       if (value is int) return value;
       if (value is num) return value.toInt();
@@ -75,9 +77,11 @@ class Ride {
     }
 
     // Helper function to safely convert to double with field name for errors
-    double _toDouble(dynamic value, String fieldName) {
+    double toDouble(dynamic value, String fieldName) {
       if (value == null) {
-        throw Exception('Required field "$fieldName" is null. Available keys: ${json.keys.join(", ")}');
+        throw Exception(
+          'Required field "$fieldName" is null. Available keys: ${json.keys.join(", ")}',
+        );
       }
       if (value is double) return value;
       if (value is num) return value.toDouble();
@@ -85,7 +89,7 @@ class Ride {
     }
 
     // Helper function to safely convert nullable to double
-    double? _toDoubleNullable(dynamic value) {
+    double? toDoubleNullable(dynamic value) {
       if (value == null) return null;
       if (value is double) return value;
       if (value is num) return value.toDouble();
@@ -93,7 +97,7 @@ class Ride {
     }
 
     // Helper function to safely convert nullable to int
-    int? _toIntNullable(dynamic value) {
+    int? toIntNullable(dynamic value) {
       if (value == null) return null;
       if (value is int) return value;
       if (value is num) return value.toInt();
@@ -101,9 +105,11 @@ class Ride {
     }
 
     // Helper function to safely convert status (handle enum strings) with field name for errors
-    String _toString(dynamic value, String fieldName) {
+    String toString(dynamic value, String fieldName) {
       if (value == null) {
-        throw Exception('Required field "$fieldName" is null. Available keys: ${json.keys.join(", ")}');
+        throw Exception(
+          'Required field "$fieldName" is null. Available keys: ${json.keys.join(", ")}',
+        );
       }
       return value.toString();
     }
@@ -111,26 +117,35 @@ class Ride {
     // Handle both 'id' and 'rideId' field names (API changed)
     final rideId = json['rideId'] ?? json['id'];
     if (rideId == null) {
-      throw Exception('Neither "rideId" nor "id" found in response. Available keys: ${json.keys.join(", ")}');
+      throw Exception(
+        'Neither "rideId" nor "id" found in response. Available keys: ${json.keys.join(", ")}',
+      );
     }
-    
+
     // Handle both 'departureTime' and 'departureTimeStart' field names (API changed)
     // Use departureTimeStart if available, otherwise fall back to departureTime
-    final departureTimeValue = json['departureTimeStart'] ?? json['departureTime'];
+    final departureTimeValue =
+        json['departureTimeStart'] ?? json['departureTime'];
     if (departureTimeValue == null) {
-      throw Exception('Neither "departureTimeStart" nor "departureTime" found in response. Available keys: ${json.keys.join(", ")}');
+      throw Exception(
+        'Neither "departureTimeStart" nor "departureTime" found in response. Available keys: ${json.keys.join(", ")}',
+      );
     }
-    
+
     // Parse departureTimeStart and departureTimeEnd if available
     DateTime? departureTimeStart;
     DateTime? departureTimeEnd;
     if (json['departureTimeStart'] != null) {
-      departureTimeStart = DateTime.parse(_toString(json['departureTimeStart'], 'departureTimeStart')).toLocal();
+      departureTimeStart = DateTime.parse(
+        toString(json['departureTimeStart'], 'departureTimeStart'),
+      ).toLocal();
     }
     if (json['departureTimeEnd'] != null) {
-      departureTimeEnd = DateTime.parse(_toString(json['departureTimeEnd'], 'departureTimeEnd')).toLocal();
+      departureTimeEnd = DateTime.parse(
+        toString(json['departureTimeEnd'], 'departureTimeEnd'),
+      ).toLocal();
     }
-    
+
     // Handle routePolyline - it can be a string or an object
     String? routePolylineStr;
     if (json['routePolyline'] != null) {
@@ -143,47 +158,69 @@ class Ride {
         routePolylineStr = json['routePolyline'].toString();
       }
     }
-    
+
     return Ride(
-      id: _toInt(rideId, 'id/rideId'),
-      driverId: _toInt(json['driverId'], 'driverId'),
-      driverName: _toString(json['driverName'], 'driverName'),
+      id: toInt(rideId, 'id/rideId'),
+      driverId: toInt(json['driverId'], 'driverId'),
+      driverName: toString(json['driverName'], 'driverName'),
       driverRating: json['driverRating'] != null
-          ? _toDoubleNullable(json['driverRating'])
+          ? toDoubleNullable(json['driverRating'])
           : null,
-      vehicleId: _toInt(json['vehicleId'], 'vehicleId'),
-      vehicleMake: _toString(json['vehicleMake'], 'vehicleMake'),
-      vehicleModel: _toString(json['vehicleModel'], 'vehicleModel'),
-      vehiclePlateNumber: _toString(json['vehiclePlateNumber'], 'vehiclePlateNumber'),
-      vehicleSeatCount: _toInt(json['vehicleSeatCount'], 'vehicleSeatCount'),
-      pickupLocationId: _toInt(json['pickupLocationId'], 'pickupLocationId'),
-      pickupLocationLabel: _toString(json['pickupLocationLabel'], 'pickupLocationLabel'),
-      pickupLatitude: _toDouble(json['pickupLatitude'], 'pickupLatitude'),
-      pickupLongitude: _toDouble(json['pickupLongitude'], 'pickupLongitude'),
-      destinationLocationId: _toInt(json['destinationLocationId'], 'destinationLocationId'),
-      destinationLocationLabel: _toString(json['destinationLocationLabel'], 'destinationLocationLabel'),
-      destinationLatitude: _toDouble(json['destinationLatitude'], 'destinationLatitude'),
-      destinationLongitude: _toDouble(json['destinationLongitude'], 'destinationLongitude'),
-      departureTime: DateTime.parse(_toString(departureTimeValue, 'departureTime')).toLocal(),
+      vehicleId: toInt(json['vehicleId'], 'vehicleId'),
+      vehicleMake: toString(json['vehicleMake'], 'vehicleMake'),
+      vehicleModel: toString(json['vehicleModel'], 'vehicleModel'),
+      vehiclePlateNumber: toString(
+        json['vehiclePlateNumber'],
+        'vehiclePlateNumber',
+      ),
+      vehicleSeatCount: toInt(json['vehicleSeatCount'], 'vehicleSeatCount'),
+      pickupLocationId: toInt(json['pickupLocationId'], 'pickupLocationId'),
+      pickupLocationLabel: toString(
+        json['pickupLocationLabel'],
+        'pickupLocationLabel',
+      ),
+      pickupLatitude: toDouble(json['pickupLatitude'], 'pickupLatitude'),
+      pickupLongitude: toDouble(json['pickupLongitude'], 'pickupLongitude'),
+      destinationLocationId: toInt(
+        json['destinationLocationId'],
+        'destinationLocationId',
+      ),
+      destinationLocationLabel: toString(
+        json['destinationLocationLabel'],
+        'destinationLocationLabel',
+      ),
+      destinationLatitude: toDouble(
+        json['destinationLatitude'],
+        'destinationLatitude',
+      ),
+      destinationLongitude: toDouble(
+        json['destinationLongitude'],
+        'destinationLongitude',
+      ),
+      departureTime: DateTime.parse(
+        toString(departureTimeValue, 'departureTime'),
+      ).toLocal(),
       departureTimeStart: departureTimeStart,
       departureTimeEnd: departureTimeEnd,
-      totalSeats: _toInt(json['totalSeats'], 'totalSeats'),
-      availableSeats: _toInt(json['availableSeats'], 'availableSeats'),
+      totalSeats: toInt(json['totalSeats'], 'totalSeats'),
+      availableSeats: toInt(json['availableSeats'], 'availableSeats'),
       estimatedDistanceKm: json['estimatedDistanceKm'] != null
-          ? _toDoubleNullable(json['estimatedDistanceKm'])
+          ? toDoubleNullable(json['estimatedDistanceKm'])
           : null,
       routeDistanceKm: json['routeDistanceKm'] != null
-          ? _toDoubleNullable(json['routeDistanceKm'])
+          ? toDoubleNullable(json['routeDistanceKm'])
           : null,
-      estimatedDurationMinutes: _toIntNullable(json['estimatedDurationMinutes']),
+      estimatedDurationMinutes: toIntNullable(json['estimatedDurationMinutes']),
       basePrice: json['basePrice'] != null
-          ? _toDoubleNullable(json['basePrice'])
+          ? toDoubleNullable(json['basePrice'])
           : null,
       pricePerSeat: json['pricePerSeat'] != null
-          ? _toDoubleNullable(json['pricePerSeat'])
+          ? toDoubleNullable(json['pricePerSeat'])
           : null,
-      status: _toString(json['status'], 'status'),
-      createdAt: DateTime.parse(_toString(json['createdAt'], 'createdAt')).toLocal(),
+      status: toString(json['status'], 'status'),
+      createdAt: DateTime.parse(
+        toString(json['createdAt'], 'createdAt'),
+      ).toLocal(),
       routePolyline: routePolylineStr,
     );
   }

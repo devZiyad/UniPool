@@ -4,7 +4,7 @@ import '../providers/auth_provider.dart';
 import '../services/auth_service.dart';
 
 class AppDrawer extends StatelessWidget {
-  AppDrawer({super.key});
+  const AppDrawer({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -83,13 +83,12 @@ class AppDrawer extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.search),
               title: const Text('Search for Ride'),
-              subtitle: const Text('Find rides by destination and start location'),
+              subtitle: const Text(
+                'Find rides by destination and start location',
+              ),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(
-                  context,
-                  '/rider/destination-search',
-                );
+                Navigator.pushNamed(context, '/rider/destination-search');
               },
             ),
           ],

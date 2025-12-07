@@ -92,26 +92,27 @@ class RideProvider with ChangeNotifier {
           return false;
         }
 
-        // Get ride's departure time (use departureTimeStart if available, otherwise departureTime)
-        final rideDepartureTime = ride.departureTimeStart ?? ride.departureTime;
+        // Get ride's departure time range
+        // Use departureTimeStart/departureTimeEnd if available, otherwise use departureTime as both start and end
+        final rideTimeStart = ride.departureTimeStart ?? ride.departureTime;
+        final rideTimeEnd = ride.departureTimeEnd ?? ride.departureTime;
 
-        // Show ride if its departureTime falls within the search time range (inclusive)
-        // Condition: searchStart <= rideDepartureTime <= searchEnd
-        final matches =
-            rideDepartureTime.compareTo(searchStart) >= 0 &&
-            rideDepartureTime.compareTo(searchEnd) <= 0;
+        // Check for time range overlap between ride's departure time range and search time range
+        // Two ranges overlap if: rideStart <= searchEnd AND rideEnd >= searchStart
+        final hasOverlap = rideTimeStart.compareTo(searchEnd) <= 0 &&
+            rideTimeEnd.compareTo(searchStart) >= 0;
 
-        if (matches) {
+        if (hasOverlap) {
           print(
-            '  Ride ${ride.id}: MATCH - Ride departureTime: ${rideDepartureTime.toIso8601String()} is within search range [${searchStart.toIso8601String()}, ${searchEnd.toIso8601String()}]',
+            '  Ride ${ride.id}: MATCH - Ride time range [${rideTimeStart.toIso8601String()}, ${rideTimeEnd.toIso8601String()}] overlaps with search range [${searchStart.toIso8601String()}, ${searchEnd.toIso8601String()}]',
           );
         } else {
           print(
-            '  Ride ${ride.id}: NO MATCH - Ride departureTime: ${rideDepartureTime.toIso8601String()} is outside search range [${searchStart.toIso8601String()}, ${searchEnd.toIso8601String()}]',
+            '  Ride ${ride.id}: NO MATCH - Ride time range [${rideTimeStart.toIso8601String()}, ${rideTimeEnd.toIso8601String()}] does not overlap with search range [${searchStart.toIso8601String()}, ${searchEnd.toIso8601String()}]',
           );
         }
 
-        return matches;
+        return hasOverlap;
       }).toList();
 
       print(

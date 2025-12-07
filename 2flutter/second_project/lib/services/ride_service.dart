@@ -54,20 +54,27 @@ class RideService {
     if (pickupLatitude != null) body['pickupLatitude'] = pickupLatitude;
     if (pickupLongitude != null) body['pickupLongitude'] = pickupLongitude;
     if (pickupRadiusKm != null) body['pickupRadiusKm'] = pickupRadiusKm;
-    if (destinationLocationId != null)
+    if (destinationLocationId != null) {
       body['destinationLocationId'] = destinationLocationId;
-    if (destinationLatitude != null)
+    }
+    if (destinationLatitude != null) {
       body['destinationLatitude'] = destinationLatitude;
-    if (destinationLongitude != null)
+    }
+    if (destinationLongitude != null) {
       body['destinationLongitude'] = destinationLongitude;
-    if (destinationRadiusKm != null)
+    }
+    if (destinationRadiusKm != null) {
       body['destinationRadiusKm'] = destinationRadiusKm;
-    if (departureTimeFrom != null)
+    }
+    if (departureTimeFrom != null) {
       body['departureTimeFrom'] = departureTimeFrom.toIso8601String();
-    if (departureTimeTo != null)
+    }
+    if (departureTimeTo != null) {
       body['departureTimeTo'] = departureTimeTo.toIso8601String();
-    if (minAvailableSeats != null)
+    }
+    if (minAvailableSeats != null) {
       body['minAvailableSeats'] = minAvailableSeats;
+    }
     if (maxPrice != null) body['maxPrice'] = maxPrice;
     if (sortBy != null) body['sortBy'] = sortBy;
 
