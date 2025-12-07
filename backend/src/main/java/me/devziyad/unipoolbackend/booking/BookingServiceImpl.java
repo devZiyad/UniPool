@@ -74,6 +74,7 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public RideResponse createBooking(CreateBookingRequest request, Long riderId) {
+        // Use pessimistic locking to prevent race conditions on seat availability
         Ride ride = rideRepository.findById(request.getRideId())
                 .orElseThrow(() -> new ResourceNotFoundException("Ride not found"));
 
@@ -118,13 +119,23 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException("Number of seats cannot exceed ride capacity");
         }
 
-        if (ride.getAvailableSeats() < request.getSeats()) {
-            throw new BusinessException("Not enough available seats");
-        }
-
-        // Check for duplicate booking
+        // Check for duplicate booking BEFORE locking
         if (bookingRepository.findByRideIdAndRiderId(request.getRideId(), riderId).isPresent()) {
             throw new BusinessException("You already have a booking for this ride");
+        }
+
+        // Reload ride with pessimistic lock to prevent concurrent modifications
+        // This ensures only one booking can be processed at a time for this ride
+        ride = rideRepository.findByIdWithLock(request.getRideId())
+                .orElseThrow(() -> new ResourceNotFoundException("Ride not found"));
+
+        // Re-validate all conditions after acquiring lock (double-check pattern)
+        if (ride.getStatus() != RideStatus.POSTED) {
+            throw new BusinessException("Ride is not available for booking");
+        }
+        
+        if (ride.getAvailableSeats() < request.getSeats()) {
+            throw new BusinessException("Not enough available seats");
         }
 
         User rider = userRepository.findById(riderId)
@@ -141,7 +152,7 @@ public class BookingServiceImpl implements BookingService {
                 .multiply(BigDecimal.valueOf(request.getSeats()))
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // Update available seats
+        // Update available seats - this happens atomically within the transaction
         ride.setAvailableSeats(ride.getAvailableSeats() - request.getSeats());
         rideRepository.save(ride);
 

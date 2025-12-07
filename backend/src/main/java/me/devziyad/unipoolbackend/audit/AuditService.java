@@ -21,13 +21,24 @@ public class AuditService {
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // Public method that extracts request data before async execution
+    public void logAction(ActionType actionType, Long userId, Map<String, Object> metadata, HttpServletRequest request) {
+        // Extract request data synchronously before async execution
+        String ipAddress = getClientIpAddress(request);
+        String userAgent = request != null ? request.getHeader("User-Agent") : null;
+        // Truncate user agent if needed
+        if (userAgent != null && userAgent.length() > 500) {
+            userAgent = userAgent.substring(0, 500);
+        }
+        // Call async method with extracted data
+        logActionAsync(actionType, userId, metadata, ipAddress, userAgent);
+    }
+
     @Async
     @Transactional
-    public void logAction(ActionType actionType, Long userId, Map<String, Object> metadata, HttpServletRequest request) {
+    private void logActionAsync(ActionType actionType, Long userId, Map<String, Object> metadata, String ipAddress, String userAgent) {
         try {
             String metadataJson = metadata != null ? objectMapper.writeValueAsString(metadata) : null;
-            String ipAddress = getClientIpAddress(request);
-            String userAgent = request != null ? request.getHeader("User-Agent") : null;
 
             AuditLog auditLog = AuditLog.builder()
                     .userId(userId)
@@ -35,7 +46,7 @@ public class AuditService {
                     .timestamp(Instant.now())
                     .metadata(metadataJson)
                     .ipAddress(ipAddress)
-                    .userAgent(userAgent != null && userAgent.length() > 500 ? userAgent.substring(0, 500) : userAgent)
+                    .userAgent(userAgent)
                     .build();
 
             auditLogRepository.save(auditLog);
@@ -46,14 +57,10 @@ public class AuditService {
         }
     }
 
-    @Async
-    @Transactional
     public void logAction(ActionType actionType, Long userId, HttpServletRequest request) {
         logAction(actionType, userId, null, request);
     }
 
-    @Async
-    @Transactional
     public void logAction(ActionType actionType, Long userId, String metadataKey, Object metadataValue, HttpServletRequest request) {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put(metadataKey, metadataValue);

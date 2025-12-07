@@ -1,11 +1,13 @@
 package me.devziyad.unipoolbackend.ride;
 
+import jakarta.persistence.LockModeType;
 import lombok.NonNull;
 import me.devziyad.unipoolbackend.common.RideStatus;
 import me.devziyad.unipoolbackend.location.Location;
 import me.devziyad.unipoolbackend.user.User;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,6 +18,10 @@ import java.util.Optional;
 
 @Repository
 public interface RideRepository extends JpaRepository<@NonNull Ride, @NonNull Long> {
+    
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM Ride r WHERE r.id = :id")
+    Optional<Ride> findByIdWithLock(@Param("id") Long id);
 
     @Query("SELECT r FROM Ride r WHERE r.departureTimeStart >= :from AND r.departureTimeStart <= :to")
     @NonNull
