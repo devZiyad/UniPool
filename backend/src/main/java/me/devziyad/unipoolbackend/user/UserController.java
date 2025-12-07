@@ -52,6 +52,12 @@ public class UserController {
         } catch (IllegalArgumentException e) {
             throw new ForbiddenException("Invalid role. Must be RIDER, DRIVER, or BOTH");
         }
+        
+        // Additional validation: prevent ADMIN role
+        if (role == Role.ADMIN) {
+            throw new ForbiddenException("Cannot set role to ADMIN");
+        }
+        
         return ResponseEntity.ok(userService.updateRole(userId, role));
     }
 

@@ -373,8 +373,14 @@ Update user role.
 **Field Descriptions:**
 - `role` (required): New role - `RIDER`, `DRIVER`, or `BOTH`
   - **Note:** `ADMIN` role cannot be assigned through this endpoint. Admin accounts must be created by existing administrators or through system initialization.
+  - **Note:** Users with `ADMIN` role cannot change their role through this endpoint.
 
 **Response:** `200 OK`
+
+**Status Codes:**
+- `200 OK` - Role updated successfully
+- `400 Bad Request` - Invalid role value
+- `403 Forbidden` - Admin users cannot change their role, or attempting to set ADMIN role
 ```json
 {
   "id": 1,

@@ -285,14 +285,34 @@ rate.limiting.enabled=true  # Set to false to disable rate limiting (useful for 
 app.version=0.0.1-SNAPSHOT
 ```
 
-### Default Admin Account
+### Admin Account Configuration
 
-```properties
-admin.default.email=admin@unipool.edu
-admin.default.password=admin123
-admin.default.universityId=ADMIN001
-admin.default.fullName=System Administrator
-```
+**REQUIRED:** Admin credentials must be configured using a `.env` file. The application will not start without it.
+
+1. Copy `.env.template` to `.env`:
+   ```bash
+   cp .env.template .env
+   ```
+
+2. Edit `.env` and set your admin credentials:
+   ```bash
+   ADMIN_EMAIL=admin@unipool.edu
+   ADMIN_PASSWORD=your_secure_password
+   ADMIN_UNIVERSITY_ID=ADMIN001
+   ADMIN_FULL_NAME=System Administrator
+   ADMIN_PHONE_NUMBER=
+   ```
+
+3. The `.env` file is automatically ignored by git for security.
+
+**Required Variables:**
+- `ADMIN_EMAIL` - Admin user email address
+- `ADMIN_PASSWORD` - Admin user password
+- `ADMIN_UNIVERSITY_ID` - Admin university ID
+- `ADMIN_FULL_NAME` - Admin full name
+- `ADMIN_PHONE_NUMBER` - Admin phone number (optional)
+
+**Important:** The application will fail to start if the `.env` file is missing or if any required variables are not set. This ensures that admin credentials are never committed to version control.
 
 ## Build Instructions
 

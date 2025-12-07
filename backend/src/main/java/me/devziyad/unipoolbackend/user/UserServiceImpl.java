@@ -6,6 +6,7 @@ import me.devziyad.unipoolbackend.audit.ActionType;
 import me.devziyad.unipoolbackend.audit.AuditService;
 import me.devziyad.unipoolbackend.booking.BookingRepository;
 import me.devziyad.unipoolbackend.common.Role;
+import me.devziyad.unipoolbackend.exception.ForbiddenException;
 import me.devziyad.unipoolbackend.exception.ResourceNotFoundException;
 import me.devziyad.unipoolbackend.exception.UnauthorizedException;
 import me.devziyad.unipoolbackend.ride.RideRepository;
@@ -107,6 +108,17 @@ public class UserServiceImpl implements UserService {
     public UserResponse updateRole(Long id, Role role) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        
+        // Prevent ADMIN users from changing their role
+        if (user.getRole() == Role.ADMIN) {
+            throw new ForbiddenException("Admin users cannot change their role");
+        }
+        
+        // Prevent setting role to ADMIN through this endpoint
+        if (role == Role.ADMIN) {
+            throw new ForbiddenException("Cannot set role to ADMIN through this endpoint");
+        }
+        
         user.setRole(role);
         return toResponse(userRepository.save(user));
     }

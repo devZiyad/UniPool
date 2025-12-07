@@ -36,3 +36,6 @@ data/unipool.mv.db
 logs/
 start-server
 *.db
+
+# Environment variables
+.env
