@@ -25,8 +25,8 @@ public class Booking {
 
     @PrePersist
     protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = Instant.now();
+        if (createdAtInstant == null) {
+            createdAtInstant = Instant.now();
         }
     }
 
@@ -64,7 +64,7 @@ public class Booking {
 
     @Column(name = "created_at_instant", nullable = false, updatable = false)
     @Builder.Default
-    private Instant createdAt = Instant.now();
+    private Instant createdAtInstant = Instant.now();
 
     @Column(nullable = false)
     private Instant pickupTimeStart;

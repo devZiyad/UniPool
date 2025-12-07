@@ -108,7 +108,7 @@ public class RideServiceImpl implements RideService {
                 .dropoffLongitude(booking.getDropoffLocation().getLongitude())
                 .pickupTimeStart(booking.getPickupTimeStart())
                 .pickupTimeEnd(booking.getPickupTimeEnd())
-                .createdAt(booking.getCreatedAt())
+                .createdAt(booking.getCreatedAtInstant())
                 .status(booking.getStatus())
                 .costForThisRider(booking.getCostForThisRider())
                 .cancelledAt(booking.getCancelledAt())
