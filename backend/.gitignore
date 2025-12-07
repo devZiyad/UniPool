@@ -33,3 +33,5 @@ build/
 .vscode/
 
 data/unipool.mv.db
+logs/
+start-server
