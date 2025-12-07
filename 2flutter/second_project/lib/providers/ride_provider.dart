@@ -63,10 +63,15 @@ class RideProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      // Convert local times to UTC before sending to API
+      // The API expects all times in UTC, but we store them in local time for display
+      final departureTimeFromUtc = _departureTimeFrom!.toUtc();
+      final departureTimeToUtc = _departureTimeTo!.toUtc();
+      
       // Search without location filters - only by time
       final allRides = await RideService.searchRides(
-        departureTimeFrom: _departureTimeFrom,
-        departureTimeTo: _departureTimeTo,
+        departureTimeFrom: departureTimeFromUtc,
+        departureTimeTo: departureTimeToUtc,
         minAvailableSeats: _seatsNeeded,
         sortBy: 'departureTime',
       );

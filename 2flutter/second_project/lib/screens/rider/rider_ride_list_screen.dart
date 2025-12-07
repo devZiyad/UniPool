@@ -206,7 +206,8 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                       final dropoffLocationId = ride.destinationLocationId;
                                       
                                       // Use the ride's departure time range for pickup time
-                                      // The pickup time must be within the ride's departure time range
+                                      // Note: ride times are stored in local time (converted from UTC API response)
+                                      // but we need to send UTC times to the API
                                       var pickupTimeStart = ride.departureTimeStart ?? ride.departureTime;
                                       var pickupTimeEnd = ride.departureTimeEnd ?? ride.departureTime;
                                       
@@ -246,6 +247,7 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                       }
                                       
                                       // Final check: ensure pickupTimeStart is still in the future (in UTC)
+                                      // The BookingService will convert these local times to UTC before sending
                                       final finalNowUtc = DateTime.now().toUtc();
                                       final finalPickupTimeStartUtc = pickupTimeStart.toUtc();
                                       if (finalPickupTimeStartUtc.isBefore(finalNowUtc) || finalPickupTimeStartUtc.isAtSameMomentAs(finalNowUtc)) {
