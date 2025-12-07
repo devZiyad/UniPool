@@ -8,7 +8,7 @@ import me.devziyad.unipoolbackend.user.User;
 import me.devziyad.unipoolbackend.vehicle.Vehicle;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "rides", indexes = {
@@ -45,10 +45,10 @@ public class Ride {
     private Location destinationLocation;
 
     @Column(nullable = false)
-    private LocalDateTime departureTimeStart;
+    private Instant departureTimeStart;
 
     @Column(nullable = false)
-    private LocalDateTime departureTimeEnd;
+    private Instant departureTimeEnd;
 
     @Column(nullable = false)
     @jakarta.validation.constraints.Min(value = 1, message = "Total seats must be at least 1")
@@ -79,7 +79,7 @@ public class Ride {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(columnDefinition = "TEXT")
     private String routePolyline;

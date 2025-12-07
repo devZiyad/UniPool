@@ -31,7 +31,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<Payment> payments = paymentRepository.findByDriverId(driverId).stream()
                 .filter(p -> p.getStatus() == PaymentStatus.SETTLED)
                 .filter(p -> {
-                    LocalDate paymentDate = p.getCreatedAt().toLocalDate();
+                    java.time.LocalDate paymentDate = p.getCreatedAt().atZone(java.time.ZoneId.of("UTC")).toLocalDate();
                     return (from == null || !paymentDate.isBefore(from)) &&
                            (to == null || !paymentDate.isAfter(to));
                 })
@@ -55,7 +55,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         List<Payment> payments = paymentRepository.findByPayerId(riderId).stream()
                 .filter(p -> p.getStatus() == PaymentStatus.SETTLED)
                 .filter(p -> {
-                    LocalDate paymentDate = p.getCreatedAt().toLocalDate();
+                    java.time.LocalDate paymentDate = p.getCreatedAt().atZone(java.time.ZoneId.of("UTC")).toLocalDate();
                     return (from == null || !paymentDate.isBefore(from)) &&
                            (to == null || !paymentDate.isAfter(to));
                 })
@@ -132,7 +132,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     public PeakTimesResponse getPeakTimes() {
         Map<Integer, Long> hourCounts = rideRepository.findAll().stream()
-                .map(r -> r.getDepartureTimeStart().getHour())
+                .map(r -> r.getDepartureTimeStart().atZone(java.time.ZoneId.of("UTC")).getHour())
                 .collect(Collectors.groupingBy(h -> h, Collectors.counting()));
 
         List<PeakTime> peakTimes = hourCounts.entrySet().stream()

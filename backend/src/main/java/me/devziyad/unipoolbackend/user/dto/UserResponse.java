@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import me.devziyad.unipoolbackend.common.Role;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @Builder
@@ -21,7 +21,7 @@ public class UserResponse {
     private String phoneNumber;
     private Role role;
     private Boolean enabled;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     private BigDecimal walletBalance;
     private BigDecimal avgRatingAsDriver;
     private Integer ratingCountAsDriver;

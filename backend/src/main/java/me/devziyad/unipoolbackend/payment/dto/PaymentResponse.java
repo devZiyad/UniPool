@@ -8,7 +8,7 @@ import me.devziyad.unipoolbackend.common.PaymentMethod;
 import me.devziyad.unipoolbackend.common.PaymentStatus;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @Builder
@@ -27,7 +27,7 @@ public class PaymentResponse {
     private PaymentMethod method;
     private PaymentStatus status;
     private String transactionRef;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 }
 

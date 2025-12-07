@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import me.devziyad.unipoolbackend.user.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "failed_login_attempts", indexes = {
@@ -31,7 +31,7 @@ public class FailedLoginAttempt {
 
     @Column(nullable = false)
     @Builder.Default
-    private LocalDateTime attemptTime = LocalDateTime.now();
+    private Instant attemptTime = Instant.now();
 
     @Column(length = 45)
     private String ipAddress;

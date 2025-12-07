@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Component
@@ -29,8 +29,8 @@ public class RideReminderScheduler {
     public void sendRideReminders() {
         logger.info("Running ride reminder scheduler");
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime tenMinutesFromNow = now.plusMinutes(10);
+        Instant now = Instant.now();
+        Instant tenMinutesFromNow = now.plusSeconds(10 * 60L);
 
         // Find rides starting in the next 10 minutes
         List<Ride> upcomingRides = rideRepository.findAll().stream()

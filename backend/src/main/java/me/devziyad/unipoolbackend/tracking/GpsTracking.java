@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import me.devziyad.unipoolbackend.ride.Ride;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "gps_tracking", indexes = {
@@ -38,7 +38,7 @@ public class GpsTracking {
 
     @Column(nullable = false)
     @Builder.Default
-    private LocalDateTime lastUpdate = LocalDateTime.now();
+    private Instant lastUpdate = Instant.now();
 
     @Column(nullable = false)
     @Builder.Default

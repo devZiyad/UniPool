@@ -24,7 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -116,7 +116,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         // Check for account lockout
-        LocalDateTime lockoutThreshold = LocalDateTime.now().minusMinutes(LOCKOUT_DURATION_MINUTES);
+        Instant lockoutThreshold = Instant.now().minusSeconds(LOCKOUT_DURATION_MINUTES * 60L);
         Long failedAttempts = failedLoginAttemptRepository.countFailedAttemptsSince(request.getEmail(), lockoutThreshold);
         
         if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
@@ -140,7 +140,7 @@ public class AuthServiceImpl implements AuthService {
         }
 
         // Clear failed attempts on successful login
-        LocalDateTime since = LocalDateTime.now().minusHours(24);
+        Instant since = Instant.now().minusSeconds(24L * 60 * 60);
         failedLoginAttemptRepository.findRecentFailedAttempts(request.getEmail(), since)
                 .forEach(failedLoginAttemptRepository::delete);
 
@@ -157,7 +157,7 @@ public class AuthServiceImpl implements AuthService {
         FailedLoginAttempt attempt = FailedLoginAttempt.builder()
                 .email(email)
                 .user(user)
-                .attemptTime(LocalDateTime.now())
+                .attemptTime(Instant.now())
                 .ipAddress(ipAddress)
                 .build();
         failedLoginAttemptRepository.save(attempt);
@@ -182,14 +182,14 @@ public class AuthServiceImpl implements AuthService {
         // Add token to blacklist
         if (jwtService.isTokenValid(token)) {
             try {
-                LocalDateTime expiresAt = new java.util.Date(jwtService.getClaims(token).getExpiration().getTime())
-                        .toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime();
+                Instant expiresAt = new java.util.Date(jwtService.getClaims(token).getExpiration().getTime())
+                        .toInstant();
                 
                 TokenBlacklist blacklistEntry = TokenBlacklist.builder()
                         .token(token)
                         .user(userRepository.findById(userId).orElse(null))
                         .expiresAt(expiresAt)
-                        .blacklistedAt(LocalDateTime.now())
+                        .blacklistedAt(Instant.now())
                         .build();
                 tokenBlacklistRepository.save(blacklistEntry);
             } catch (Exception e) {

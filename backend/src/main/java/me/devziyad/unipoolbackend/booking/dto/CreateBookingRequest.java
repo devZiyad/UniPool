@@ -22,10 +22,10 @@ public class CreateBookingRequest {
 
     @NotNull(message = "Pickup time start is required")
     @Future(message = "Pickup time start must be in the future")
-    private java.time.LocalDateTime pickupTimeStart;
+    private java.time.Instant pickupTimeStart;
 
     @NotNull(message = "Pickup time end is required")
     @Future(message = "Pickup time end must be in the future")
-    private java.time.LocalDateTime pickupTimeEnd;
+    private java.time.Instant pickupTimeEnd;
 }
 

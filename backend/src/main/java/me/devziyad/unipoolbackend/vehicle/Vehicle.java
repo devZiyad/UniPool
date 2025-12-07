@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import me.devziyad.unipoolbackend.user.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "vehicles", indexes = {
@@ -47,5 +47,5 @@ public class Vehicle {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 }

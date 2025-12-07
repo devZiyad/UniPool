@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import me.devziyad.unipoolbackend.user.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "audit_logs", indexes = {
@@ -36,7 +36,7 @@ public class AuditLog {
 
     @Column(nullable = false)
     @Builder.Default
-    private LocalDateTime timestamp = LocalDateTime.now();
+    private Instant timestamp = Instant.now();
 
     @Column(columnDefinition = "TEXT")
     private String metadata;

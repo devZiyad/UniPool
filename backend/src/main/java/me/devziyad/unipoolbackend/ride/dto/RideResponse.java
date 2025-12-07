@@ -8,7 +8,7 @@ import me.devziyad.unipoolbackend.booking.dto.BookingResponse;
 import me.devziyad.unipoolbackend.common.RideStatus;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -33,8 +33,8 @@ public class RideResponse {
     private String destinationLocationLabel;
     private Double destinationLatitude;
     private Double destinationLongitude;
-    private LocalDateTime departureTimeStart;
-    private LocalDateTime departureTimeEnd;
+    private Instant departureTimeStart;
+    private Instant departureTimeEnd;
     private Integer totalSeats;
     private Integer availableSeats;
     private Double estimatedDistanceKm;
@@ -43,7 +43,7 @@ public class RideResponse {
     private BigDecimal basePrice;
     private BigDecimal pricePerSeat;
     private RideStatus status;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     private String routePolyline;
     private List<BookingResponse> bookings;
 }

@@ -5,7 +5,7 @@ import lombok.*;
 import me.devziyad.unipoolbackend.common.Role;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "users", indexes = {
@@ -49,7 +49,7 @@ public class User {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(nullable = false)
     @Builder.Default

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 public class CreateRideRequest {
@@ -22,11 +22,11 @@ public class CreateRideRequest {
     
     @NotNull(message = "Departure time start is required")
     @Future(message = "Departure time start must be in the future")
-    private LocalDateTime departureTimeStart;
+    private Instant departureTimeStart;
     
     @NotNull(message = "Departure time end is required")
     @Future(message = "Departure time end must be in the future")
-    private LocalDateTime departureTimeEnd;
+    private Instant departureTimeEnd;
     
     @NotNull(message = "Total seats is required")
     @Positive(message = "Total seats must be positive")

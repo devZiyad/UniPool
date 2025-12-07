@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @Builder
@@ -20,6 +20,6 @@ public class RatingResponse {
     private Long bookingId;
     private Integer score;
     private String comment;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }
 

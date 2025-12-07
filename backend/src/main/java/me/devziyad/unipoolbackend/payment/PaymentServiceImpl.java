@@ -24,7 +24,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -137,7 +137,7 @@ public class PaymentServiceImpl implements PaymentService {
         } else {
             // Cash payments are marked as settled immediately
             payment.setStatus(PaymentStatus.SETTLED);
-            payment.setUpdatedAt(LocalDateTime.now());
+            payment.setUpdatedAt(Instant.now());
             payment = paymentRepository.save(payment);
 
             // Audit log payment completion
@@ -182,7 +182,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         payment.setStatus(PaymentStatus.PROCESSING);
-        payment.setUpdatedAt(LocalDateTime.now());
+        payment.setUpdatedAt(Instant.now());
         payment = paymentRepository.save(payment);
 
         // Simulate processing delay
@@ -194,7 +194,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         // Settle payment
         payment.setStatus(PaymentStatus.SETTLED);
-        payment.setUpdatedAt(LocalDateTime.now());
+        payment.setUpdatedAt(Instant.now());
         payment = paymentRepository.save(payment);
 
         // Update driver wallet
@@ -236,7 +236,7 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         payment.setStatus(PaymentStatus.REFUNDED);
-        payment.setUpdatedAt(LocalDateTime.now());
+        payment.setUpdatedAt(Instant.now());
         payment = paymentRepository.save(payment);
 
         // Refund to payer
@@ -309,8 +309,8 @@ public class PaymentServiceImpl implements PaymentService {
                 .method(PaymentMethod.WALLET)
                 .status(PaymentStatus.SETTLED)
                 .transactionRef("TOPUP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
         return response;
     }

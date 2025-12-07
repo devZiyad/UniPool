@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -126,7 +126,7 @@ public class ModerationServiceImpl implements ModerationService {
 
         report.setStatus(request.getStatus());
         report.setResolvedBy(admin);
-        report.setResolvedAt(LocalDateTime.now());
+        report.setResolvedAt(Instant.now());
         if (request.getAdminNotes() != null) {
             report.setAdminNotes(contentFilter.sanitize(request.getAdminNotes()));
         }

@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import me.devziyad.unipoolbackend.user.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "token_blacklist", indexes = {
@@ -30,10 +30,10 @@ public class TokenBlacklist {
     private User user;
 
     @Column(nullable = false)
-    private LocalDateTime expiresAt;
+    private Instant expiresAt;
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime blacklistedAt = LocalDateTime.now();
+    private Instant blacklistedAt = Instant.now();
 }
 

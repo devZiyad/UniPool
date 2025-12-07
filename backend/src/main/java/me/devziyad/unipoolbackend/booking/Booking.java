@@ -9,7 +9,6 @@ import me.devziyad.unipoolbackend.user.User;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bookings", indexes = {
@@ -58,18 +57,14 @@ public class Booking {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    @Column(nullable = false, updatable = false)
-    @Builder.Default
-    private Instant createdAtInstant = Instant.now();
+    private Instant createdAt = Instant.now();
 
     @Column(nullable = false)
-    private LocalDateTime pickupTimeStart;
+    private Instant pickupTimeStart;
 
     @Column(nullable = false)
-    private LocalDateTime pickupTimeEnd;
+    private Instant pickupTimeEnd;
 
     @Column
-    private LocalDateTime cancelledAt;
+    private Instant cancelledAt;
 }

@@ -27,7 +27,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -108,7 +108,7 @@ public class RideServiceImpl implements RideService {
                 .dropoffLongitude(booking.getDropoffLocation().getLongitude())
                 .pickupTimeStart(booking.getPickupTimeStart())
                 .pickupTimeEnd(booking.getPickupTimeEnd())
-                .createdAt(booking.getCreatedAtInstant() != null ? booking.getCreatedAtInstant() : booking.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant())
+                .createdAt(booking.getCreatedAt())
                 .status(booking.getStatus())
                 .costForThisRider(booking.getCostForThisRider())
                 .cancelledAt(booking.getCancelledAt())
@@ -156,11 +156,11 @@ public class RideServiceImpl implements RideService {
             throw new BusinessException("Departure time start must be before departure time end");
         }
 
-        if (request.getDepartureTimeStart().isBefore(LocalDateTime.now())) {
+        if (request.getDepartureTimeStart().isBefore(Instant.now())) {
             throw new BusinessException("Departure time start must be in the future");
         }
 
-        if (request.getDepartureTimeEnd().isAfter(LocalDateTime.now().plusYears(1))) {
+        if (request.getDepartureTimeEnd().isAfter(Instant.now().plusSeconds(365L * 24 * 60 * 60))) {
             throw new BusinessException("Departure time end cannot be more than 1 year in the future");
         }
 
@@ -228,15 +228,15 @@ public class RideServiceImpl implements RideService {
 
         // Check for overlapping departure times with existing active rides
         List<Ride> activeRides = rideRepository.findActiveRidesByDriver(driverId);
-        LocalDateTime newDepartureTimeStart = request.getDepartureTimeStart();
-        LocalDateTime newDepartureTimeEnd = request.getDepartureTimeEnd();
+        Instant newDepartureTimeStart = request.getDepartureTimeStart();
+        Instant newDepartureTimeEnd = request.getDepartureTimeEnd();
         int newEstimatedDuration = routeInfo.getDurationMinutes();
-        LocalDateTime newEndTime = newDepartureTimeEnd.plusMinutes(newEstimatedDuration);
+        Instant newEndTime = newDepartureTimeEnd.plusSeconds(newEstimatedDuration * 60L);
 
         for (Ride existingRide : activeRides) {
-            LocalDateTime existingDepartureTimeStart = existingRide.getDepartureTimeStart();
-            LocalDateTime existingDepartureTimeEnd = existingRide.getDepartureTimeEnd();
-            LocalDateTime existingEndTime = existingDepartureTimeEnd.plusMinutes(existingRide.getEstimatedDurationMinutes());
+            Instant existingDepartureTimeStart = existingRide.getDepartureTimeStart();
+            Instant existingDepartureTimeEnd = existingRide.getDepartureTimeEnd();
+            Instant existingEndTime = existingDepartureTimeEnd.plusSeconds(existingRide.getEstimatedDurationMinutes() * 60L);
 
             // Check if time ranges overlap
             // Two time ranges overlap if: newStart < existingEnd AND newEnd > existingStart
@@ -293,7 +293,7 @@ public class RideServiceImpl implements RideService {
     public List<RideResponse> searchRides(SearchRidesRequest request) {
         List<Ride> rides = rideRepository.findAvailableRidesWithBookings(
                 request.getMinAvailableSeats() != null ? request.getMinAvailableSeats() : 1,
-                request.getDepartureTimeFrom() != null ? request.getDepartureTimeFrom() : LocalDateTime.now()
+                request.getDepartureTimeFrom() != null ? request.getDepartureTimeFrom() : Instant.now()
         );
 
         // Filter by pickup location

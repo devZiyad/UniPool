@@ -8,7 +8,7 @@ import me.devziyad.unipoolbackend.tracking.dto.GpsLocationResponse;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +36,7 @@ public class GpsTrackingServiceImpl implements GpsTrackingService {
 
         tracking.setLatitude(latitude);
         tracking.setLongitude(longitude);
-        tracking.setLastUpdate(LocalDateTime.now());
+        tracking.setLastUpdate(Instant.now());
         trackingRepository.save(tracking);
     }
 
@@ -70,7 +70,7 @@ public class GpsTrackingServiceImpl implements GpsTrackingService {
                 });
 
         tracking.setIsActive(true);
-        tracking.setLastUpdate(LocalDateTime.now());
+        tracking.setLastUpdate(Instant.now());
         trackingRepository.save(tracking);
     }
 

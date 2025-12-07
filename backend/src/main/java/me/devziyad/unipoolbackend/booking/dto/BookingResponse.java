@@ -8,7 +8,6 @@ import me.devziyad.unipoolbackend.common.BookingStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -27,11 +26,11 @@ public class BookingResponse {
     private String dropoffLocationLabel;
     private Double dropoffLatitude;
     private Double dropoffLongitude;
-    private java.time.LocalDateTime pickupTimeStart;
-    private java.time.LocalDateTime pickupTimeEnd;
+    private Instant pickupTimeStart;
+    private Instant pickupTimeEnd;
     private Instant createdAt;
     private BookingStatus status;
     private BigDecimal costForThisRider;
-    private LocalDateTime cancelledAt;
+    private Instant cancelledAt;
 }
 

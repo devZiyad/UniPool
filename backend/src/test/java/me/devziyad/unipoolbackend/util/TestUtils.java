@@ -1,6 +1,9 @@
 package me.devziyad.unipoolbackend.util;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import me.devziyad.unipoolbackend.auth.dto.AuthResponse;
 import me.devziyad.unipoolbackend.auth.dto.LoginRequest;
 import me.devziyad.unipoolbackend.auth.dto.RegisterRequest;
@@ -16,7 +19,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
@@ -26,8 +30,20 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class TestUtils {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper()
-            .findAndRegisterModules(); // Auto-registers JavaTimeModule if available
+    private static final ObjectMapper objectMapper = createObjectMapper();
+    
+    private static ObjectMapper createObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        // Register JavaTimeModule for JSR310 date/time support
+        mapper.registerModule(new JavaTimeModule());
+        // Use ISO-8601 instead of timestamps
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        // Do not adjust dates based on JVM timezone
+        mapper.disable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE);
+        // Force UTC
+        mapper.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+        return mapper;
+    }
     
     private static final AtomicLong emailCounter = new AtomicLong(0);
 
@@ -218,6 +234,27 @@ public class TestUtils {
     }
 
     /**
+     * Helper method to get Instant now plus specified hours
+     */
+    public static Instant instantNowPlusHours(long hours) {
+        return Instant.now().plus(hours, ChronoUnit.HOURS);
+    }
+
+    /**
+     * Helper method to get Instant now plus specified minutes
+     */
+    public static Instant instantNowPlusMinutes(long minutes) {
+        return Instant.now().plus(minutes, ChronoUnit.MINUTES);
+    }
+
+    /**
+     * Helper method to get Instant now plus specified days
+     */
+    public static Instant instantNowPlusDays(long days) {
+        return Instant.now().plus(days, ChronoUnit.DAYS);
+    }
+
+    /**
      * Creates a ride for a driver
      */
     public static RideResponse createRide(RestTestClient restClient, String driverToken, Long vehicleId, Long pickupLocationId, Long destinationLocationId) {
@@ -225,9 +262,9 @@ public class TestUtils {
         request.setVehicleId(vehicleId);
         request.setPickupLocationId(pickupLocationId);
         request.setDestinationLocationId(destinationLocationId);
-        LocalDateTime departureStart = LocalDateTime.now().plusHours(2);
+        Instant departureStart = instantNowPlusHours(2);
         request.setDepartureTimeStart(departureStart);
-        request.setDepartureTimeEnd(departureStart.plusMinutes(30));
+        request.setDepartureTimeEnd(departureStart.plus(30, ChronoUnit.MINUTES));
         request.setTotalSeats(4);
         request.setBasePrice(new BigDecimal("10.00"));
         request.setPricePerSeat(new BigDecimal("2.50"));

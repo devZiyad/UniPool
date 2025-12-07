@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @Builder
@@ -15,7 +15,7 @@ public class GpsLocationResponse {
     private Long rideId;
     private Double latitude;
     private Double longitude;
-    private LocalDateTime lastUpdate;
+    private Instant lastUpdate;
     private Boolean isActive;
 }
 

@@ -8,7 +8,7 @@ import me.devziyad.unipoolbackend.common.PaymentStatus;
 import me.devziyad.unipoolbackend.user.User;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "payments", indexes = {
@@ -63,9 +63,9 @@ public class Payment {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column(nullable = false)
     @Builder.Default
-    private LocalDateTime updatedAt = LocalDateTime.now();
+    private Instant updatedAt = Instant.now();
 }

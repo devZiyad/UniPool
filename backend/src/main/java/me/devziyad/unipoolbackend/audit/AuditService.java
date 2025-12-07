@@ -9,7 +9,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,7 +32,7 @@ public class AuditService {
             AuditLog auditLog = AuditLog.builder()
                     .userId(userId)
                     .actionType(actionType)
-                    .timestamp(LocalDateTime.now())
+                    .timestamp(Instant.now())
                     .metadata(metadataJson)
                     .ipAddress(ipAddress)
                     .userAgent(userAgent != null && userAgent.length() > 500 ? userAgent.substring(0, 500) : userAgent)

@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,7 +19,7 @@ public interface RideRepository extends JpaRepository<@NonNull Ride, @NonNull Lo
 
     @Query("SELECT r FROM Ride r WHERE r.departureTimeStart >= :from AND r.departureTimeStart <= :to")
     @NonNull
-    List<@NonNull Ride> findByDepartureTimeBetween(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    List<@NonNull Ride> findByDepartureTimeBetween(@Param("from") Instant from, @Param("to") Instant to);
 
     @NonNull
     List<@NonNull Ride> findByDriver(User driver);
@@ -38,7 +38,7 @@ public interface RideRepository extends JpaRepository<@NonNull Ride, @NonNull Lo
 
     @Query("SELECT r FROM Ride r WHERE r.departureTimeStart > :time")
     @NonNull
-    List<@NonNull Ride> findByDepartureTimeAfter(@Param("time") LocalDateTime time);
+    List<@NonNull Ride> findByDepartureTimeAfter(@Param("time") Instant time);
 
     @Query("SELECT r FROM Ride r WHERE r.driver.id = :driverId AND r.status = :status")
     @NonNull
@@ -46,7 +46,7 @@ public interface RideRepository extends JpaRepository<@NonNull Ride, @NonNull Lo
 
     @Query("SELECT r FROM Ride r WHERE r.availableSeats >= :minSeats AND r.departureTimeStart >= :fromTime AND r.status = 'POSTED'")
     @NonNull
-    List<@NonNull Ride> findAvailableRides(@Param("minSeats") Integer minSeats, @Param("fromTime") LocalDateTime fromTime);
+    List<@NonNull Ride> findAvailableRides(@Param("minSeats") Integer minSeats, @Param("fromTime") Instant fromTime);
 
     @Query("SELECT r FROM Ride r WHERE r.driver.id = :driverId AND r.status != 'CANCELLED' AND r.status != 'COMPLETED'")
     @NonNull
@@ -65,5 +65,5 @@ public interface RideRepository extends JpaRepository<@NonNull Ride, @NonNull Lo
     @EntityGraph(attributePaths = {"bookings", "bookings.rider", "bookings.pickupLocation", "bookings.dropoffLocation"})
     @Query("SELECT r FROM Ride r WHERE r.availableSeats >= :minSeats AND r.departureTimeStart >= :fromTime AND r.status = 'POSTED'")
     @NonNull
-    List<@NonNull Ride> findAvailableRidesWithBookings(@Param("minSeats") Integer minSeats, @Param("fromTime") LocalDateTime fromTime);
+    List<@NonNull Ride> findAvailableRidesWithBookings(@Param("minSeats") Integer minSeats, @Param("fromTime") Instant fromTime);
 }

@@ -6,7 +6,7 @@ import me.devziyad.unipoolbackend.booking.Booking;
 import me.devziyad.unipoolbackend.ride.Ride;
 import me.devziyad.unipoolbackend.user.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "user_reports", indexes = {
@@ -63,9 +63,9 @@ public class UserReport {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 
     @Column
-    private LocalDateTime resolvedAt;
+    private Instant resolvedAt;
 }
 

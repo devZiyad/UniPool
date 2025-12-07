@@ -4,6 +4,8 @@ import me.devziyad.unipoolbackend.common.RideStatus;
 import me.devziyad.unipoolbackend.common.Role;
 import me.devziyad.unipoolbackend.ride.dto.CreateRideRequest;
 import me.devziyad.unipoolbackend.util.TestUtils;
+
+import static me.devziyad.unipoolbackend.util.TestUtils.instantNowPlusHours;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,7 +15,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 
 @AutoConfigureRestTestClient
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -42,9 +45,9 @@ public class RideControllerIT {
         request.setVehicleId(1L);
         request.setPickupLocationId(1L);
         request.setDestinationLocationId(2L);
-        LocalDateTime departureStart = LocalDateTime.now().plusHours(2);
+        Instant departureStart = instantNowPlusHours(2);
         request.setDepartureTimeStart(departureStart);
-        request.setDepartureTimeEnd(departureStart.plusMinutes(30));
+        request.setDepartureTimeEnd(departureStart.plus(30, ChronoUnit.MINUTES));
         request.setTotalSeats(4);
         request.setBasePrice(new BigDecimal("10.00"));
         request.setPricePerSeat(new BigDecimal("5.00"));
@@ -72,9 +75,9 @@ public class RideControllerIT {
         request.setVehicleId(1L);
         request.setPickupLocationId(1L);
         request.setDestinationLocationId(2L);
-        LocalDateTime departureStart = LocalDateTime.now().plusHours(2);
+        Instant departureStart = instantNowPlusHours(2);
         request.setDepartureTimeStart(departureStart);
-        request.setDepartureTimeEnd(departureStart.plusMinutes(30));
+        request.setDepartureTimeEnd(departureStart.plus(30, ChronoUnit.MINUTES));
         request.setTotalSeats(4);
 
         restClient

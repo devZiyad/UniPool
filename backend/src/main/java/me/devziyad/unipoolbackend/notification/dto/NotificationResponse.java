@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import me.devziyad.unipoolbackend.common.NotificationType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @Builder
@@ -19,6 +19,6 @@ public class NotificationResponse {
     private String title;
     private String body;
     private Boolean read;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }
 

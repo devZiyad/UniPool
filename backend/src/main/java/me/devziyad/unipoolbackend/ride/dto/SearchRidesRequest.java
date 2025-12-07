@@ -3,7 +3,7 @@ package me.devziyad.unipoolbackend.ride.dto;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 public class SearchRidesRequest {
@@ -17,8 +17,8 @@ public class SearchRidesRequest {
     private Double destinationLongitude;
     private Double destinationRadiusKm;
     
-    private LocalDateTime departureTimeFrom;
-    private LocalDateTime departureTimeTo;
+    private Instant departureTimeFrom;
+    private Instant departureTimeTo;
     
     private Integer minAvailableSeats;
     private BigDecimal maxPrice;

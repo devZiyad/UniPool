@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Repository
@@ -20,10 +20,10 @@ public interface AuditLogRepository extends JpaRepository<@NonNull AuditLog, @No
     
     @Query("SELECT a FROM AuditLog a WHERE a.timestamp >= :since ORDER BY a.timestamp DESC")
     @NonNull
-    List<@NonNull AuditLog> findRecentLogs(@Param("since") LocalDateTime since);
+    List<@NonNull AuditLog> findRecentLogs(@Param("since") Instant since);
     
     @Query("SELECT a FROM AuditLog a WHERE a.userId = :userId AND a.timestamp >= :since ORDER BY a.timestamp DESC")
     @NonNull
-    List<@NonNull AuditLog> findUserLogsSince(@Param("userId") Long userId, @Param("since") LocalDateTime since);
+    List<@NonNull AuditLog> findUserLogsSince(@Param("userId") Long userId, @Param("since") Instant since);
 }
 

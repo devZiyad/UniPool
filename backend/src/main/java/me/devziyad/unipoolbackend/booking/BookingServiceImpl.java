@@ -27,7 +27,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -64,7 +64,7 @@ public class BookingServiceImpl implements BookingService {
                 .dropoffLongitude(booking.getDropoffLocation().getLongitude())
                 .pickupTimeStart(booking.getPickupTimeStart())
                 .pickupTimeEnd(booking.getPickupTimeEnd())
-                .createdAt(booking.getCreatedAtInstant() != null ? booking.getCreatedAtInstant() : booking.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant())
+                .createdAt(booking.getCreatedAt())
                 .status(booking.getStatus())
                 .costForThisRider(booking.getCostForThisRider())
                 .cancelledAt(booking.getCancelledAt())
@@ -85,7 +85,7 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException("Ride is not available for booking");
         }
 
-        if (ride.getDepartureTimeEnd().isBefore(LocalDateTime.now())) {
+        if (ride.getDepartureTimeEnd().isBefore(Instant.now())) {
             throw new BusinessException("Cannot book past rides");
         }
 
@@ -94,7 +94,7 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException("Pickup time start must be before pickup time end");
         }
 
-        if (request.getPickupTimeStart().isBefore(LocalDateTime.now())) {
+        if (request.getPickupTimeStart().isBefore(Instant.now())) {
             throw new BusinessException("Pickup time start must be in the future");
         }
 
@@ -226,7 +226,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        booking.setCancelledAt(LocalDateTime.now());
+        booking.setCancelledAt(Instant.now());
         bookingRepository.save(booking);
 
         // Return seats to ride

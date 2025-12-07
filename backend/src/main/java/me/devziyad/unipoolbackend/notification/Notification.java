@@ -5,7 +5,7 @@ import lombok.*;
 import me.devziyad.unipoolbackend.common.NotificationType;
 import me.devziyad.unipoolbackend.user.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "notifications", indexes = {
@@ -43,5 +43,5 @@ public class Notification {
 
     @Column(nullable = false, updatable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private Instant createdAt = Instant.now();
 }

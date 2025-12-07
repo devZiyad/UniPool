@@ -6,7 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Component
 @RequiredArgsConstructor
@@ -19,7 +19,7 @@ public class CleanupScheduler {
     @Scheduled(cron = "0 0 * * * *") // Run every hour
     @Transactional
     public void cleanupExpiredTokens() {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         tokenBlacklistRepository.deleteExpiredTokens(now);
         log.info("Cleaned up expired tokens");
     }
@@ -27,7 +27,7 @@ public class CleanupScheduler {
     @Scheduled(cron = "0 0 0 * * *") // Run daily at midnight
     @Transactional
     public void cleanupOldFailedAttempts() {
-        LocalDateTime oneDayAgo = LocalDateTime.now().minusDays(1);
+        Instant oneDayAgo = Instant.now().minusSeconds(24L * 60 * 60);
         failedLoginAttemptRepository.deleteOldAttempts(oneDayAgo);
         log.info("Cleaned up old failed login attempts");
     }

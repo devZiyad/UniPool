@@ -88,6 +88,43 @@ The application follows a layered architecture:
 - **Testing**: JUnit 5, MockMvc
 - **Utilities**: Lombok, Jackson (JSR310 support)
 
+## Date/Time Policy (UTC)
+
+**Important**: The backend uses a strict UTC timezone policy across all layers.
+
+### Backend Behavior
+
+- **All timestamps are stored and processed in UTC**: All date/time fields in entities, DTOs, and services use `java.time.Instant` internally, which represents a point in time in UTC.
+
+- **API Format**: All timestamps are serialized as ISO-8601 UTC strings with a trailing `Z` (e.g., `2024-12-15T14:30:00Z`).
+
+- **Input Handling**: The backend accepts timestamps with or without a `Z` suffix. If no timezone is specified, timestamps are interpreted as UTC. The backend never applies server-local timezone offsets.
+
+- **Database Storage**: All timestamps are stored in the database as UTC. Hibernate is configured to use UTC timezone for all date/time operations.
+
+- **Comparisons**: All time comparisons use `Instant.now()` in UTC without any timezone conversion.
+
+### Frontend Responsibility
+
+**The frontend is responsible for converting UTC timestamps to the device's local timezone for display purposes.**
+
+When sending timestamps to the backend:
+- Send timestamps in UTC format (ISO-8601 with `Z` suffix)
+- Or send timestamps without timezone (they will be treated as UTC)
+
+When receiving timestamps from the backend:
+- All timestamps are in UTC
+- Convert to local timezone for display using the device's timezone settings
+
+### Configuration
+
+The UTC policy is enforced through:
+- Global Jackson configuration (`JacksonConfig`) that disables timezone adjustments
+- JPA/Hibernate configuration using UTC timezone
+- All date/time fields using `Instant` instead of `LocalDateTime` or `ZonedDateTime`
+
+This ensures consistent behavior regardless of the server's timezone settings.
+
 ## Installation
 
 ### Prerequisites

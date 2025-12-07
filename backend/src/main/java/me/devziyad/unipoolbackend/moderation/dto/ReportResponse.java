@@ -5,7 +5,7 @@ import lombok.Data;
 import me.devziyad.unipoolbackend.moderation.ReportStatus;
 import me.devziyad.unipoolbackend.moderation.ReportType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @Builder
@@ -23,7 +23,7 @@ public class ReportResponse {
     private String adminNotes;
     private Long resolvedById;
     private String resolvedByName;
-    private LocalDateTime createdAt;
-    private LocalDateTime resolvedAt;
+    private Instant createdAt;
+    private Instant resolvedAt;
 }
 
