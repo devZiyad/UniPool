@@ -1003,6 +1003,11 @@ Search for available rides with filters.
 - Use either `pickupLocationId` OR `pickupLatitude`/`pickupLongitude`/`pickupRadiusKm`
 - Use either `destinationLocationId` OR `destinationLatitude`/`destinationLongitude`/`destinationRadiusKm`
 - `sortBy`: `distance`, `price`, or `departureTime`
+- **Time Range Overlap**: The search uses overlapping time range detection. A ride will be returned if its departure time range overlaps with the search time range. For example:
+  - Ride: 7:00 - 8:30
+  - Search: 6:30 - 7:30 → **Matches** (overlaps)
+  - Search: 8:00 - 9:00 → **Matches** (overlaps)
+  - Search: 5:00 - 6:00 → **No match** (no overlap)
 
 **Response:** `200 OK` (array of RideResponse)
 
@@ -1014,7 +1019,7 @@ curl -X POST http://localhost:8080/api/rides/search \
   -d '{
     "pickupLocationId": 1,
     "destinationLocationId": 2,
-    "departureTimeFrom": "2024-12-15T00:00:00",
+    "departureTimeFrom": "2024-12-15T00:00:00Z",
     "minAvailableSeats": 1,
     "sortBy": "price"
   }'

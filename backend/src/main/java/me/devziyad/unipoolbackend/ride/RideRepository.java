@@ -44,9 +44,9 @@ public interface RideRepository extends JpaRepository<@NonNull Ride, @NonNull Lo
     @NonNull
     List<@NonNull Ride> findByDriverIdAndStatus(@Param("driverId") Long driverId, @Param("status") RideStatus status);
 
-    @Query("SELECT r FROM Ride r WHERE r.availableSeats >= :minSeats AND r.departureTimeStart >= :fromTime AND r.status = 'POSTED'")
+    @Query("SELECT r FROM Ride r WHERE r.availableSeats >= :minSeats AND r.status = 'POSTED'")
     @NonNull
-    List<@NonNull Ride> findAvailableRides(@Param("minSeats") Integer minSeats, @Param("fromTime") Instant fromTime);
+    List<@NonNull Ride> findAvailableRides(@Param("minSeats") Integer minSeats);
 
     @Query("SELECT r FROM Ride r WHERE r.driver.id = :driverId AND r.status != 'CANCELLED' AND r.status != 'COMPLETED'")
     @NonNull
@@ -63,7 +63,7 @@ public interface RideRepository extends JpaRepository<@NonNull Ride, @NonNull Lo
     List<@NonNull Ride> findByDriverIdWithBookings(@Param("driverId") Long driverId);
 
     @EntityGraph(attributePaths = {"bookings", "bookings.rider", "bookings.pickupLocation", "bookings.dropoffLocation"})
-    @Query("SELECT r FROM Ride r WHERE r.availableSeats >= :minSeats AND r.departureTimeStart >= :fromTime AND r.status = 'POSTED'")
+    @Query("SELECT r FROM Ride r WHERE r.availableSeats >= :minSeats AND r.status = 'POSTED'")
     @NonNull
-    List<@NonNull Ride> findAvailableRidesWithBookings(@Param("minSeats") Integer minSeats, @Param("fromTime") Instant fromTime);
+    List<@NonNull Ride> findAvailableRidesWithBookings(@Param("minSeats") Integer minSeats);
 }

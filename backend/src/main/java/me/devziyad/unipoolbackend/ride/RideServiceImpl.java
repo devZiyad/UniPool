@@ -291,9 +291,9 @@ public class RideServiceImpl implements RideService {
     @Override
     @Transactional(readOnly = true)
     public List<RideResponse> searchRides(SearchRidesRequest request) {
+        // Get all available rides (time filtering will be done in memory for proper overlap detection)
         List<Ride> rides = rideRepository.findAvailableRidesWithBookings(
-                request.getMinAvailableSeats() != null ? request.getMinAvailableSeats() : 1,
-                request.getDepartureTimeFrom() != null ? request.getDepartureTimeFrom() : Instant.now()
+                request.getMinAvailableSeats() != null ? request.getMinAvailableSeats() : 1
         );
 
         // Filter by pickup location
@@ -326,10 +326,23 @@ public class RideServiceImpl implements RideService {
                     .collect(Collectors.toList());
         }
 
-        // Filter by time window
+        // Filter by time window with proper overlap detection
+        // Two time ranges overlap if: searchStart < rideEnd AND searchEnd > rideStart
+        Instant searchStart = request.getDepartureTimeFrom() != null ? request.getDepartureTimeFrom() : Instant.now();
         if (request.getDepartureTimeTo() != null) {
+            Instant searchEnd = request.getDepartureTimeTo();
             rides = rides.stream()
-                    .filter(r -> r.getDepartureTimeStart().isBefore(request.getDepartureTimeTo()))
+                    .filter(r -> {
+                        // Check if ride time range overlaps with search time range
+                        // Overlap condition: searchStart < rideEnd AND searchEnd > rideStart
+                        return searchStart.isBefore(r.getDepartureTimeEnd()) && 
+                               searchEnd.isAfter(r.getDepartureTimeStart());
+                    })
+                    .collect(Collectors.toList());
+        } else {
+            // If no end time specified, just check if ride starts after search start
+            rides = rides.stream()
+                    .filter(r -> r.getDepartureTimeStart().isAfter(searchStart) || r.getDepartureTimeStart().equals(searchStart))
                     .collect(Collectors.toList());
         }
 
