@@ -12,6 +12,10 @@ class User {
   final int ratingCountAsDriver;
   final double? avgRatingAsRider;
   final int ratingCountAsRider;
+  final bool universityIdVerified;
+  final bool verifiedDriver;
+  final String? universityIdImage;
+  final String? driversLicenseImage;
 
   User({
     required this.id,
@@ -27,6 +31,10 @@ class User {
     required this.ratingCountAsDriver,
     this.avgRatingAsRider,
     required this.ratingCountAsRider,
+    required this.universityIdVerified,
+    required this.verifiedDriver,
+    this.universityIdImage,
+    this.driversLicenseImage,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -44,6 +52,10 @@ class User {
       ratingCountAsDriver: json['ratingCountAsDriver'] ?? 0,
       avgRatingAsRider: json['avgRatingAsRider']?.toDouble(),
       ratingCountAsRider: json['ratingCountAsRider'] ?? 0,
+      universityIdVerified: json['universityIdVerified'] ?? false,
+      verifiedDriver: json['verifiedDriver'] ?? false,
+      universityIdImage: json['universityIdImage'],
+      driversLicenseImage: json['driversLicenseImage'],
     );
   }
 
@@ -62,6 +74,10 @@ class User {
       'ratingCountAsDriver': ratingCountAsDriver,
       'avgRatingAsRider': avgRatingAsRider,
       'ratingCountAsRider': ratingCountAsRider,
+      'universityIdVerified': universityIdVerified,
+      'verifiedDriver': verifiedDriver,
+      'universityIdImage': universityIdImage,
+      'driversLicenseImage': driversLicenseImage,
     };
   }
 }

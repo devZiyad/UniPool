@@ -11,8 +11,14 @@ class MyInformationScreen extends StatefulWidget {
 
 class _MyInformationScreenState extends State<MyInformationScreen> {
   final ImagePicker _picker = ImagePicker();
-  final Map<String, XFile?> _uploadedDocuments = {'university_card': null};
-  final Map<String, bool> _uploadingStatus = {'university_card': false};
+  final Map<String, XFile?> _uploadedDocuments = {
+    'university_card': null,
+    'driving_license': null,
+  };
+  final Map<String, bool> _uploadingStatus = {
+    'university_card': false,
+    'driving_license': false,
+  };
 
   Future<void> _showUploadOptions(String documentType) async {
     showModalBottomSheet(
@@ -70,13 +76,23 @@ class _MyInformationScreenState extends State<MyInformationScreen> {
         });
 
         try {
-          // Upload to backend - only university card is required
+          // Upload to backend based on document type
           if (documentType == 'university_card') {
             await UserService.uploadUniversityId(image);
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('University ID uploaded successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          } else if (documentType == 'driving_license') {
+            await UserService.uploadDriversLicense(image);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Driver\'s license uploaded successfully'),
                   backgroundColor: Colors.green,
                 ),
               );
@@ -113,6 +129,7 @@ class _MyInformationScreenState extends State<MyInformationScreen> {
   }
 
   bool get _allRequiredUploaded {
+    // Only university card is required
     return _uploadedDocuments['university_card'] != null;
   }
 
@@ -140,6 +157,13 @@ class _MyInformationScreenState extends State<MyInformationScreen> {
               required: true,
             ),
             const SizedBox(height: 16),
+            _buildDocumentCard(
+              'Driver License',
+              'Upload your driver\'s license (optional)',
+              'driving_license',
+              required: false,
+            ),
+            const SizedBox(height: 16),
             const Text(
               '* This field is required',
               style: TextStyle(color: Colors.red, fontSize: 14),
@@ -148,7 +172,10 @@ class _MyInformationScreenState extends State<MyInformationScreen> {
             ElevatedButton(
               onPressed: _allRequiredUploaded
                   ? () {
-                      Navigator.pushNamed(context, '/role-selection');
+                      Navigator.pushReplacementNamed(
+                        context,
+                        '/profile-settings',
+                      );
                     }
                   : null,
               style: ElevatedButton.styleFrom(

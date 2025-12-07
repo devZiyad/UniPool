@@ -65,16 +65,19 @@ class AppDrawer extends StatelessWidget {
               Navigator.pushNamed(context, '/vehicles');
             },
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.swap_horiz),
-            title: const Text('Switch Mode'),
-            subtitle: const Text('Change between Rider/Driver'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushReplacementNamed(context, '/role-selection');
-            },
-          ),
+          // Only show Switch Mode if university ID is verified
+          if (user != null && user.universityIdVerified) ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: const Text('Switch Mode'),
+              subtitle: const Text('Change between Rider/Driver'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacementNamed(context, '/role-selection');
+              },
+            ),
+          ],
           // Rider-specific options (show for RIDER or BOTH roles)
           if (user != null &&
               (user.role.toUpperCase() == 'RIDER' ||
@@ -125,6 +128,19 @@ class AppDrawer extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/driver/ride-management');
+              },
+            ),
+          ],
+          // Admin-specific options
+          if (user != null && user.role.toUpperCase() == 'ADMIN') ...[
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.admin_panel_settings),
+              title: const Text('User Management'),
+              subtitle: const Text('Manage all users and verifications'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/admin/users');
               },
             ),
           ],

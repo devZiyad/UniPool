@@ -257,6 +257,17 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                                 'Wallet Balance',
                                 'BD ${_user!.walletBalance.toStringAsFixed(2)}',
                               ),
+                              const SizedBox(height: 8),
+                              _buildVerificationStatus(
+                                'University ID Verified',
+                                _user!.universityIdVerified,
+                                'Your university ID verification status',
+                              ),
+                              _buildVerificationStatus(
+                                'Driver Verified',
+                                _user!.verifiedDriver,
+                                'Your driver verification status',
+                              ),
                               if (_user!.avgRatingAsDriver != null)
                                 _buildInfoRow(
                                   'Driver Rating',
@@ -344,6 +355,63 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
             child: Text(
               value,
               style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerificationStatus(
+    String label,
+    bool isVerified,
+    String description,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      isVerified ? Icons.check_circle : Icons.pending,
+                      color: isVerified ? Colors.green : Colors.orange,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      isVerified ? 'Verified' : 'Pending',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: isVerified ? Colors.green : Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

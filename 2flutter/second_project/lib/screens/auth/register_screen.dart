@@ -51,7 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, '/my-information');
+      Navigator.pushReplacementNamed(context, '/profile-settings');
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

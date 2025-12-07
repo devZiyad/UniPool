@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../services/user_service.dart';
 
 class AuthProvider with ChangeNotifier {
   User? _user;
@@ -20,6 +21,16 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await AuthService.login(email: email, password: password);
       _user = result['user'] as User;
+      // Ensure role is DRIVER if university ID verification is pending
+      if (_user != null && 
+          !_user!.universityIdVerified && 
+          _user!.role.toUpperCase() != 'DRIVER') {
+        try {
+          _user = await UserService.updateRole('DRIVER');
+        } catch (e) {
+          // If role update fails, keep the current user
+        }
+      }
       _isLoading = false;
       notifyListeners();
       return true;
@@ -53,6 +64,16 @@ class AuthProvider with ChangeNotifier {
         role: role,
       );
       _user = result['user'] as User;
+      // Ensure role is DRIVER if university ID verification is pending
+      if (_user != null && 
+          !_user!.universityIdVerified && 
+          _user!.role.toUpperCase() != 'DRIVER') {
+        try {
+          _user = await UserService.updateRole('DRIVER');
+        } catch (e) {
+          // If role update fails, keep the current user
+        }
+      }
       _isLoading = false;
       notifyListeners();
       return true;
@@ -70,6 +91,16 @@ class AuthProvider with ChangeNotifier {
 
     try {
       _user = await AuthService.getCurrentUser();
+      // Ensure role is DRIVER if university ID verification is pending
+      if (_user != null && 
+          !_user!.universityIdVerified && 
+          _user!.role.toUpperCase() != 'DRIVER') {
+        try {
+          _user = await UserService.updateRole('DRIVER');
+        } catch (e) {
+          // If role update fails, keep the current user
+        }
+      }
     } catch (e) {
       _user = null;
     }
@@ -91,6 +122,17 @@ class AuthProvider with ChangeNotifier {
 
   void setUser(User user) {
     _user = user;
-    notifyListeners();
+    // Ensure role is DRIVER if university ID verification is pending
+    if (!user.universityIdVerified && user.role.toUpperCase() != 'DRIVER') {
+      UserService.updateRole('DRIVER').then((updatedUser) {
+        _user = updatedUser;
+        notifyListeners();
+      }).catchError((e) {
+        // If role update fails, keep the current user
+        notifyListeners();
+      });
+    } else {
+      notifyListeners();
+    }
   }
 }

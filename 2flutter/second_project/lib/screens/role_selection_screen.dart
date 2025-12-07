@@ -50,6 +50,25 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   Future<void> _selectRider() async {
     if (_riderExpanding || _driverExpanding) return;
     
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final user = authProvider.user;
+    
+    // Prevent selecting RIDER if university ID verification is pending
+    if (user != null && !user.universityIdVerified) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'University ID verification is required to use Rider mode. Please wait for verification.',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      return;
+    }
+    
     setState(() {
       _riderExpanding = true;
     });
@@ -59,7 +78,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     
     if (!mounted) return;
     
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
       final updatedUser = await UserService.updateRole('RIDER');
       authProvider.setUser(updatedUser);
@@ -102,6 +120,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.user;
+    final isUniversityIdVerified = user?.universityIdVerified ?? false;
+    
     return Scaffold(
       body: Stack(
         children: [
@@ -136,7 +158,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                           clipper: DiagonalClipper(isTop: true),
                           child: MouseRegion(
                             onEnter: (_) {
-                              if (!_riderExpanding && !_driverExpanding) {
+                              if (!_riderExpanding && !_driverExpanding && isUniversityIdVerified) {
                                 setState(() => _riderHovered = true);
                               }
                             },
@@ -146,21 +168,26 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                               }
                             },
                             child: GestureDetector(
-                              onTap: _selectRider,
+                              onTap: isUniversityIdVerified ? _selectRider : null,
                               child: Container(
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
                                     begin: Alignment.topLeft,
                                     end: Alignment.bottomRight,
-                                    colors: _riderHovered
+                                    colors: !isUniversityIdVerified
                                         ? [
-                                            Colors.blue.shade600,
-                                            Colors.blue.shade400,
+                                            Colors.grey.shade400,
+                                            Colors.grey.shade300,
                                           ]
-                                        : [
-                                            Colors.blue.shade400,
-                                            Colors.blue.shade300,
-                                          ],
+                                        : _riderHovered
+                                            ? [
+                                                Colors.blue.shade600,
+                                                Colors.blue.shade400,
+                                              ]
+                                            : [
+                                                Colors.blue.shade400,
+                                                Colors.blue.shade300,
+                                              ],
                                   ),
                                 ),
                                 child: Align(
@@ -173,24 +200,32 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                                       children: [
                                         Icon(
                                           Icons.person,
-                                          size: _riderHovered ? 80 : 64,
-                                          color: Colors.white,
+                                          size: _riderHovered && isUniversityIdVerified ? 80 : 64,
+                                          color: !isUniversityIdVerified
+                                              ? Colors.grey.shade600
+                                              : Colors.white,
                                         ),
                                         const SizedBox(height: 16),
                                         Text(
                                           'Rider',
                                           style: TextStyle(
-                                            fontSize: _riderHovered ? 36 : 28,
+                                            fontSize: _riderHovered && isUniversityIdVerified ? 36 : 28,
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.white,
+                                            color: !isUniversityIdVerified
+                                                ? Colors.grey.shade600
+                                                : Colors.white,
                                           ),
                                         ),
                                         const SizedBox(height: 8),
                                         Text(
-                                          'Search and join rides',
+                                          !isUniversityIdVerified
+                                              ? 'University ID verification required'
+                                              : 'Search and join rides',
                                           style: TextStyle(
                                             fontSize: 16,
-                                            color: Colors.white.withOpacity(0.9),
+                                            color: !isUniversityIdVerified
+                                                ? Colors.grey.shade600
+                                                : Colors.white.withOpacity(0.9),
                                           ),
                                         ),
                                       ],
