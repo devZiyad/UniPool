@@ -128,10 +128,6 @@ public class RideServiceImpl implements RideService {
             throw new ForbiddenException("You can only use your own vehicles");
         }
 
-        if (!vehicle.getActive()) {
-            throw new BusinessException("Vehicle is not active");
-        }
-
         Location pickupLocation = locationRepository.findById(request.getPickupLocationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pickup location not found"));
 

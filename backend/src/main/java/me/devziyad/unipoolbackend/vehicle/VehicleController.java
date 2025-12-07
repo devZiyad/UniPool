@@ -40,23 +40,11 @@ public class VehicleController {
         return ResponseEntity.ok(vehicleService.getVehiclesForUser(ownerId));
     }
 
-    @GetMapping("/me/active")
-    public ResponseEntity<@NonNull List<@NonNull VehicleResponse>> getMyActiveVehicles() {
-        Long ownerId = authService.getCurrentUser().getId();
-        return ResponseEntity.ok(vehicleService.getActiveVehiclesForUser(ownerId));
-    }
-
     @PutMapping("/{id}")
     public ResponseEntity<@NonNull VehicleResponse> update(@PathVariable Long id,
                                                   @Valid @RequestBody UpdateVehicleRequest request) {
         Long ownerId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(vehicleService.updateVehicle(id, request, ownerId));
-    }
-
-    @PutMapping("/{id}/activate")
-    public ResponseEntity<@NonNull VehicleResponse> activate(@PathVariable Long id) {
-        Long ownerId = authService.getCurrentUser().getId();
-        return ResponseEntity.ok(vehicleService.setActiveVehicle(id, ownerId));
     }
 
     @DeleteMapping("/{id}")

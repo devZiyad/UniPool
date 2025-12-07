@@ -33,6 +33,9 @@ import me.devziyad.unipoolbackend.user.UserSettingsRepository;
 import me.devziyad.unipoolbackend.moderation.UserReportRepository;
 import me.devziyad.unipoolbackend.security.TokenBlacklistRepository;
 import me.devziyad.unipoolbackend.security.FailedLoginAttemptRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -67,6 +70,9 @@ public class AdminController {
     private final UserReportRepository userReportRepository;
     private final TokenBlacklistRepository tokenBlacklistRepository;
     private final FailedLoginAttemptRepository failedLoginAttemptRepository;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     private void checkAdmin() {
         if (authService.getCurrentUser().getRole() != Role.ADMIN) {
@@ -194,6 +200,34 @@ public class AdminController {
         // auditService.logAction(ActionType.DATABASE_RESET, adminId, httpRequest);
         
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/database/regenerate")
+    @Transactional
+    public ResponseEntity<Void> regenerateDatabase(HttpServletRequest httpRequest) {
+        checkAdmin();
+        
+        try {
+            // For H2 database, use DROP ALL OBJECTS to drop all tables, sequences, constraints, etc.
+            // This will drop the entire schema structure but keep the database file
+            Query dropAllQuery = entityManager.createNativeQuery("DROP ALL OBJECTS");
+            dropAllQuery.executeUpdate();
+            
+            // Flush to ensure the drop is executed
+            entityManager.flush();
+            
+            // Clear the persistence context to ensure Hibernate sees the schema change
+            entityManager.clear();
+            
+            // Trigger schema recreation by accessing a repository
+            // This forces Hibernate to check and recreate tables based on entity definitions
+            // Since ddl-auto=update, Hibernate will create missing tables
+            userRepository.count(); // Simple operation that triggers schema validation
+            
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to regenerate database schema: " + e.getMessage(), e);
+        }
     }
 
     @lombok.Data

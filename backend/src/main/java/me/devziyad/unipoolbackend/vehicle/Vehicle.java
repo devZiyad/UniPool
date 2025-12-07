@@ -41,10 +41,6 @@ public class Vehicle {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean active = true;
-
     @Column(nullable = false, updatable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

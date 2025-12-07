@@ -11,6 +11,7 @@ Complete API reference documentation for the UniPool Backend service.
 - [User Management](#user-management)
 - [Vehicle Management](#vehicle-management)
 - [Location Management](#location-management)
+- [Routing and Distance Calculation](#routing-and-distance-calculation)
 - [Ride Management](#ride-management)
 - [GPS Tracking](#gps-tracking)
 - [Booking Management](#booking-management)
@@ -584,22 +585,6 @@ curl -X GET http://localhost:8080/api/vehicles/me \
 
 ---
 
-### GET /api/vehicles/me/active
-
-Get active vehicles owned by current user.
-
-**Authentication:** Required
-
-**Response:** `200 OK` (array of VehicleResponse)
-
-**cURL Example:**
-```bash
-curl -X GET http://localhost:8080/api/vehicles/me/active \
-  -H "Authorization: Bearer $TOKEN"
-```
-
----
-
 ### PUT /api/vehicles/{id}
 
 Update vehicle.
@@ -613,15 +598,13 @@ Update vehicle.
   "model": "Accord",
   "color": "Red",
   "plateNumber": "XYZ-5678",
-  "seatCount": 5,
-  "active": true
+  "seatCount": 5
 }
 ```
 
 **Field Validation:**
 - All fields optional
 - `seatCount`: Positive integer if provided
-- `active`: Boolean
 
 **Response:** `200 OK` (VehicleResponse)
 
@@ -632,25 +615,8 @@ curl -X PUT http://localhost:8080/api/vehicles/1 \
   -H "Content-Type: application/json" \
   -d '{
     "make": "Honda",
-    "model": "Accord",
-    "active": true
+    "model": "Accord"
   }'
-```
-
----
-
-### PUT /api/vehicles/{id}/activate
-
-Activate a vehicle.
-
-**Authentication:** Required (Vehicle owner)
-
-**Response:** `200 OK` (VehicleResponse)
-
-**cURL Example:**
-```bash
-curl -X PUT http://localhost:8080/api/vehicles/1/activate \
-  -H "Authorization: Bearer $TOKEN"
 ```
 
 ---
@@ -824,6 +790,8 @@ Calculate distance between two locations.
 - `locationAId` (required): Location ID
 - `locationBId` (required): Location ID
 
+**Note:** This endpoint uses OSRM for route-based distance calculation. If OSRM is unavailable, it falls back to Haversine (straight-line) distance. See [Routing and Distance Calculation](#routing-and-distance-calculation) for more details.
+
 **Response:** `200 OK`
 ```json
 {
@@ -900,6 +868,38 @@ curl -X GET "http://localhost:8080/api/locations/reverse-geocode?latitude=40.712
 
 ---
 
+## Routing and Distance Calculation
+
+The backend uses **OSRM (Open Source Routing Machine)** for accurate route calculation and distance estimation. The system automatically falls back to Haversine distance calculation if OSRM is unavailable.
+
+### Routing Service
+
+**OSRM Integration:**
+- Uses the public OSRM service (`router.project-osrm.org`) for route calculation
+- Calculates road-based distances and estimated travel times
+- Provides route geometry (polyline) for map visualization
+- Connection timeout: 2 seconds
+- Read timeout: 3 seconds
+
+**Fallback Behavior:**
+- If OSRM is unavailable or times out, the system automatically falls back to Haversine distance calculation
+- Haversine calculates straight-line (as-the-crow-flies) distance between coordinates
+- Estimated duration is calculated using an average speed of 40 km/h
+
+**Endpoints Using Routing:**
+- `POST /api/rides` - Calculates route distance and duration when creating a ride
+- `PUT /api/rides/{id}` - Recalculates route if locations are updated
+- `POST /api/locations/distance` - Calculates distance between two locations
+
+**Performance:**
+- OSRM requests typically complete in < 1 second when available
+- If OSRM is unavailable, fallback to Haversine is nearly instantaneous
+- Route calculation may add 1-3 seconds to ride creation requests
+
+**Note:** Route distances and durations are estimates based on road networks. Actual travel times may vary based on traffic conditions, which are not currently factored into calculations.
+
+---
+
 ## Ride Management
 
 ### POST /api/rides
@@ -932,7 +932,9 @@ Create a new ride.
 - `basePrice` (optional): Positive decimal
 - `pricePerSeat` (optional): Positive decimal
 
-**Note:** Rides require both `departureTimeStart` and `departureTimeEnd` to define the departure time window.
+**Note:** 
+- Rides require both `departureTimeStart` and `departureTimeEnd` to define the departure time window.
+- Route distance and estimated duration are automatically calculated using OSRM when creating a ride. See [Routing and Distance Calculation](#routing-and-distance-calculation) for more details.
 
 **Response:** `201 Created` (RideResponse)
 
@@ -2440,7 +2442,7 @@ curl -X GET http://localhost:8080/api/admin/payments/1 \
 
 ### POST /api/admin/database/reset
 
-Reset the entire database (Admin only).
+Reset the entire database by deleting all data (Admin only).
 
 **Authentication:** Required (ADMIN role)
 
@@ -2449,6 +2451,8 @@ Reset the entire database (Admin only).
 - All rides, bookings, payments, ratings, notifications
 - All locations, vehicles, GPS tracking data
 
+**Note:** This only deletes data. The database schema remains unchanged. Use `/api/admin/database/regenerate` to drop and recreate the schema.
+
 **Response:** `200 OK` (empty body)
 
 **cURL Example:**
@@ -2456,6 +2460,32 @@ Reset the entire database (Admin only).
 curl -X POST http://localhost:8080/api/admin/database/reset \
   -H "Authorization: Bearer $TOKEN"
 ```
+
+---
+
+### POST /api/admin/database/regenerate
+
+Regenerate the database schema by dropping all tables and letting Hibernate recreate them (Admin only).
+
+**Authentication:** Required (ADMIN role)
+
+**Warning:** This operation is irreversible and will:
+- Drop all database tables, sequences, and constraints
+- Delete all data in the database
+- Recreate the schema from scratch based on current entity definitions
+- The default admin account will be recreated on next operation
+
+**Use Case:** Use this endpoint when you have changed the database schema (e.g., added/removed columns, changed field types) and want to regenerate the database with the new schema structure. This is different from `/api/admin/database/reset` which only deletes data but keeps the old schema.
+
+**Response:** `200 OK` (empty body)
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:8080/api/admin/database/regenerate \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+**Note:** After regeneration, the database schema will match the current entity definitions. Hibernate will automatically recreate all tables based on `ddl-auto=update` setting.
 
 ---
 
@@ -2522,7 +2552,6 @@ curl -X POST http://localhost:8080/api/admin/database/reset \
   "color": "Blue",
   "plateNumber": "ABC-1234",
   "seatCount": 4,
-  "active": true,
   "createdAt": "2024-01-15T10:30:00"
 }
 ```

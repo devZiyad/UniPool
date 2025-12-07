@@ -20,6 +20,5 @@ public class VehicleResponse {
     private Integer seatCount;
     private Long ownerId;
     private String ownerName;
-    private Boolean active;
     private Instant createdAt;
 }

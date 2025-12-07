@@ -12,6 +12,4 @@ public class UpdateVehicleRequest {
 
     @Positive(message = "Seat count must be positive")
     private Integer seatCount;
-
-    private Boolean active;
 }

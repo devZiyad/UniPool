@@ -31,7 +31,6 @@ public class VehicleServiceImpl implements VehicleService {
                 .seatCount(vehicle.getSeatCount())
                 .ownerId(vehicle.getOwner().getId())
                 .ownerName(vehicle.getOwner().getFullName())
-                .active(vehicle.getActive())
                 .createdAt(vehicle.getCreatedAt())
                 .build();
     }
@@ -53,7 +52,6 @@ public class VehicleServiceImpl implements VehicleService {
                 .plateNumber(request.getPlateNumber())
                 .seatCount(request.getSeatCount())
                 .owner(owner)
-                .active(true)
                 .build();
 
         return toResponse(vehicleRepository.save(vehicle));
@@ -74,14 +72,6 @@ public class VehicleServiceImpl implements VehicleService {
     }
 
     @Override
-    public List<VehicleResponse> getActiveVehiclesForUser(Long ownerId) {
-        return vehicleRepository.findByOwnerId(ownerId).stream()
-                .filter(Vehicle::getActive)
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
     @Transactional
     public VehicleResponse updateVehicle(Long id, UpdateVehicleRequest request, Long ownerId) {
         Vehicle vehicle = vehicleRepository.findById(id)
@@ -96,7 +86,6 @@ public class VehicleServiceImpl implements VehicleService {
         if (request.getColor() != null) vehicle.setColor(request.getColor());
         if (request.getPlateNumber() != null) vehicle.setPlateNumber(request.getPlateNumber());
         if (request.getSeatCount() != null) vehicle.setSeatCount(request.getSeatCount());
-        if (request.getActive() != null) vehicle.setActive(request.getActive());
 
         return toResponse(vehicleRepository.save(vehicle));
     }
@@ -112,19 +101,5 @@ public class VehicleServiceImpl implements VehicleService {
         }
 
         vehicleRepository.delete(vehicle);
-    }
-
-    @Override
-    @Transactional
-    public VehicleResponse setActiveVehicle(Long id, Long ownerId) {
-        Vehicle vehicle = vehicleRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
-
-        if (!vehicle.getOwner().getId().equals(ownerId)) {
-            throw new ForbiddenException("You can only set your own vehicles as active");
-        }
-
-        vehicle.setActive(true);
-        return toResponse(vehicleRepository.save(vehicle));
     }
 }
