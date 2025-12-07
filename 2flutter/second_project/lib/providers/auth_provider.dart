@@ -21,14 +21,21 @@ class AuthProvider with ChangeNotifier {
     try {
       final result = await AuthService.login(email: email, password: password);
       _user = result['user'] as User;
-      // Ensure role is DRIVER if university ID verification is pending
+      // Log user role after login
+      if (_user != null) {
+        print('Login successful - User role: ${_user!.role}');
+        print('User ID: ${_user!.id}, Email: ${_user!.email}');
+      }
+      // Ensure role is RIDER if university ID verification is pending
       if (_user != null && 
           !_user!.universityIdVerified && 
-          _user!.role.toUpperCase() != 'DRIVER') {
+          _user!.role.toUpperCase() != 'RIDER') {
         try {
-          _user = await UserService.updateRole('DRIVER');
+          _user = await UserService.updateRole('RIDER');
+          print('Role updated to RIDER due to pending university ID verification');
         } catch (e) {
           // If role update fails, keep the current user
+          print('Failed to update role to RIDER: $e');
         }
       }
       _isLoading = false;
@@ -64,12 +71,12 @@ class AuthProvider with ChangeNotifier {
         role: role,
       );
       _user = result['user'] as User;
-      // Ensure role is DRIVER if university ID verification is pending
+      // Ensure role is RIDER if university ID verification is pending
       if (_user != null && 
           !_user!.universityIdVerified && 
-          _user!.role.toUpperCase() != 'DRIVER') {
+          _user!.role.toUpperCase() != 'RIDER') {
         try {
-          _user = await UserService.updateRole('DRIVER');
+          _user = await UserService.updateRole('RIDER');
         } catch (e) {
           // If role update fails, keep the current user
         }
@@ -91,12 +98,12 @@ class AuthProvider with ChangeNotifier {
 
     try {
       _user = await AuthService.getCurrentUser();
-      // Ensure role is DRIVER if university ID verification is pending
+      // Ensure role is RIDER if university ID verification is pending
       if (_user != null && 
           !_user!.universityIdVerified && 
-          _user!.role.toUpperCase() != 'DRIVER') {
+          _user!.role.toUpperCase() != 'RIDER') {
         try {
-          _user = await UserService.updateRole('DRIVER');
+          _user = await UserService.updateRole('RIDER');
         } catch (e) {
           // If role update fails, keep the current user
         }
@@ -122,9 +129,9 @@ class AuthProvider with ChangeNotifier {
 
   void setUser(User user) {
     _user = user;
-    // Ensure role is DRIVER if university ID verification is pending
-    if (!user.universityIdVerified && user.role.toUpperCase() != 'DRIVER') {
-      UserService.updateRole('DRIVER').then((updatedUser) {
+    // Ensure role is RIDER if university ID verification is pending
+    if (!user.universityIdVerified && user.role.toUpperCase() != 'RIDER') {
+      UserService.updateRole('RIDER').then((updatedUser) {
         _user = updatedUser;
         notifyListeners();
       }).catchError((e) {

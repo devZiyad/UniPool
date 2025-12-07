@@ -51,7 +51,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
 
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, '/profile-settings');
+      // Check if user is admin and navigate accordingly
+      final user = authProvider.user;
+      if (user != null && user.role.toUpperCase() == 'ADMIN') {
+        Navigator.pushReplacementNamed(context, '/admin/users');
+      } else {
+        // Navigate to image upload page after registration
+        Navigator.pushReplacementNamed(context, '/my-information');
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

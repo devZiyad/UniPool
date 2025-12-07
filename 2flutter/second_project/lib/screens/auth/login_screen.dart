@@ -32,7 +32,13 @@ class _LoginScreenState extends State<LoginScreen> {
     );
 
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, '/role-selection');
+      // Check if user is admin and navigate accordingly
+      final user = authProvider.user;
+      if (user != null && user.role.toUpperCase() == 'ADMIN') {
+        Navigator.pushReplacementNamed(context, '/admin/users');
+      } else {
+        Navigator.pushReplacementNamed(context, '/role-selection');
+      }
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
