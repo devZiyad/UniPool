@@ -210,6 +210,27 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                       var pickupTimeStart = ride.departureTimeStart ?? ride.departureTime;
                                       var pickupTimeEnd = ride.departureTimeEnd ?? ride.departureTime;
                                       
+                                      // Ensure pickupTimeStart is in the future (check in UTC since API validates in UTC)
+                                      // API requires pickupTimeStart to be in the future when converted to UTC
+                                      final nowUtc = DateTime.now().toUtc();
+                                      final pickupTimeStartUtc = pickupTimeStart.toUtc();
+                                      
+                                      if (pickupTimeStartUtc.isBefore(nowUtc) || pickupTimeStartUtc.isAtSameMomentAs(nowUtc)) {
+                                        // If the ride's departure time is in the past (in UTC), use current UTC time + 2 minutes
+                                        // Add buffer to account for any timezone differences
+                                        final futureUtc = nowUtc.add(const Duration(minutes: 2));
+                                        pickupTimeStart = futureUtc.toLocal();
+                                        
+                                        // Adjust pickupTimeEnd to maintain the same duration from original times
+                                        final originalDuration = pickupTimeEnd.difference(ride.departureTimeStart ?? ride.departureTime);
+                                        pickupTimeEnd = pickupTimeStart.add(originalDuration);
+                                        
+                                        // Ensure minimum 1 minute difference
+                                        if (pickupTimeEnd.isAtSameMomentAs(pickupTimeStart) || pickupTimeEnd.isBefore(pickupTimeStart)) {
+                                          pickupTimeEnd = pickupTimeStart.add(const Duration(minutes: 1));
+                                        }
+                                      }
+                                      
                                       // If both times are the same (no time range), add a small buffer
                                       // to ensure pickupTimeEnd is after pickupTimeStart
                                       if (pickupTimeStart.isAtSameMomentAs(pickupTimeEnd)) {
@@ -222,6 +243,18 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                         final temp = pickupTimeStart;
                                         pickupTimeStart = pickupTimeEnd;
                                         pickupTimeEnd = temp;
+                                      }
+                                      
+                                      // Final check: ensure pickupTimeStart is still in the future (in UTC)
+                                      final finalNowUtc = DateTime.now().toUtc();
+                                      final finalPickupTimeStartUtc = pickupTimeStart.toUtc();
+                                      if (finalPickupTimeStartUtc.isBefore(finalNowUtc) || finalPickupTimeStartUtc.isAtSameMomentAs(finalNowUtc)) {
+                                        // Use current UTC + 2 minutes to ensure it's in the future
+                                        final futureUtc = finalNowUtc.add(const Duration(minutes: 2));
+                                        pickupTimeStart = futureUtc.toLocal();
+                                        if (pickupTimeEnd.isBefore(pickupTimeStart) || pickupTimeEnd.isAtSameMomentAs(pickupTimeStart)) {
+                                          pickupTimeEnd = pickupTimeStart.add(const Duration(minutes: 1));
+                                        }
                                       }
                                       
                                       print('Creating booking with:');
