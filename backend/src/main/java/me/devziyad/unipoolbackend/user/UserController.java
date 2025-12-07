@@ -77,4 +77,16 @@ public class UserController {
         Long userId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(userService.getUserStats(userId));
     }
+
+    @PostMapping("/me/upload-university-id")
+    public ResponseEntity<@NonNull UserResponse> uploadUniversityIdImage(@Valid @RequestBody UploadImageRequest request) {
+        Long userId = authService.getCurrentUser().getId();
+        return ResponseEntity.ok(userService.uploadUniversityIdImage(userId, request.getImageData()));
+    }
+
+    @PostMapping("/me/upload-drivers-license")
+    public ResponseEntity<@NonNull UserResponse> uploadDriversLicenseImage(@Valid @RequestBody UploadImageRequest request) {
+        Long userId = authService.getCurrentUser().getId();
+        return ResponseEntity.ok(userService.uploadDriversLicenseImage(userId, request.getImageData()));
+    }
 }

@@ -19,6 +19,10 @@ public class UserResponse {
     private String email;
     private String fullName;
     private String phoneNumber;
+    private String universityIdImage;
+    private String driversLicenseImage;
+    private Boolean universityIdVerified;
+    private Boolean verifiedDriver;
     private Role role;
     private Boolean enabled;
     private Instant createdAt;

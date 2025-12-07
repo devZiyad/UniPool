@@ -20,6 +20,7 @@ import me.devziyad.unipoolbackend.ride.RideService;
 import me.devziyad.unipoolbackend.ride.dto.RideResponse;
 import me.devziyad.unipoolbackend.user.User;
 import me.devziyad.unipoolbackend.user.UserRepository;
+import me.devziyad.unipoolbackend.user.UserSettingsRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -42,6 +43,7 @@ public class BookingServiceImpl implements BookingService {
     private final NotificationService notificationService;
     private final AuditService auditService;
     private final RideService rideService;
+    private final UserSettingsRepository userSettingsRepository;
 
     private HttpServletRequest getCurrentRequest() {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
@@ -135,12 +137,29 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException("Ride is not available for booking");
         }
         
-        if (ride.getAvailableSeats() < request.getSeats()) {
+        // Check available seats - calculate from confirmed bookings for accuracy
+        long confirmedSeats = bookingRepository.findByRideId(ride.getId()).stream()
+                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
+                .mapToInt(Booking::getSeatsBooked)
+                .sum();
+        
+        int availableSeats = ride.getTotalSeats() - (int) confirmedSeats;
+        if (availableSeats < request.getSeats()) {
             throw new BusinessException("Not enough available seats");
+        }
+        
+        // Keep ride.availableSeats in sync (should match confirmed bookings)
+        if (ride.getAvailableSeats() != availableSeats) {
+            ride.setAvailableSeats(availableSeats);
         }
 
         User rider = userRepository.findById(riderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rider not found"));
+
+        // Verify rider has verified university ID
+        if (!Boolean.TRUE.equals(rider.getUniversityIdVerified())) {
+            throw new BusinessException("Only verified university students can book rides. Please wait for admin verification.");
+        }
 
         Location pickupLocation = locationRepository.findById(request.getPickupLocationId())
                 .orElseThrow(() -> new ResourceNotFoundException("Pickup location not found"));
@@ -153,9 +172,18 @@ public class BookingServiceImpl implements BookingService {
                 .multiply(BigDecimal.valueOf(request.getSeats()))
                 .setScale(2, RoundingMode.HALF_UP);
 
-        // Update available seats - this happens atomically within the transaction
-        ride.setAvailableSeats(ride.getAvailableSeats() - request.getSeats());
-        rideRepository.save(ride);
+        // Check if driver has auto-accept enabled
+        boolean autoAccept = userSettingsRepository.findByUserId(ride.getDriver().getId())
+                .map(settings -> Boolean.TRUE.equals(settings.getAutoAcceptBookings()))
+                .orElse(false);
+
+        BookingStatus initialStatus = autoAccept ? BookingStatus.CONFIRMED : BookingStatus.PENDING;
+
+        // Only reserve seats if booking is confirmed
+        if (autoAccept) {
+            ride.setAvailableSeats(ride.getAvailableSeats() - request.getSeats());
+            rideRepository.save(ride);
+        }
 
         Booking booking = Booking.builder()
                 .ride(ride)
@@ -165,7 +193,7 @@ public class BookingServiceImpl implements BookingService {
                 .pickupTimeStart(request.getPickupTimeStart())
                 .pickupTimeEnd(request.getPickupTimeEnd())
                 .seatsBooked(request.getSeats())
-                .status(BookingStatus.CONFIRMED)
+                .status(initialStatus)
                 .costForThisRider(costForRider)
                 .build();
 
@@ -176,15 +204,37 @@ public class BookingServiceImpl implements BookingService {
         metadata.put("bookingId", booking.getId());
         metadata.put("rideId", ride.getId());
         metadata.put("seats", request.getSeats());
+        metadata.put("status", initialStatus.toString());
         auditService.logAction(ActionType.BOOKING_CREATE, riderId, metadata, getCurrentRequest());
 
-        // Create notification
-        notificationService.createNotification(
-                ride.getDriver().getId(),
-                "Booking Confirmed",
-                String.format("%s booked %d seat(s) on your ride", rider.getFullName(), request.getSeats()),
-                me.devziyad.unipoolbackend.common.NotificationType.BOOKING_CONFIRMED
-        );
+        // Create notification based on status
+        if (autoAccept) {
+            notificationService.createNotification(
+                    ride.getDriver().getId(),
+                    "Booking Confirmed",
+                    String.format("%s booked %d seat(s) on your ride (auto-accepted)", rider.getFullName(), request.getSeats()),
+                    me.devziyad.unipoolbackend.common.NotificationType.BOOKING_CONFIRMED
+            );
+            notificationService.createNotification(
+                    riderId,
+                    "Booking Confirmed",
+                    String.format("Your booking for ride #%d has been confirmed", ride.getId()),
+                    me.devziyad.unipoolbackend.common.NotificationType.BOOKING_CONFIRMED
+            );
+        } else {
+            notificationService.createNotification(
+                    ride.getDriver().getId(),
+                    "New Booking Request",
+                    String.format("%s requested to book %d seat(s) on your ride", rider.getFullName(), request.getSeats()),
+                    me.devziyad.unipoolbackend.common.NotificationType.BOOKING_CONFIRMED
+            );
+            notificationService.createNotification(
+                    riderId,
+                    "Booking Pending",
+                    String.format("Your booking request for ride #%d is pending driver confirmation", ride.getId()),
+                    me.devziyad.unipoolbackend.common.NotificationType.BOOKING_CONFIRMED
+            );
+        }
 
         // Return updated ride with all bookings
         return rideService.getRideById(ride.getId());
@@ -237,14 +287,19 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessException("Cannot cancel completed booking");
         }
 
+        // Store original status before updating
+        BookingStatus originalStatus = booking.getStatus();
+        Ride ride = booking.getRide();
+        
         booking.setStatus(BookingStatus.CANCELLED);
         booking.setCancelledAt(Instant.now());
         bookingRepository.save(booking);
 
-        // Return seats to ride
-        Ride ride = booking.getRide();
-        ride.setAvailableSeats(ride.getAvailableSeats() + booking.getSeatsBooked());
-        rideRepository.save(ride);
+        // Return seats to ride only if booking was confirmed (seats were reserved)
+        if (originalStatus == BookingStatus.CONFIRMED) {
+            ride.setAvailableSeats(ride.getAvailableSeats() + booking.getSeatsBooked());
+            rideRepository.save(ride);
+        }
 
         // Create notification
         if (booking.getRider().getId().equals(userId)) {
@@ -267,5 +322,82 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public List<BookingResponse> getMyBookings(Long riderId) {
         return getBookingsForRider(riderId);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse updateBookingStatus(Long bookingId, Long driverId, BookingStatus newStatus) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+
+        // Verify the user is the driver of the ride
+        if (!booking.getRide().getDriver().getId().equals(driverId)) {
+            throw new ForbiddenException("Only the driver can update booking status");
+        }
+
+        // Validate status transition
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new BusinessException("Can only update status of pending bookings");
+        }
+
+        if (newStatus != BookingStatus.CONFIRMED && newStatus != BookingStatus.CANCELLED) {
+            throw new BusinessException("Can only update booking to CONFIRMED or CANCELLED");
+        }
+
+        // Store original status
+        BookingStatus originalStatus = booking.getStatus();
+        Ride ride = booking.getRide();
+
+        // If confirming, check seat availability and reserve seats
+        if (newStatus == BookingStatus.CONFIRMED) {
+            // Check available seats (only confirmed bookings count, excluding this one since it's still pending)
+            long confirmedSeats = bookingRepository.findByRideId(ride.getId()).stream()
+                    .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
+                    .mapToInt(Booking::getSeatsBooked)
+                    .sum();
+            
+            int availableSeats = ride.getTotalSeats() - (int) confirmedSeats;
+            if (availableSeats < booking.getSeatsBooked()) {
+                throw new BusinessException("Not enough available seats to confirm this booking");
+            }
+
+            // Reserve seats and keep in sync
+            ride.setAvailableSeats(availableSeats - booking.getSeatsBooked());
+            rideRepository.save(ride);
+        }
+
+        // Update booking status
+        booking.setStatus(newStatus);
+        if (newStatus == BookingStatus.CANCELLED) {
+            booking.setCancelledAt(Instant.now());
+        }
+        booking = bookingRepository.save(booking);
+
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("bookingId", booking.getId());
+        metadata.put("rideId", ride.getId());
+        metadata.put("oldStatus", originalStatus.toString());
+        metadata.put("newStatus", newStatus.toString());
+        auditService.logAction(ActionType.BOOKING_CREATE, driverId, metadata, getCurrentRequest());
+
+        // Create notifications
+        if (newStatus == BookingStatus.CONFIRMED) {
+            notificationService.createNotification(
+                    booking.getRider().getId(),
+                    "Booking Confirmed",
+                    String.format("Your booking for ride #%d has been confirmed by the driver", ride.getId()),
+                    me.devziyad.unipoolbackend.common.NotificationType.BOOKING_CONFIRMED
+            );
+        } else if (newStatus == BookingStatus.CANCELLED) {
+            notificationService.createNotification(
+                    booking.getRider().getId(),
+                    "Booking Cancelled",
+                    String.format("Your booking request for ride #%d was cancelled by the driver", ride.getId()),
+                    me.devziyad.unipoolbackend.common.NotificationType.BOOKING_CANCELLED
+            );
+        }
+
+        return toResponse(booking);
     }
 }

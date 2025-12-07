@@ -42,6 +42,10 @@ public class UserServiceImpl implements UserService {
                 .email(user.getEmail())
                 .fullName(user.getFullName())
                 .phoneNumber(user.getPhoneNumber())
+                .universityIdImage(user.getUniversityIdImage())
+                .driversLicenseImage(user.getDriversLicenseImage())
+                .universityIdVerified(user.getUniversityIdVerified())
+                .verifiedDriver(user.getVerifiedDriver())
                 .role(user.getRole())
                 .enabled(user.getEnabled())
                 .createdAt(user.getCreatedAt())
@@ -232,6 +236,42 @@ public class UserServiceImpl implements UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
         user.setEnabled(enabled);
+        return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse uploadUniversityIdImage(Long userId, String imageData) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setUniversityIdImage(imageData);
+        return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse uploadDriversLicenseImage(Long userId, String imageData) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setDriversLicenseImage(imageData);
+        return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse verifyUniversityId(Long userId, Boolean verified) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setUniversityIdVerified(verified);
+        return toResponse(userRepository.save(user));
+    }
+
+    @Override
+    @Transactional
+    public UserResponse verifyDriver(Long userId, Boolean verified) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setVerifiedDriver(verified);
         return toResponse(userRepository.save(user));
     }
 }

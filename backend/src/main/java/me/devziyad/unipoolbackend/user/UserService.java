@@ -15,4 +15,8 @@ public interface UserService {
     UserStatsResponse getUserStats(Long userId);
     List<UserResponse> getAllUsers();
     UserResponse enableUser(Long id, Boolean enabled);
+    UserResponse uploadUniversityIdImage(Long userId, String imageData);
+    UserResponse uploadDriversLicenseImage(Long userId, String imageData);
+    UserResponse verifyUniversityId(Long userId, Boolean verified);
+    UserResponse verifyDriver(Long userId, Boolean verified);
 }

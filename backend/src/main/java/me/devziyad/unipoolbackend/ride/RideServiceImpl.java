@@ -121,6 +121,11 @@ public class RideServiceImpl implements RideService {
         User driver = userRepository.findById(driverId)
                 .orElseThrow(() -> new ResourceNotFoundException("Driver not found"));
 
+        // Verify driver is a verified driver
+        if (!Boolean.TRUE.equals(driver.getVerifiedDriver())) {
+            throw new BusinessException("Only verified drivers can post rides. Please wait for admin verification.");
+        }
+
         Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
                 .orElseThrow(() -> new ResourceNotFoundException("Vehicle not found"));
 

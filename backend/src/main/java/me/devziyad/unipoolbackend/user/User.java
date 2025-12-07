@@ -38,6 +38,20 @@ public class User {
     @Column(unique = true, length = 30)
     private String phoneNumber;
 
+    @Column(columnDefinition = "TEXT")
+    private String universityIdImage; // Base64 encoded image or file path
+
+    @Column(columnDefinition = "TEXT")
+    private String driversLicenseImage; // Base64 encoded image or file path
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean universityIdVerified = false; // Only admin can update
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean verifiedDriver = false; // Only admin can update
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

@@ -458,7 +458,7 @@ Update user settings.
 - `preferQuietRides`: Prefer quiet rides
 - `showPhoneNumber`: Show phone number to other users
 - `showEmail`: Show email to other users
-- `autoAcceptBookings`: Automatically accept booking requests
+- `autoAcceptBookings`: Automatically accept booking requests (when enabled, bookings are immediately confirmed and seats are reserved)
 - `preferredPaymentMethod`: Preferred payment method (`CARD_SIMULATED`, `CASH`, `WALLET`)
 
 **Response:** `200 OK` (same structure as GET)
@@ -482,6 +482,58 @@ Get current user's statistics.
   "ratingCountAsRider": 28
 }
 ```
+
+---
+
+### POST /api/users/me/upload-university-id
+
+Upload university ID image for verification.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+}
+```
+
+**Field Descriptions:**
+- `imageData` (required): Base64 encoded image data (can include data URI prefix)
+
+**Response:** `200 OK` (UserResponse with updated universityIdImage)
+
+**Status Codes:**
+- `200 OK` - Image uploaded successfully
+- `400 Bad Request` - Invalid image data
+
+**Note:** After uploading, wait for admin verification. You cannot book rides until your university ID is verified.
+
+---
+
+### POST /api/users/me/upload-drivers-license
+
+Upload driver's license image for verification.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+}
+```
+
+**Field Descriptions:**
+- `imageData` (required): Base64 encoded image data (can include data URI prefix)
+
+**Response:** `200 OK` (UserResponse with updated driversLicenseImage)
+
+**Status Codes:**
+- `200 OK` - Image uploaded successfully
+- `400 Bad Request` - Invalid image data
+
+**Note:** After uploading, wait for admin verification. You cannot post rides until you are verified as a driver.
 
 ---
 
@@ -850,13 +902,18 @@ Create a new ride.
 
 **Authentication:** Required (Driver role)
 
+**Requirements:**
+- User must be a **verified driver** (`verifiedDriver` must be `true`)
+- Only admins can verify drivers after reviewing their driver's license image
+
 **Request Body:**
 ```json
 {
   "vehicleId": 1,
   "pickupLocationId": 1,
   "destinationLocationId": 2,
-  "departureTime": "2024-01-20T14:30:00",
+  "departureTimeStart": "2024-01-20T14:30:00Z",
+  "departureTimeEnd": "2024-01-20T15:00:00Z",
   "totalSeats": 4,
   "basePrice": 10.00,
   "pricePerSeat": 5.00
@@ -867,11 +924,17 @@ Create a new ride.
 - `vehicleId` (required): Vehicle ID (must belong to the authenticated driver)
 - `pickupLocationId` (required): Pickup location ID
 - `destinationLocationId` (required): Destination location ID
-- `departureTime` (required): Departure date/time (must be in the future)
-  - **Note:** Cannot overlap with existing active rides. The system checks if the new ride's time window (departure time + estimated duration) overlaps with any of the driver's existing active rides (excluding CANCELLED and COMPLETED rides).
+- `departureTimeStart` (required): Start of departure time window (must be in the future)
+- `departureTimeEnd` (required): End of departure time window (must be after departureTimeStart, max 24 hours)
+  - **Note:** Cannot overlap with existing active rides. The system checks if the new ride's time window overlaps with any of the driver's existing active rides (excluding CANCELLED and COMPLETED rides).
 - `totalSeats` (required): Total available seats (must be positive and cannot exceed vehicle capacity)
 - `basePrice` (optional): Base price for the ride (defaults to 0.5 per km if not provided)
 - `pricePerSeat` (optional): Price per seat (defaults to basePrice / totalSeats if not provided)
+
+**Status Codes:**
+- `201 Created` - Ride created successfully
+- `400 Bad Request` - Validation errors, not a verified driver, or overlapping rides
+- `403 Forbidden` - Not a verified driver
 
 **Response:** `201 Created`
 ```json
@@ -1218,37 +1281,43 @@ Create a new booking for a ride.
 
 **Authentication:** Required (Rider role)
 
+**Requirements:**
+- User must have a **verified university ID** (`universityIdVerified` must be `true`)
+- Only admins can verify university IDs after reviewing the university ID image
+
 **Request Body:**
 ```json
 {
   "rideId": 1,
-  "seats": 2
+  "seats": 2,
+  "pickupLocationId": 3,
+  "dropoffLocationId": 4,
+  "pickupTimeStart": "2024-01-20T14:30:00Z",
+  "pickupTimeEnd": "2024-01-20T15:00:00Z"
 }
 ```
 
 **Field Descriptions:**
 - `rideId` (required): Ride ID to book
-- `seats` (required): Number of seats to book (must be positive)
+- `seats` (required): Number of seats to book (must be positive, cannot exceed ride capacity)
+- `pickupLocationId` (required): Pickup location ID
+- `dropoffLocationId` (required): Dropoff location ID
+- `pickupTimeStart` (required): Start of pickup time window (must be in the future, within ride's departure time range)
+- `pickupTimeEnd` (required): End of pickup time window (must be after pickupTimeStart, within ride's departure time range, and not more than 2 hours after pickupTimeStart)
 
-**Response:** `201 Created`
-```json
-{
-  "id": 1,
-  "rideId": 1,
-  "riderId": 2,
-  "riderName": "Jane Rider",
-  "seatsBooked": 2,
-  "status": "PENDING",
-  "costForThisRider": 20.00,
-  "createdAt": "2024-01-15T10:30:00",
-  "cancelledAt": null
-}
-```
+**Booking Status:**
+- Bookings are created with `PENDING` status by default
+- If the driver has `autoAcceptBookings` enabled in their settings, the booking will be automatically confirmed (`CONFIRMED`) and seats will be reserved immediately
+- Otherwise, the booking remains `PENDING` until the driver confirms or cancels it
+- Seats are only reserved when a booking is confirmed
+
+**Response:** `201 Created` (RideResponse with updated bookings)
 
 **Status Codes:**
-- `201 Created` - Booking created
-- `400 Bad Request` - Not enough available seats or validation errors
-- `404 Not Found` - Ride not found
+- `201 Created` - Booking created (pending or confirmed based on driver's auto-accept setting)
+- `400 Bad Request` - Not enough available seats, validation errors, invalid time ranges, or university ID not verified
+- `403 Forbidden` - Driver cannot book their own ride, or university ID not verified
+- `404 Not Found` - Ride or location not found
 
 ---
 
@@ -1301,6 +1370,65 @@ Get all bookings for a specific ride (driver only).
 
 ---
 
+### PUT /api/bookings/{bookingId}/status
+
+Update booking status (Driver only).
+
+Allows drivers to confirm or cancel pending bookings for their rides.
+
+**Authentication:** Required (Driver role - must be the driver of the ride)
+
+**Path Parameters:**
+- `bookingId` (required): Booking ID
+
+**Request Body:**
+```json
+{
+  "status": "CONFIRMED"
+}
+```
+
+**Field Descriptions:**
+- `status` (required): New booking status - must be `CONFIRMED` or `CANCELLED`
+
+**Status Transition Rules:**
+- Can only update bookings with `PENDING` status
+- When confirming: Seats are reserved if available. If not enough seats are available, the request will fail.
+- When cancelling: Seats are not returned (they were never reserved for pending bookings)
+
+**Response:** `200 OK` (BookingResponse)
+```json
+{
+  "bookingId": 1,
+  "rideId": 1,
+  "passengerId": 2,
+  "passengerName": "Jane Rider",
+  "seatsBooked": 2,
+  "pickupLocationId": 3,
+  "pickupLocationLabel": "University Main Gate",
+  "pickupLatitude": 40.7128,
+  "pickupLongitude": -74.0060,
+  "dropoffLocationId": 4,
+  "dropoffLocationLabel": "City Center",
+  "dropoffLatitude": 40.7580,
+  "dropoffLongitude": -73.9855,
+  "pickupTimeStart": "2024-01-20T14:30:00Z",
+  "pickupTimeEnd": "2024-01-20T15:00:00Z",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "status": "CONFIRMED",
+  "costForThisRider": 20.00,
+  "cancelledAt": null
+}
+```
+
+**Status Codes:**
+- `200 OK` - Booking status updated successfully
+- `400 Bad Request` - Invalid status transition, not enough available seats (for confirmation), or validation errors
+- `403 Forbidden` - Only the driver of the ride can update booking status
+- `404 Not Found` - Booking not found
+
+---
+
 ### POST /api/bookings/{bookingId}/cancel
 
 Cancel a booking.
@@ -1310,10 +1438,17 @@ Cancel a booking.
 **Path Parameters:**
 - `bookingId` (required): Booking ID
 
+**Notes:**
+- Riders can cancel their own bookings
+- Drivers can cancel bookings on their rides
+- Seats are only returned to the ride if the booking was previously `CONFIRMED`
+- Pending bookings can be cancelled without affecting seat availability
+
 **Response:** `200 OK` (empty body)
 
 **Status Codes:**
 - `200 OK` - Booking cancelled
+- `400 Bad Request` - Booking is already cancelled or completed
 - `403 Forbidden` - Not authorized to cancel this booking
 - `404 Not Found` - Booking not found
 
@@ -1851,6 +1986,102 @@ Enable or disable a user.
 
 ---
 
+### POST /api/admin/users/{id}/upload-university-id
+
+Upload university ID image for a user (admin override).
+
+**Authentication:** Required (Admin role)
+
+**Path Parameters:**
+- `id` (required): User ID
+
+**Request Body:**
+```json
+{
+  "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+}
+```
+
+**Field Descriptions:**
+- `imageData` (required): Base64 encoded image data
+
+**Response:** `200 OK` (UserResponse)
+
+---
+
+### POST /api/admin/users/{id}/upload-drivers-license
+
+Upload driver's license image for a user (admin override).
+
+**Authentication:** Required (Admin role)
+
+**Path Parameters:**
+- `id` (required): User ID
+
+**Request Body:**
+```json
+{
+  "imageData": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+}
+```
+
+**Field Descriptions:**
+- `imageData` (required): Base64 encoded image data
+
+**Response:** `200 OK` (UserResponse)
+
+---
+
+### PUT /api/admin/users/{id}/verify-university-id
+
+Verify or reject a user's university ID.
+
+**Authentication:** Required (Admin role)
+
+**Path Parameters:**
+- `id` (required): User ID
+
+**Request Body:**
+```json
+{
+  "verified": true
+}
+```
+
+**Field Descriptions:**
+- `verified` (required): Set to `true` to verify the university ID, `false` to reject
+
+**Response:** `200 OK` (UserResponse)
+
+**Note:** Only verified university students can book rides.
+
+---
+
+### PUT /api/admin/users/{id}/verify-driver
+
+Verify or reject a user as a driver.
+
+**Authentication:** Required (Admin role)
+
+**Path Parameters:**
+- `id` (required): User ID
+
+**Request Body:**
+```json
+{
+  "verified": true
+}
+```
+
+**Field Descriptions:**
+- `verified` (required): Set to `true` to verify the driver, `false` to reject
+
+**Response:** `200 OK` (UserResponse)
+
+**Note:** Only verified drivers can post rides.
+
+---
+
 ### GET /api/admin/rides
 
 Get all rides.
@@ -2058,6 +2289,20 @@ Reset the entire database by deleting all data.
 }
 ```
 
+#### UploadImageRequest
+```json
+{
+  "imageData": "string (required, base64 encoded image data)"
+}
+```
+
+#### VerifyUserRequest
+```json
+{
+  "verified": "boolean (required)"
+}
+```
+
 #### CreateVehicleRequest
 ```json
 {
@@ -2147,7 +2392,18 @@ Reset the entire database by deleting all data.
 ```json
 {
   "rideId": "integer (required)",
-  "seats": "integer (required, positive)"
+  "seats": "integer (required, positive, cannot exceed ride capacity)",
+  "pickupLocationId": "integer (required)",
+  "dropoffLocationId": "integer (required)",
+  "pickupTimeStart": "datetime (required, ISO format, future date, within ride's departure time range)",
+  "pickupTimeEnd": "datetime (required, ISO format, future date, after pickupTimeStart, within ride's departure time range, max 2 hours after pickupTimeStart)"
+}
+```
+
+#### UpdateBookingStatusRequest
+```json
+{
+  "status": "string (required: CONFIRMED or CANCELLED)"
 }
 ```
 
@@ -2185,6 +2441,10 @@ Reset the entire database by deleting all data.
   "email": "string",
   "fullName": "string",
   "phoneNumber": "string",
+  "universityIdImage": "string (nullable, base64 encoded image or file path)",
+  "driversLicenseImage": "string (nullable, base64 encoded image or file path)",
+  "universityIdVerified": "boolean",
+  "verifiedDriver": "boolean",
   "role": "Role enum",
   "enabled": "boolean",
   "createdAt": "datetime (ISO format)",
@@ -2262,14 +2522,24 @@ Reset the entire database by deleting all data.
 #### BookingResponse
 ```json
 {
-  "id": "integer",
+  "bookingId": "integer",
   "rideId": "integer",
-  "riderId": "integer",
-  "riderName": "string",
+  "passengerId": "integer",
+  "passengerName": "string",
   "seatsBooked": "integer",
-  "status": "BookingStatus enum",
-  "costForThisRider": "decimal",
+  "pickupLocationId": "integer",
+  "pickupLocationLabel": "string",
+  "pickupLatitude": "number",
+  "pickupLongitude": "number",
+  "dropoffLocationId": "integer",
+  "dropoffLocationLabel": "string",
+  "dropoffLatitude": "number",
+  "dropoffLongitude": "number",
+  "pickupTimeStart": "datetime (ISO format)",
+  "pickupTimeEnd": "datetime (ISO format)",
   "createdAt": "datetime (ISO format)",
+  "status": "BookingStatus enum (PENDING, CONFIRMED, CANCELLED, COMPLETED)",
+  "costForThisRider": "decimal",
   "cancelledAt": "datetime (ISO format, nullable)"
 }
 ```

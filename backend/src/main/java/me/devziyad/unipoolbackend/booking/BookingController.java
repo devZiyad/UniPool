@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.AuthService;
 import me.devziyad.unipoolbackend.booking.dto.BookingResponse;
 import me.devziyad.unipoolbackend.booking.dto.CreateBookingRequest;
+import me.devziyad.unipoolbackend.booking.dto.UpdateBookingStatusRequest;
 import me.devziyad.unipoolbackend.ride.dto.RideResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -56,5 +57,13 @@ public class BookingController {
         Long userId = authService.getCurrentUser().getId();
         bookingService.cancelBooking(bookingId, userId);
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{bookingId}/status")
+    public ResponseEntity<@NonNull BookingResponse> updateBookingStatus(
+            @PathVariable Long bookingId,
+            @Valid @RequestBody UpdateBookingStatusRequest request) {
+        Long driverId = authService.getCurrentUser().getId();
+        return ResponseEntity.ok(bookingService.updateBookingStatus(bookingId, driverId, request.getStatus()));
     }
 }

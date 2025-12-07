@@ -18,6 +18,8 @@ import me.devziyad.unipoolbackend.ride.dto.RideResponse;
 import me.devziyad.unipoolbackend.common.RideStatus;
 import me.devziyad.unipoolbackend.user.UserService;
 import me.devziyad.unipoolbackend.user.dto.UserResponse;
+import me.devziyad.unipoolbackend.user.dto.UploadImageRequest;
+import me.devziyad.unipoolbackend.user.dto.VerifyUserRequest;
 import me.devziyad.unipoolbackend.rating.RatingRepository;
 import me.devziyad.unipoolbackend.notification.NotificationRepository;
 import me.devziyad.unipoolbackend.tracking.GpsTrackingRepository;
@@ -103,6 +105,76 @@ public class AdminController {
         metadata.put("targetUserId", id);
         metadata.put("enabled", request.getEnabled());
         auditService.logAction(request.getEnabled() ? ActionType.USER_ENABLE : ActionType.USER_DISABLE, adminId, metadata, httpRequest);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/users/{id}/upload-university-id")
+    public ResponseEntity<@NonNull UserResponse> uploadUniversityIdImage(
+            @PathVariable Long id,
+            @RequestBody UploadImageRequest request,
+            HttpServletRequest httpRequest) {
+        checkAdmin();
+        Long adminId = authService.getCurrentUser().getId();
+        UserResponse response = userService.uploadUniversityIdImage(id, request.getImageData());
+        
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("targetUserId", id);
+        auditService.logAction(ActionType.PROFILE_UPDATE, adminId, metadata, httpRequest);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/users/{id}/upload-drivers-license")
+    public ResponseEntity<@NonNull UserResponse> uploadDriversLicenseImage(
+            @PathVariable Long id,
+            @RequestBody UploadImageRequest request,
+            HttpServletRequest httpRequest) {
+        checkAdmin();
+        Long adminId = authService.getCurrentUser().getId();
+        UserResponse response = userService.uploadDriversLicenseImage(id, request.getImageData());
+        
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("targetUserId", id);
+        auditService.logAction(ActionType.PROFILE_UPDATE, adminId, metadata, httpRequest);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/users/{id}/verify-university-id")
+    public ResponseEntity<@NonNull UserResponse> verifyUniversityId(
+            @PathVariable Long id,
+            @RequestBody VerifyUserRequest request,
+            HttpServletRequest httpRequest) {
+        checkAdmin();
+        Long adminId = authService.getCurrentUser().getId();
+        UserResponse response = userService.verifyUniversityId(id, request.getVerified());
+        
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("targetUserId", id);
+        metadata.put("verified", request.getVerified());
+        auditService.logAction(ActionType.PROFILE_UPDATE, adminId, metadata, httpRequest);
+        
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/users/{id}/verify-driver")
+    public ResponseEntity<@NonNull UserResponse> verifyDriver(
+            @PathVariable Long id,
+            @RequestBody VerifyUserRequest request,
+            HttpServletRequest httpRequest) {
+        checkAdmin();
+        Long adminId = authService.getCurrentUser().getId();
+        UserResponse response = userService.verifyDriver(id, request.getVerified());
+        
+        // Audit log
+        java.util.Map<String, Object> metadata = new java.util.HashMap<>();
+        metadata.put("targetUserId", id);
+        metadata.put("verified", request.getVerified());
+        auditService.logAction(ActionType.PROFILE_UPDATE, adminId, metadata, httpRequest);
         
         return ResponseEntity.ok(response);
     }
