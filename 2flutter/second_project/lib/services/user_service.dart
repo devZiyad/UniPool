@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
 import '../models/user.dart';
 import '../models/user_settings.dart';
 import 'api_client.dart';
@@ -68,5 +69,61 @@ class UserService {
 
     final response = await ApiClient.put('/users/me/settings', body);
     return UserSettings.fromJson(jsonDecode(response.body));
+  }
+
+  /// Upload university ID image for verification
+  /// 
+  /// [imageFile] - The XFile image to upload (works on both mobile and web)
+  /// Returns the updated User object
+  static Future<User> uploadUniversityId(XFile imageFile) async {
+    // Read the image file and convert to base64
+    // XFile.readAsBytes() works on both mobile and web platforms
+    final bytes = await imageFile.readAsBytes();
+    final base64Image = base64Encode(bytes);
+    
+    // Determine the image type from MIME type or file extension
+    String mimeType = 'image/jpeg'; // default
+    if (imageFile.mimeType != null) {
+      mimeType = imageFile.mimeType!;
+    } else {
+      // Fallback to extension-based detection
+      final extension = imageFile.path.split('.').last.toLowerCase();
+      mimeType = extension == 'png' ? 'image/png' : 'image/jpeg';
+    }
+    
+    final imageData = 'data:$mimeType;base64,$base64Image';
+    
+    final response = await ApiClient.post('/users/me/upload-university-id', {
+      'imageData': imageData,
+    });
+    return User.fromJson(jsonDecode(response.body));
+  }
+
+  /// Upload driver's license image for verification
+  /// 
+  /// [imageFile] - The XFile image to upload (works on both mobile and web)
+  /// Returns the updated User object
+  static Future<User> uploadDriversLicense(XFile imageFile) async {
+    // Read the image file and convert to base64
+    // XFile.readAsBytes() works on both mobile and web platforms
+    final bytes = await imageFile.readAsBytes();
+    final base64Image = base64Encode(bytes);
+    
+    // Determine the image type from MIME type or file extension
+    String mimeType = 'image/jpeg'; // default
+    if (imageFile.mimeType != null) {
+      mimeType = imageFile.mimeType!;
+    } else {
+      // Fallback to extension-based detection
+      final extension = imageFile.path.split('.').last.toLowerCase();
+      mimeType = extension == 'png' ? 'image/png' : 'image/jpeg';
+    }
+    
+    final imageData = 'data:$mimeType;base64,$base64Image';
+    
+    final response = await ApiClient.post('/users/me/upload-drivers-license', {
+      'imageData': imageData,
+    });
+    return User.fromJson(jsonDecode(response.body));
   }
 }

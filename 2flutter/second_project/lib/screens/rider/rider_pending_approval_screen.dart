@@ -13,7 +13,6 @@ class RiderPendingApprovalScreen extends StatefulWidget {
 class _RiderPendingApprovalScreenState
     extends State<RiderPendingApprovalScreen> {
   Booking? _booking;
-  bool _isLoading = true;
 
   @override
   void initState() {
@@ -31,27 +30,24 @@ class _RiderPendingApprovalScreenState
             (b) => b.status == 'PENDING',
             orElse: () => bookings.first,
           );
-          _isLoading = false;
         });
       }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      // Error loading booking
     }
   }
 
   void _pollBookingStatus() {
     Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) {
-        _loadBooking().then((_) {
-          if (_booking?.status == 'CONFIRMED') {
-            Navigator.pushReplacementNamed(context, '/rider/live-tracking');
-          } else {
-            _pollBookingStatus();
-          }
-        });
-      }
+      if (!mounted) return;
+      _loadBooking().then((_) {
+        if (!mounted) return;
+        if (_booking?.status == 'CONFIRMED') {
+          Navigator.pushReplacementNamed(context, '/rider/live-tracking');
+        } else {
+          _pollBookingStatus();
+        }
+      });
     });
   }
 

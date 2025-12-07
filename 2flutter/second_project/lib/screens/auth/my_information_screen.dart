@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import '../../services/user_service.dart';
 
 class MyInformationScreen extends StatefulWidget {
   const MyInformationScreen({super.key});
@@ -11,11 +11,8 @@ class MyInformationScreen extends StatefulWidget {
 
 class _MyInformationScreenState extends State<MyInformationScreen> {
   final ImagePicker _picker = ImagePicker();
-  Map<String, File?> _uploadedDocuments = {
-    'driving_license': null,
-    'university_card': null,
-    'id_card': null,
-  };
+  final Map<String, XFile?> _uploadedDocuments = {'university_card': null};
+  final Map<String, bool> _uploadingStatus = {'university_card': false};
 
   Future<void> _showUploadOptions(String documentType) async {
     showModalBottomSheet(
@@ -66,24 +63,57 @@ class _MyInformationScreenState extends State<MyInformationScreen> {
     try {
       final XFile? image = await _picker.pickImage(source: source);
       if (image != null) {
+        // Store the XFile directly (works on both mobile and web)
         setState(() {
-          _uploadedDocuments[documentType] = File(image.path);
+          _uploadedDocuments[documentType] = image;
+          _uploadingStatus[documentType] = true;
         });
-        // TODO: Upload to backend
+
+        try {
+          // Upload to backend - only university card is required
+          if (documentType == 'university_card') {
+            await UserService.uploadUniversityId(image);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('University ID uploaded successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error uploading image: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+            // Remove the file if upload failed
+            setState(() {
+              _uploadedDocuments[documentType] = null;
+            });
+          }
+        } finally {
+          if (mounted) {
+            setState(() {
+              _uploadingStatus[documentType] = false;
+            });
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));
       }
     }
   }
 
   bool get _allRequiredUploaded {
-    return _uploadedDocuments['driving_license'] != null &&
-        _uploadedDocuments['university_card'] != null &&
-        _uploadedDocuments['id_card'] != null;
+    return _uploadedDocuments['university_card'] != null;
   }
 
   @override
@@ -104,28 +134,14 @@ class _MyInformationScreenState extends State<MyInformationScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildDocumentCard(
-              'Driving license',
-              'A Driving license is an official document',
-              'driving_license',
-              required: true,
-            ),
-            const SizedBox(height: 16),
-            _buildDocumentCard(
               'University Card*',
-              'or anything proving university student status',
+              'Upload your university ID or anything proving university student status',
               'university_card',
               required: true,
             ),
             const SizedBox(height: 16),
-            _buildDocumentCard(
-              'ID Card',
-              'id card is on official document',
-              'id_card',
-              required: false,
-            ),
-            const SizedBox(height: 16),
             const Text(
-              '* These field are required',
+              '* This field is required',
               style: TextStyle(color: Colors.red, fontSize: 14),
             ),
             const SizedBox(height: 32),
@@ -161,6 +177,7 @@ class _MyInformationScreenState extends State<MyInformationScreen> {
     required bool required,
   }) {
     final isUploaded = _uploadedDocuments[documentType] != null;
+    final isUploading = _uploadingStatus[documentType] ?? false;
 
     return Card(
       elevation: 2,
@@ -176,17 +193,30 @@ class _MyInformationScreenState extends State<MyInformationScreen> {
           child: Text(description),
         ),
         trailing: GestureDetector(
-          onTap: () => _showUploadOptions(documentType),
+          onTap: isUploading ? null : () => _showUploadOptions(documentType),
           child: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isUploaded ? Colors.green : Colors.grey[300],
+              color: isUploading
+                  ? Colors.blue
+                  : isUploaded
+                  ? Colors.green
+                  : Colors.grey[300],
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              isUploaded ? Icons.check : Icons.upload,
-              color: isUploaded ? Colors.white : Colors.grey[600],
-            ),
+            child: isUploading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Icon(
+                    isUploaded ? Icons.check : Icons.upload,
+                    color: isUploaded ? Colors.white : Colors.grey[600],
+                  ),
           ),
         ),
       ),

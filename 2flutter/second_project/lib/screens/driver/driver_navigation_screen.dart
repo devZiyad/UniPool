@@ -15,8 +15,6 @@ class DriverNavigationScreen extends StatefulWidget {
 }
 
 class _DriverNavigationScreenState extends State<DriverNavigationScreen> {
-  MapController? _mapController;
-
   @override
   void initState() {
     super.initState();
@@ -34,9 +32,6 @@ class _DriverNavigationScreenState extends State<DriverNavigationScreen> {
               widget.ride.pickupLongitude,
             ),
             zoom: 14,
-            onMapCreated: (controller) {
-              _mapController = controller;
-            },
             markers: [
               Marker(
                 point: LatLng(

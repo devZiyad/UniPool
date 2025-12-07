@@ -16,7 +16,6 @@ class RiderLiveTrackingScreen extends StatefulWidget {
 }
 
 class _RiderLiveTrackingScreenState extends State<RiderLiveTrackingScreen> {
-  MapController? _mapController;
   LatLng? _driverLocation;
 
   @override
@@ -52,9 +51,6 @@ class _RiderLiveTrackingScreenState extends State<RiderLiveTrackingScreen> {
               widget.ride.pickupLongitude,
             ),
             zoom: 14,
-            onMapCreated: (controller) {
-              _mapController = controller;
-            },
             markers: [
               if (_driverLocation != null)
                 Marker(
