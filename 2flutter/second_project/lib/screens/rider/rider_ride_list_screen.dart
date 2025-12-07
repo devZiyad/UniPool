@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:latlong2/latlong.dart';
 import '../../providers/ride_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/ride.dart';
 import '../../services/booking_service.dart';
+import '../../widgets/map_widget.dart';
 
 class RiderRideListScreen extends StatefulWidget {
   const RiderRideListScreen({super.key});
@@ -13,20 +16,52 @@ class RiderRideListScreen extends StatefulWidget {
 
 class _RiderRideListScreenState extends State<RiderRideListScreen> {
   Ride? _selectedRide;
-  int _seatsNeeded = 2;
 
   @override
   Widget build(BuildContext context) {
     final rideProvider = Provider.of<RideProvider>(context);
     final rides = rideProvider.availableRides;
+    final seatsNeeded = rideProvider.seatsNeeded;
+    final pickupLocation = rideProvider.pickupLocation;
+    final destinationLocation = rideProvider.destinationLocation;
+
+    // Default location (Bahrain center)
+    LatLng centerLocation = const LatLng(26.0667, 50.5577);
+    
+    // Use pickup location if available, otherwise use destination, otherwise default
+    if (pickupLocation != null) {
+      centerLocation = LatLng(pickupLocation.latitude, pickupLocation.longitude);
+    } else if (destinationLocation != null) {
+      centerLocation = LatLng(destinationLocation.latitude, destinationLocation.longitude);
+    }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Available Rides'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Navigate back to time filters screen
+            // Check if user is driver or rider to use correct route
+            final authProvider = Provider.of<AuthProvider>(context, listen: false);
+            final role = authProvider.user?.role ?? '';
+            final isDriver = role == 'DRIVER' || role == 'BOTH';
+            
+            if (isDriver) {
+              Navigator.pushReplacementNamed(context, '/driver/post-ride/route-time');
+            } else {
+              Navigator.pushReplacementNamed(context, '/rider/time-filters');
+            }
+          },
+        ),
+      ),
       body: Stack(
         children: [
           // Map background
-          Container(
-            color: Colors.grey[200],
-            child: const Center(child: Text('Map View')),
+          MapWidget(
+            initialPosition: centerLocation,
+            zoom: 13,
+            myLocationEnabled: true,
           ),
           // Bottom sheet
           DraggableScrollableSheet(
@@ -58,7 +93,7 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                         itemBuilder: (context, index) {
                           final ride = rides[index];
                           final isSelected = _selectedRide?.id == ride.id;
-                          final price = (ride.pricePerSeat ?? 0) * _seatsNeeded;
+                          final price = (ride.pricePerSeat ?? 0) * seatsNeeded;
 
                           return Card(
                             margin: const EdgeInsets.symmetric(
@@ -144,56 +179,6 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
-                          // Seats selector
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.green,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.remove,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () {
-                                    if (_seatsNeeded > 1) {
-                                      setState(() {
-                                        _seatsNeeded--;
-                                      });
-                                    }
-                                  },
-                                ),
-                                Text(
-                                  '$_seatsNeeded seats',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.add,
-                                    color: Colors.white,
-                                  ),
-                                  onPressed: () {
-                                    if (_selectedRide != null &&
-                                        _seatsNeeded <
-                                            _selectedRide!.availableSeats) {
-                                      setState(() {
-                                        _seatsNeeded++;
-                                      });
-                                    }
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
                           // Request button
                           ElevatedButton(
                             onPressed: _selectedRide == null
@@ -270,7 +255,7 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                       
                                       await BookingService.createBooking(
                                         rideId: ride.id,
-                                        seats: _seatsNeeded,
+                                        seats: seatsNeeded,
                                         pickupLocationId: pickupLocationId,
                                         dropoffLocationId: dropoffLocationId,
                                         pickupTimeStart: pickupTimeStart,
