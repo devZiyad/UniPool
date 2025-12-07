@@ -23,6 +23,13 @@ import java.time.Instant;
 @Builder
 public class Booking {
 
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = Instant.now();
+        }
+    }
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -55,7 +62,7 @@ public class Booking {
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal costForThisRider;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at_instant", nullable = false, updatable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
 
