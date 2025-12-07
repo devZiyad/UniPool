@@ -128,4 +128,13 @@ class BookingService {
   static Future<void> cancelBooking(int bookingId) async {
     await ApiClient.post('/bookings/$bookingId/cancel', null);
   }
+
+  static Future<Booking> acceptBooking(int bookingId) async {
+    final response = await ApiClient.post('/bookings/$bookingId/accept', {});
+    return Booking.fromJson(jsonDecode(response.body));
+  }
+
+  static Future<void> rejectBooking(int bookingId) async {
+    await ApiClient.post('/bookings/$bookingId/reject', {});
+  }
 }

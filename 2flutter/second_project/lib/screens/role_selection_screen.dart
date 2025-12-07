@@ -3,145 +3,341 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 
-class RoleSelectionScreen extends StatelessWidget {
+class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
+
+  @override
+  State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
+}
+
+class _RoleSelectionScreenState extends State<RoleSelectionScreen>
+    with SingleTickerProviderStateMixin {
+  bool _riderHovered = false;
+  bool _driverHovered = false;
+  bool _riderExpanding = false;
+  bool _driverExpanding = false;
+  late AnimationController _animationController;
+  late Animation<double> _riderAnimation;
+  late Animation<double> _driverAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _riderAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+    _driverAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _selectRider() async {
+    if (_riderExpanding || _driverExpanding) return;
+    
+    setState(() {
+      _riderExpanding = true;
+    });
+    
+    _animationController.forward();
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (!mounted) return;
+    
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      final updatedUser = await UserService.updateRole('RIDER');
+      authProvider.setUser(updatedUser);
+    } catch (e) {
+      // If role update fails, still allow navigation
+    }
+    
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/rider/destination-search');
+    }
+  }
+
+  Future<void> _selectDriver() async {
+    if (_riderExpanding || _driverExpanding) return;
+    
+    setState(() {
+      _driverExpanding = true;
+    });
+    
+    _animationController.forward();
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (!mounted) return;
+    
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      final updatedUser = await UserService.updateRole('DRIVER');
+      authProvider.setUser(updatedUser);
+    } catch (e) {
+      // If role update fails, still allow navigation
+    }
+    
+    if (mounted) {
+      Navigator.pushReplacementNamed(
+        context,
+        '/driver/post-ride/destination-search',
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                'Choose Your Mode',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'How would you like to use UniPool?',
-                style: TextStyle(fontSize: 16, color: Colors.black54),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 48),
-              // Rider Mode Card
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: InkWell(
-                  onTap: () async {
-                    // Update role to RIDER when rider mode is selected
-                    final authProvider = Provider.of<AuthProvider>(
-                      context,
-                      listen: false,
-                    );
-                    try {
-                      final updatedUser = await UserService.updateRole('RIDER');
-                      authProvider.setUser(updatedUser);
-                    } catch (e) {
-                      // If role update fails, still allow navigation
-                      // User might already have RIDER role
-                    }
-                    if (context.mounted) {
-                      Navigator.pushReplacementNamed(
-                        context,
-                        '/rider/destination-search',
-                      );
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        const Icon(Icons.person, size: 64, color: Colors.green),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Rider Mode',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+      body: Stack(
+        children: [
+          // Rider section (top-left triangle)
+          AnimatedBuilder(
+            animation: _riderAnimation,
+            builder: (context, child) {
+              final scale = _riderExpanding
+                  ? 1.0 + (_riderAnimation.value * 3.0)
+                  : _riderHovered
+                      ? 1.05
+                      : 1.0;
+              
+              return Positioned.fill(
+                child: _riderExpanding
+                    ? Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.blue.shade600,
+                              Colors.blue.shade400,
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Search and join rides',
-                          style: TextStyle(fontSize: 16, color: Colors.black54),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              // Driver Mode Card
-              Card(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: InkWell(
-                  onTap: () async {
-                    // Update role to DRIVER when driver mode is selected
-                    final authProvider = Provider.of<AuthProvider>(
-                      context,
-                      listen: false,
-                    );
-                    try {
-                      final updatedUser = await UserService.updateRole('DRIVER');
-                      authProvider.setUser(updatedUser);
-                    } catch (e) {
-                      // If role update fails, still allow navigation
-                      // User might already have DRIVER role
-                    }
-                    if (context.mounted) {
-                      Navigator.pushReplacementNamed(
-                        context,
-                        '/driver/post-ride/destination-search',
-                      );
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.directions_car,
-                          size: 64,
-                          color: Colors.green,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Driver Mode',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                      )
+                    : Transform.scale(
+                        scale: scale,
+                        alignment: Alignment.topLeft,
+                        child: ClipPath(
+                          clipper: DiagonalClipper(isTop: true),
+                          child: MouseRegion(
+                            onEnter: (_) {
+                              if (!_riderExpanding && !_driverExpanding) {
+                                setState(() => _riderHovered = true);
+                              }
+                            },
+                            onExit: (_) {
+                              if (!_riderExpanding && !_driverExpanding) {
+                                setState(() => _riderHovered = false);
+                              }
+                            },
+                            child: GestureDetector(
+                              onTap: _selectRider,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: _riderHovered
+                                        ? [
+                                            Colors.blue.shade600,
+                                            Colors.blue.shade400,
+                                          ]
+                                        : [
+                                            Colors.blue.shade400,
+                                            Colors.blue.shade300,
+                                          ],
+                                  ),
+                                ),
+                                child: Align(
+                                  alignment: Alignment.topLeft,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 80, left: 40),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(
+                                          Icons.person,
+                                          size: _riderHovered ? 80 : 64,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'Rider',
+                                          style: TextStyle(
+                                            fontSize: _riderHovered ? 36 : 28,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Search and join rides',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.white.withOpacity(0.9),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Post rides and host passengers',
-                          style: TextStyle(fontSize: 16, color: Colors.black54),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
+                      ),
+              );
+            },
           ),
-        ),
+          // Driver section (bottom-right triangle)
+          AnimatedBuilder(
+            animation: _driverAnimation,
+            builder: (context, child) {
+              final scale = _driverExpanding
+                  ? 1.0 + (_driverAnimation.value * 3.0)
+                  : _driverHovered
+                      ? 1.05
+                      : 1.0;
+              
+              return Positioned.fill(
+                child: _driverExpanding
+                    ? Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              Colors.orange.shade600,
+                              Colors.orange.shade400,
+                            ],
+                          ),
+                        ),
+                      )
+                    : Transform.scale(
+                        scale: scale,
+                        alignment: Alignment.bottomRight,
+                        child: ClipPath(
+                          clipper: DiagonalClipper(isTop: false),
+                          child: MouseRegion(
+                            onEnter: (_) {
+                              if (!_riderExpanding && !_driverExpanding) {
+                                setState(() => _driverHovered = true);
+                              }
+                            },
+                            onExit: (_) {
+                              if (!_riderExpanding && !_driverExpanding) {
+                                setState(() => _driverHovered = false);
+                              }
+                            },
+                            child: GestureDetector(
+                              onTap: _selectDriver,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: _driverHovered
+                                        ? [
+                                            Colors.orange.shade600,
+                                            Colors.orange.shade400,
+                                          ]
+                                        : [
+                                            Colors.orange.shade400,
+                                            Colors.orange.shade300,
+                                          ],
+                                  ),
+                                ),
+                                child: Align(
+                                  alignment: Alignment.bottomRight,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(bottom: 80, right: 40),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Icon(
+                                          Icons.directions_car,
+                                          size: _driverHovered ? 80 : 64,
+                                          color: Colors.white,
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'Driver',
+                                          style: TextStyle(
+                                            fontSize: _driverHovered ? 36 : 28,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Post rides and host passengers',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            color: Colors.white.withOpacity(0.9),
+                                          ),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
+}
+
+class DiagonalClipper extends CustomClipper<Path> {
+  final bool isTop;
+
+  DiagonalClipper({required this.isTop});
+
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    
+    if (isTop) {
+      // Top-left triangle: top-left corner, top-right corner, bottom-left corner
+      path.moveTo(0, 0);
+      path.lineTo(size.width, 0);
+      path.lineTo(0, size.height);
+      path.close();
+    } else {
+      // Bottom-right triangle: top-right corner, bottom-right corner, bottom-left corner
+      path.moveTo(size.width, 0);
+      path.lineTo(size.width, size.height);
+      path.lineTo(0, size.height);
+      path.close();
+    }
+    
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

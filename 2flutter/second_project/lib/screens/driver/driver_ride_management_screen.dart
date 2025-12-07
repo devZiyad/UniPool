@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../providers/driver_provider.dart';
 import '../../widgets/app_drawer.dart';
 import '../../services/ride_service.dart';
+import '../../services/booking_service.dart';
 import '../../models/ride.dart';
 
 class DriverRideManagementScreen extends StatefulWidget {
@@ -26,6 +27,52 @@ class _DriverRideManagementScreenState
   void initState() {
     super.initState();
     _loadRides();
+  }
+
+  Future<void> _refreshData() async {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    
+    try {
+      // Reload rides
+      await driverProvider.loadMyRides();
+      
+      if (mounted) {
+        // Filter out cancelled rides
+        final activeRides = driverProvider.myRides
+            .where((ride) => ride.status.toUpperCase() != 'CANCELLED')
+            .toList();
+        
+        if (activeRides.isNotEmpty) {
+          // Ensure current index is valid
+          int safeIndex = _currentRideIndex;
+          if (safeIndex >= activeRides.length) {
+            safeIndex = 0;
+          }
+          
+          setState(() {
+            _currentRideIndex = safeIndex;
+          });
+          
+          // Reload details for current ride
+          await _loadRideDetails(activeRides[safeIndex].id);
+        } else {
+          setState(() {
+            _currentRideDetails = null;
+          });
+        }
+      }
+    } catch (e) {
+      print('RideManagementScreen._refreshData - Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error refreshing data: ${e.toString()}'),
+            duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _loadRides() async {
@@ -306,18 +353,30 @@ class _DriverRideManagementScreenState
     final rideToDisplay = _currentRideDetails ?? currentRide;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Ride Management')),
+      appBar: AppBar(
+        title: const Text('Ride Management'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshData,
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
       drawer: AppDrawer(),
       body: Column(
         children: [
           Expanded(
             child: _isLoadingDetails
                 ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
+                : RefreshIndicator(
+                    onRefresh: _refreshData,
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(), // Enable pull-to-refresh even when content is small
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
                         // Ride counter
                         Center(
                           child: Text(
@@ -674,15 +733,12 @@ class _DriverRideManagementScreenState
                               ),
                             ],
                           ),
-                          // Show all bookings (both pending and confirmed)
+                          // Show only pending bookings in "New Requests"
                           Builder(
                             builder: (context) {
-                              final allBookings = [
-                                ...driverProvider.pendingBookings,
-                                ...driverProvider.acceptedBookings,
-                              ];
+                              final pendingBookings = driverProvider.pendingBookings;
                               
-                              if (allBookings.isEmpty)
+                              if (pendingBookings.isEmpty)
                                 return Card(
                                   child: Padding(
                                     padding: const EdgeInsets.all(24),
@@ -709,7 +765,7 @@ class _DriverRideManagementScreenState
                                 );
                               
                               return Column(
-                                children: allBookings.map((booking) {
+                                children: pendingBookings.map((booking) {
                                   return Card(
                                     margin: const EdgeInsets.only(bottom: 12),
                                     elevation: 2,
@@ -850,6 +906,87 @@ class _DriverRideManagementScreenState
                                                 ],
                                               ),
                                             ],
+                                            // Accept/Reject buttons for PENDING bookings
+                                            if (booking.status.toUpperCase() == 'PENDING') ...[
+                                              const SizedBox(height: 16),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: OutlinedButton(
+                                                      onPressed: () async {
+                                                        try {
+                                                          await BookingService.rejectBooking(booking.id);
+                                                          // Reload bookings
+                                                          final driverProvider = Provider.of<DriverProvider>(
+                                                            context,
+                                                            listen: false,
+                                                          );
+                                                          await driverProvider.loadBookingsForRide(rideToDisplay.id);
+                                                          if (mounted) {
+                                                            await _loadRideDetails(rideToDisplay.id);
+                                                          }
+                                                        } catch (e) {
+                                                          if (mounted) {
+                                                            ScaffoldMessenger.of(context).showSnackBar(
+                                                              SnackBar(
+                                                                content: Text('Error rejecting booking: ${e.toString()}'),
+                                                                backgroundColor: Colors.red,
+                                                              ),
+                                                            );
+                                                          }
+                                                        }
+                                                      },
+                                                      style: OutlinedButton.styleFrom(
+                                                        foregroundColor: Colors.red,
+                                                        side: const BorderSide(color: Colors.red),
+                                                      ),
+                                                      child: const Text('Reject'),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  Expanded(
+                                                    child: ElevatedButton(
+                                                      onPressed: () async {
+                                                        try {
+                                                          await BookingService.acceptBooking(booking.id);
+                                                          // Reload bookings
+                                                          final driverProvider = Provider.of<DriverProvider>(
+                                                            context,
+                                                            listen: false,
+                                                          );
+                                                          await driverProvider.loadBookingsForRide(rideToDisplay.id);
+                                                          if (mounted) {
+                                                            await _loadRideDetails(rideToDisplay.id);
+                                                          }
+                                                          if (mounted) {
+                                                            ScaffoldMessenger.of(context).showSnackBar(
+                                                              const SnackBar(
+                                                                content: Text('Booking accepted successfully'),
+                                                                backgroundColor: Colors.green,
+                                                              ),
+                                                            );
+                                                          }
+                                                        } catch (e) {
+                                                          if (mounted) {
+                                                            ScaffoldMessenger.of(context).showSnackBar(
+                                                              SnackBar(
+                                                                content: Text('Error accepting booking: ${e.toString()}'),
+                                                                backgroundColor: Colors.red,
+                                                              ),
+                                                            );
+                                                          }
+                                                        }
+                                                      },
+                                                      style: ElevatedButton.styleFrom(
+                                                        backgroundColor: Colors.green,
+                                                        foregroundColor: Colors.white,
+                                                      ),
+                                                      child: const Text('Accept'),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
                                           ],
                                         ),
                                       ),
@@ -956,6 +1093,7 @@ class _DriverRideManagementScreenState
                       ],
                     ),
                   ),
+                ),
           ),
           // Navigation buttons at bottom
           Container(

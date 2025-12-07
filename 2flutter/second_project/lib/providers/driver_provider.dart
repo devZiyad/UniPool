@@ -88,9 +88,11 @@ class DriverProvider with ChangeNotifier {
   Future<void> loadBookingsForRide(int rideId) async {
     try {
       final bookings = await BookingService.getBookingsForRide(rideId);
-      _pendingBookings = bookings.where((b) => b.status == 'PENDING').toList();
+      _pendingBookings = bookings
+          .where((b) => b.status.toUpperCase() == 'PENDING')
+          .toList();
       _acceptedBookings = bookings
-          .where((b) => b.status == 'CONFIRMED')
+          .where((b) => b.status.toUpperCase() == 'CONFIRMED')
           .toList();
       notifyListeners();
     } catch (e) {

@@ -124,29 +124,6 @@ class _VehiclesManagementScreenState extends State<VehiclesManagementScreen> {
     }
   }
 
-  Future<void> _deactivateVehicle(Vehicle vehicle) async {
-    try {
-      await VehicleService.updateVehicle(
-        id: vehicle.id,
-        active: false,
-      );
-      if (mounted) {
-        _loadVehicles();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${vehicle.make} ${vehicle.model} is now inactive'),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deactivating vehicle: $e')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -264,74 +241,6 @@ class _VehiclesManagementScreenState extends State<VehiclesManagementScreen> {
                             ],
                           ),
                             ),
-                            // Active status switch
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: SwitchListTile(
-                                      title: Text(
-                                        (vehicle.active ?? false) ? 'Active Vehicle' : 'Inactive Vehicle',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.w500,
-                                          color: (vehicle.active ?? false)
-                                              ? Colors.green
-                                              : Colors.grey[600],
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        (vehicle.active ?? false)
-                                            ? 'This vehicle will be used for new rides'
-                                            : 'Tap to set as active vehicle',
-                                        style: TextStyle(fontSize: 12),
-                                      ),
-                                      value: vehicle.active ?? false,
-                                      onChanged: (value) async {
-                                        if (value) {
-                                          await _activateVehicle(vehicle);
-                                        } else {
-                                          // Deactivate by setting active to false
-                                          await _deactivateVehicle(vehicle);
-                                        }
-                                      },
-                                      secondary: Icon(
-                                        (vehicle.active ?? false)
-                                            ? Icons.check_circle
-                                            : Icons.cancel,
-                                        color: (vehicle.active ?? false)
-                                            ? Colors.green
-                                            : Colors.grey,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            // Set as Active button for inactive vehicles
-                            if (!(vehicle.active ?? false))
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 16,
-                                  right: 16,
-                                  bottom: 12,
-                                ),
-                                child: SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: () => _activateVehicle(vehicle),
-                                    icon: const Icon(Icons.check_circle),
-                                    label: const Text('Set as Active Vehicle'),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: Colors.green,
-                                      side: const BorderSide(color: Colors.green),
-                                    ),
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                       );
