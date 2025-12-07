@@ -5,6 +5,7 @@ import '../../providers/driver_provider.dart';
 import '../../services/ride_service.dart';
 import '../../services/location_service.dart';
 import '../../services/vehicle_service.dart';
+import '../../models/vehicle.dart';
 import '../../widgets/app_drawer.dart';
 
 class DriverPostRideRouteTimeScreen extends StatefulWidget {
@@ -97,6 +98,81 @@ class _DriverPostRideRouteTimeScreenState
       setState(() {
         _endDate = DateTime(picked.year, picked.month, picked.day);
       });
+    }
+  }
+
+  Future<Vehicle?> _showVehicleSelectionDialog() async {
+    try {
+      final vehicles = await VehicleService.getMyVehicles();
+      
+      if (vehicles.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No vehicles found. Please add a vehicle first.',
+              ),
+            ),
+          );
+        }
+        return null;
+      }
+
+      return showDialog<Vehicle>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Select Vehicle'),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: vehicles.length,
+                itemBuilder: (context, index) {
+                  final vehicle = vehicles[index];
+                  final isActive = vehicle.active ?? false;
+                  return ListTile(
+                    leading: Icon(
+                      isActive ? Icons.check_circle : Icons.circle_outlined,
+                      color: isActive ? Colors.green : Colors.grey,
+                    ),
+                    title: Text(
+                      '${vehicle.make} ${vehicle.model}',
+                      style: TextStyle(
+                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${vehicle.plateNumber} • ${vehicle.seatCount} seats${isActive ? ' • Active' : ''}',
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pop(vehicle);
+                    },
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error loading vehicles: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return null;
     }
   }
 
@@ -196,33 +272,18 @@ class _DriverPostRideRouteTimeScreenState
       }
     }
 
+    // Show vehicle selection dialog
+    final selectedVehicle = await _showVehicleSelectionDialog();
+    if (selectedVehicle == null) {
+      return; // User cancelled or no vehicles available
+    }
+
     setState(() {
       _isPosting = true;
     });
 
     try {
-      // Get user's active vehicles
-      final vehicles = await VehicleService.getMyVehicles();
-      final activeVehicles = vehicles.where((v) => v.active).toList();
-
-      if (activeVehicles.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'No active vehicles found. Please add a vehicle first.',
-              ),
-            ),
-          );
-        }
-        setState(() {
-          _isPosting = false;
-        });
-        return;
-      }
-
-      // Use the first active vehicle
-      final vehicle = activeVehicles.first;
+      final vehicle = selectedVehicle;
 
       // Create locations if they don't have IDs (e.g., selected from map)
       var pickupLocation = driverProvider.pickupLocation!;

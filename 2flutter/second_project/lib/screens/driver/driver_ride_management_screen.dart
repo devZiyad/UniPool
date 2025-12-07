@@ -674,59 +674,191 @@ class _DriverRideManagementScreenState
                               ),
                             ],
                           ),
-                          if (driverProvider.pendingBookings.isEmpty)
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(24),
-                                child: Center(
-                                  child: Column(
-                                    children: [
-                                      const Icon(
-                                        Icons.inbox,
-                                        size: 48,
-                                        color: Colors.grey,
+                          // Show all bookings (both pending and confirmed)
+                          Builder(
+                            builder: (context) {
+                              final allBookings = [
+                                ...driverProvider.pendingBookings,
+                                ...driverProvider.acceptedBookings,
+                              ];
+                              
+                              if (allBookings.isEmpty)
+                                return Card(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(24),
+                                    child: Center(
+                                      child: Column(
+                                        children: [
+                                          const Icon(
+                                            Icons.inbox,
+                                            size: 48,
+                                            color: Colors.grey,
+                                          ),
+                                          const SizedBox(height: 16),
+                                          const Text(
+                                            'No requests',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(height: 16),
-                                      const Text(
-                                        'No pending requests',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            )
-                          else
-                            ...driverProvider.pendingBookings.take(3).map((
-                              booking,
-                            ) {
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                child: ListTile(
-                                  leading: CircleAvatar(
-                                    child: Text(
-                                      booking.riderName
-                                          .substring(0, 1)
-                                          .toUpperCase(),
                                     ),
                                   ),
-                                  title: Text(booking.riderName),
-                                  subtitle: Text(
-                                    '${booking.seatsBooked} seat${booking.seatsBooked > 1 ? 's' : ''} requested',
-                                  ),
-                                  trailing: const Icon(Icons.arrow_forward),
-                                  onTap: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/driver/incoming-requests',
-                                    );
-                                  },
-                                ),
+                                );
+                              
+                              return Column(
+                                children: allBookings.map((booking) {
+                                  return Card(
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    elevation: 2,
+                                    child: InkWell(
+                                      onTap: () {
+                                        Navigator.pushNamed(
+                                          context,
+                                          '/driver/incoming-requests',
+                                        );
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            // Rider name
+                                            Row(
+                                              children: [
+                                                CircleAvatar(
+                                                  radius: 24,
+                                                  backgroundColor:
+                                                      Colors.blue.withOpacity(0.1),
+                                                  child: Text(
+                                                    booking.riderName
+                                                        .substring(0, 1)
+                                                        .toUpperCase(),
+                                                    style: const TextStyle(
+                                                      fontSize: 20,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: Colors.blue,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Text(
+                                                    booking.riderName,
+                                                    style: const TextStyle(
+                                                      fontSize: 18,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: booking.status == 'PENDING'
+                                                        ? Colors.orange.withOpacity(0.1)
+                                                        : Colors.green.withOpacity(0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(12),
+                                                  ),
+                                                  child: Text(
+                                                    booking.status,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: booking.status == 'PENDING'
+                                                          ? Colors.orange
+                                                          : Colors.green,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 16),
+                                            // Start location
+                                            if (booking.pickupLocationLabel != null)
+                                              Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.location_on,
+                                                    size: 20,
+                                                    color: Colors.green,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      booking.pickupLocationLabel!,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            // Destination location
+                                            if (booking.dropoffLocationLabel != null) ...[
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.place,
+                                                    size: 20,
+                                                    color: Colors.red,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      booking.dropoffLocationLabel!,
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                            // Departure time range
+                                            if (booking.pickupTimeStart != null &&
+                                                booking.pickupTimeEnd != null) ...[
+                                              const SizedBox(height: 8),
+                                              Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.access_time,
+                                                    size: 20,
+                                                    color: Colors.blue,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      _formatTimeRangeWithEnd(
+                                                        booking.pickupTimeStart!,
+                                                        booking.pickupTimeEnd!,
+                                                        booking.pickupTimeStart!,
+                                                      ),
+                                                      style: const TextStyle(
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               );
-                            }),
+                            },
+                          ),
                           const SizedBox(height: 24),
                           // Accepted riders section
                           if (driverProvider.acceptedBookings.isNotEmpty) ...[

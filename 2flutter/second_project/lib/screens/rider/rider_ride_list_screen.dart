@@ -264,17 +264,27 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                       if (mounted) {
                                         Navigator.pushNamed(
                                           context,
-                                          '/rider/pending-approval',
+                                          '/rider/bookings',
                                         );
                                       }
                                     } catch (e) {
+                                      print('Booking error: $e');
                                       if (mounted) {
+                                        // Extract error message
+                                        String errorMessage = 'Failed to create booking';
+                                        if (e.toString().contains('Exception:')) {
+                                          errorMessage = e.toString().replaceFirst('Exception: ', '');
+                                        } else {
+                                          errorMessage = e.toString();
+                                        }
+                                        
                                         ScaffoldMessenger.of(
                                           context,
                                         ).showSnackBar(
                                           SnackBar(
-                                            content: Text(e.toString()),
+                                            content: Text(errorMessage),
                                             backgroundColor: Colors.red,
+                                            duration: const Duration(seconds: 5),
                                           ),
                                         );
                                       }

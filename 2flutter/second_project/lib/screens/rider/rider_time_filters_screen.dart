@@ -212,7 +212,7 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
     try {
       // Get user's active vehicles
       final vehicles = await VehicleService.getMyVehicles();
-      final activeVehicles = vehicles.where((v) => v.active).toList();
+      final activeVehicles = vehicles.where((v) => v.active ?? false).toList();
 
       if (activeVehicles.isEmpty) {
         if (mounted) {

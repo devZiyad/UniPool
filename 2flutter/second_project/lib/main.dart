@@ -11,6 +11,7 @@ import 'screens/role_selection_screen.dart';
 import 'screens/rider/rider_unified_search_screen.dart';
 import 'screens/rider/rider_ride_list_screen.dart';
 import 'screens/rider/rider_pending_approval_screen.dart';
+import 'screens/rider/rider_bookings_screen.dart';
 import 'screens/rider/rider_live_tracking_screen.dart';
 import 'screens/rider/rider_rating_screen.dart';
 import 'screens/driver/driver_ride_posted_confirmation_screen.dart';
@@ -22,6 +23,9 @@ import 'screens/driver/driver_rate_passenger_screen.dart';
 import 'screens/vehicles/vehicles_management_screen.dart';
 import 'screens/vehicles/add_vehicle_screen.dart';
 import 'screens/profile/profile_settings_screen.dart';
+import 'models/vehicle.dart';
+import 'models/ride.dart';
+import 'models/booking.dart';
 
 void main() {
   runApp(const UniPoolApp());
@@ -58,15 +62,8 @@ class UniPoolApp extends StatelessWidget {
           '/rider/ride-list': (context) => const RiderRideListScreen(),
           '/rider/pending-approval': (context) =>
               const RiderPendingApprovalScreen(),
-          '/rider/live-tracking': (context) {
-            // This would need to get the ride from context or state
-            // For now, using a placeholder
-            throw UnimplementedError('Need to pass ride');
-          },
-          '/rider/rating': (context) {
-            // This would need to get the booking from context or state
-            throw UnimplementedError('Need to pass booking');
-          },
+          '/rider/bookings': (context) => const RiderBookingsScreen(),
+          // '/rider/live-tracking' and '/rider/rating' are handled by onGenerateRoute
           // Driver routes (using unified search screen)
           '/driver/post-ride/destination-search': (context) =>
               const RiderUnifiedSearchScreen(),
@@ -82,41 +79,73 @@ class UniPoolApp extends StatelessWidget {
               const DriverIncomingRequestsScreen(),
           '/driver/accepted-riders': (context) =>
               const DriverAcceptedRidersScreen(),
-          '/driver/navigation': (context) {
-            // This would need to get the ride from context or state
-            throw UnimplementedError('Need to pass ride');
-          },
-          '/driver/rate-passenger': (context) {
-            // This would need to get the booking from context or state
-            throw UnimplementedError('Need to pass booking');
-          },
+          // '/driver/navigation' and '/driver/rate-passenger' are handled by onGenerateRoute
           // Profile & Settings
           '/profile-settings': (context) => const ProfileSettingsScreen(),
           '/vehicles': (context) => const VehiclesManagementScreen(),
-          '/vehicles/add': (context) => const AddVehicleScreen(),
+          '/vehicles/add': (context) {
+            final vehicle = ModalRoute.of(context)?.settings.arguments;
+            return AddVehicleScreen(vehicle: vehicle is Vehicle ? vehicle : null);
+          },
         },
         onGenerateRoute: (settings) {
           // Handle routes with parameters
           if (settings.name == '/rider/live-tracking') {
-            final ride = settings.arguments as dynamic;
+            final ride = settings.arguments;
+            if (ride == null || ride is! Ride) {
+              return MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Center(
+                    child: Text('Error: Ride not provided'),
+                  ),
+                ),
+              );
+            }
             return MaterialPageRoute(
               builder: (context) => RiderLiveTrackingScreen(ride: ride),
             );
           }
           if (settings.name == '/rider/rating') {
-            final booking = settings.arguments as dynamic;
+            final booking = settings.arguments;
+            if (booking == null || booking is! Booking) {
+              return MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Center(
+                    child: Text('Error: Booking not provided'),
+                  ),
+                ),
+              );
+            }
             return MaterialPageRoute(
               builder: (context) => RiderRatingScreen(booking: booking),
             );
           }
           if (settings.name == '/driver/navigation') {
-            final ride = settings.arguments as dynamic;
+            final ride = settings.arguments;
+            if (ride == null || ride is! Ride) {
+              return MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Center(
+                    child: Text('Error: Ride not provided'),
+                  ),
+                ),
+              );
+            }
             return MaterialPageRoute(
               builder: (context) => DriverNavigationScreen(ride: ride),
             );
           }
           if (settings.name == '/driver/rate-passenger') {
-            final booking = settings.arguments as dynamic;
+            final booking = settings.arguments;
+            if (booking == null || booking is! Booking) {
+              return MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Center(
+                    child: Text('Error: Booking not provided'),
+                  ),
+                ),
+              );
+            }
             return MaterialPageRoute(
               builder: (context) => DriverRatePassengerScreen(booking: booking),
             );

@@ -7,7 +7,7 @@ class Vehicle {
   final int seatCount;
   final int ownerId;
   final String ownerName;
-  final bool active;
+  final bool? active;
   final DateTime createdAt;
 
   Vehicle({
@@ -19,7 +19,7 @@ class Vehicle {
     required this.seatCount,
     required this.ownerId,
     required this.ownerName,
-    required this.active,
+    this.active,
     required this.createdAt,
   });
 
@@ -33,7 +33,7 @@ class Vehicle {
       seatCount: json['seatCount'],
       ownerId: json['ownerId'],
       ownerName: json['ownerName'],
-      active: json['active'] ?? false,
+      active: json['active'],
       createdAt: DateTime.parse(json['createdAt']),
     );
   }

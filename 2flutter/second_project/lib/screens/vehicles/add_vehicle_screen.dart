@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../models/vehicle.dart';
 import '../../services/vehicle_service.dart';
 import '../../widgets/app_drawer.dart';
 
 class AddVehicleScreen extends StatefulWidget {
-  const AddVehicleScreen({super.key});
+  final Vehicle? vehicle;
+
+  const AddVehicleScreen({super.key, this.vehicle});
 
   @override
   State<AddVehicleScreen> createState() => _AddVehicleScreenState();
@@ -11,12 +14,24 @@ class AddVehicleScreen extends StatefulWidget {
 
 class _AddVehicleScreenState extends State<AddVehicleScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _makeController = TextEditingController();
-  final _modelController = TextEditingController();
-  final _colorController = TextEditingController();
-  final _plateNumberController = TextEditingController();
-  final _seatCountController = TextEditingController(text: '4');
+  late TextEditingController _makeController;
+  late TextEditingController _modelController;
+  late TextEditingController _colorController;
+  late TextEditingController _plateNumberController;
+  late TextEditingController _seatCountController;
   bool _isSubmitting = false;
+  bool _isEditMode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isEditMode = widget.vehicle != null;
+    _makeController = TextEditingController(text: widget.vehicle?.make ?? '');
+    _modelController = TextEditingController(text: widget.vehicle?.model ?? '');
+    _colorController = TextEditingController(text: widget.vehicle?.color ?? '');
+    _plateNumberController = TextEditingController(text: widget.vehicle?.plateNumber ?? '');
+    _seatCountController = TextEditingController(text: widget.vehicle?.seatCount.toString() ?? '4');
+  }
 
   @override
   void dispose() {
@@ -38,21 +53,41 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     });
 
     try {
-      await VehicleService.createVehicle(
-        make: _makeController.text.trim(),
-        model: _modelController.text.trim(),
-        color: _colorController.text.trim().isEmpty
-            ? null
-            : _colorController.text.trim(),
-        plateNumber: _plateNumberController.text.trim(),
-        seatCount: int.parse(_seatCountController.text),
-      );
-
-      if (mounted) {
-        Navigator.pop(context, true);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vehicle added successfully')),
+      if (_isEditMode && widget.vehicle != null) {
+        await VehicleService.updateVehicle(
+          id: widget.vehicle!.id,
+          make: _makeController.text.trim(),
+          model: _modelController.text.trim(),
+          color: _colorController.text.trim().isEmpty
+              ? null
+              : _colorController.text.trim(),
+          plateNumber: _plateNumberController.text.trim(),
+          seatCount: int.parse(_seatCountController.text),
         );
+
+        if (mounted) {
+          Navigator.pop(context, true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Vehicle updated successfully')),
+          );
+        }
+      } else {
+        await VehicleService.createVehicle(
+          make: _makeController.text.trim(),
+          model: _modelController.text.trim(),
+          color: _colorController.text.trim().isEmpty
+              ? null
+              : _colorController.text.trim(),
+          plateNumber: _plateNumberController.text.trim(),
+          seatCount: int.parse(_seatCountController.text),
+        );
+
+        if (mounted) {
+          Navigator.pop(context, true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Vehicle added successfully')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -72,7 +107,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add Vehicle')),
+      appBar: AppBar(title: Text(_isEditMode ? 'Edit Vehicle' : 'Add Vehicle')),
       drawer: AppDrawer(),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -166,7 +201,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                         width: 20,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Add Vehicle'),
+                    : Text(_isEditMode ? 'Update Vehicle' : 'Add Vehicle'),
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/user.dart';
+import '../../models/user_settings.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/user_service.dart';
 import '../../widgets/app_drawer.dart';
@@ -18,12 +19,16 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
   late TextEditingController _phoneNumberController;
   bool _isLoading = false;
   bool _isSaving = false;
+  bool _isLoadingSettings = false;
+  bool _isSavingSettings = false;
   User? _user;
+  UserSettings? _settings;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadSettings();
   }
 
   Future<void> _loadProfile() async {
@@ -49,6 +54,63 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error loading profile: $e')));
+      }
+    }
+  }
+
+  Future<void> _loadSettings() async {
+    setState(() {
+      _isLoadingSettings = true;
+    });
+
+    try {
+      final settings = await UserService.getSettings();
+      setState(() {
+        _settings = settings;
+        _isLoadingSettings = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingSettings = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading settings: $e')));
+      }
+    }
+  }
+
+  Future<void> _updateAutoAcceptBookings(bool value) async {
+    setState(() {
+      _isSavingSettings = true;
+    });
+
+    try {
+      final updatedSettings = await UserService.updateSettings(
+        autoAcceptBookings: value,
+      );
+      setState(() {
+        _settings = updatedSettings;
+        _isSavingSettings = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Settings updated successfully')),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isSavingSettings = false;
+        // Revert the toggle if update failed
+        if (_settings != null) {
+          _settings = _settings!.copyWith(autoAcceptBookings: !value);
+        }
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error updating settings: $e')));
       }
     }
   }
@@ -209,6 +271,52 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
                           ),
                         ),
                       ),
+                    const SizedBox(height: 16),
+                    // Settings Card
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Settings',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            if (_isLoadingSettings)
+                              const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            else if (_settings != null)
+                              SwitchListTile(
+                                title: const Text('Auto-Accept Bookings'),
+                                subtitle: const Text(
+                                  'Automatically accept booking requests without manual approval',
+                                ),
+                                value: _settings!.autoAcceptBookings,
+                                onChanged: _isSavingSettings
+                                    ? null
+                                    : (value) {
+                                        setState(() {
+                                          _settings = _settings!.copyWith(
+                                            autoAcceptBookings: value,
+                                          );
+                                        });
+                                        _updateAutoAcceptBookings(value);
+                                      },
+                                secondary: const Icon(Icons.check_circle_outline),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),

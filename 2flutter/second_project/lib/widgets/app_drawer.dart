@@ -91,6 +91,17 @@ class AppDrawer extends StatelessWidget {
                 Navigator.pushNamed(context, '/rider/destination-search');
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.event_note),
+              title: const Text('My Bookings'),
+              subtitle: const Text(
+                'View your pending and confirmed bookings',
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/rider/bookings');
+              },
+            ),
           ],
           // Driver-specific options (show for DRIVER or BOTH roles)
           if (user != null &&

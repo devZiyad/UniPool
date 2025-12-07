@@ -8,6 +8,11 @@ class Booking {
   final double costForThisRider;
   final DateTime createdAt;
   final DateTime? cancelledAt;
+  // Additional fields from API
+  final String? pickupLocationLabel;
+  final String? dropoffLocationLabel;
+  final DateTime? pickupTimeStart;
+  final DateTime? pickupTimeEnd;
 
   Booking({
     required this.id,
@@ -19,20 +24,46 @@ class Booking {
     required this.costForThisRider,
     required this.createdAt,
     this.cancelledAt,
+    this.pickupLocationLabel,
+    this.dropoffLocationLabel,
+    this.pickupTimeStart,
+    this.pickupTimeEnd,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
+    // Handle both 'id' and 'bookingId' field names
+    final id = json['id'] ?? json['bookingId'];
+    // Handle both 'riderId' and 'passengerId' field names
+    final riderId = json['riderId'] ?? json['passengerId'];
+    // Handle both 'riderName' and 'passengerName' field names
+    final riderName = json['riderName'] ?? json['passengerName'] ?? 'Unknown';
+    
+    // Validate required fields
+    if (id == null) {
+      throw Exception('Booking ID is missing in response. Available keys: ${json.keys.join(", ")}');
+    }
+    
     return Booking(
-      id: json['id'],
-      rideId: json['rideId'],
-      riderId: json['riderId'],
-      riderName: json['riderName'],
-      seatsBooked: json['seatsBooked'],
-      status: json['status'],
+      id: id is int ? id : int.parse(id.toString()),
+      rideId: json['rideId'] ?? 0,
+      riderId: riderId != null ? (riderId is int ? riderId : int.parse(riderId.toString())) : 0,
+      riderName: riderName,
+      seatsBooked: json['seatsBooked'] ?? json['seats'] ?? 0,
+      status: json['status'] ?? 'PENDING',
       costForThisRider: (json['costForThisRider'] ?? 0.0).toDouble(),
-      createdAt: DateTime.parse(json['createdAt']),
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt'])
+          : DateTime.now(),
       cancelledAt: json['cancelledAt'] != null
           ? DateTime.parse(json['cancelledAt'])
+          : null,
+      pickupLocationLabel: json['pickupLocationLabel'],
+      dropoffLocationLabel: json['dropoffLocationLabel'],
+      pickupTimeStart: json['pickupTimeStart'] != null
+          ? DateTime.parse(json['pickupTimeStart']).toLocal()
+          : null,
+      pickupTimeEnd: json['pickupTimeEnd'] != null
+          ? DateTime.parse(json['pickupTimeEnd']).toLocal()
           : null,
     );
   }
