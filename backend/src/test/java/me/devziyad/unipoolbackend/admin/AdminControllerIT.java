@@ -3,6 +3,8 @@ package me.devziyad.unipoolbackend.admin;
 import me.devziyad.unipoolbackend.common.Role;
 import me.devziyad.unipoolbackend.location.dto.LocationResponse;
 import me.devziyad.unipoolbackend.ride.dto.RideResponse;
+import me.devziyad.unipoolbackend.security.JwtService;
+import me.devziyad.unipoolbackend.user.UserRepository;
 import me.devziyad.unipoolbackend.util.TestUtils;
 import me.devziyad.unipoolbackend.vehicle.dto.VehicleResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,38 +13,71 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureRestTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.client.RestTestClient;
 
 @AutoConfigureRestTestClient
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.test.context.ActiveProfiles("test")
 public class AdminControllerIT {
 
     @Autowired
     private RestTestClient restClient;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtService jwtService;
+
     private String adminToken;
     private String regularUserToken;
     private Long rideId;
+    private Long regularUserId;
 
     @BeforeEach
     void setUp() {
-        // Create admin user
-        adminToken = TestUtils.registerAndGetToken(
-                restClient,
+        // Create admin user directly (bypasses registration restrictions)
+        adminToken = TestUtils.createAdminUserAndGetToken(
+                userRepository,
+                passwordEncoder,
+                jwtService,
                 "admin@example.com",
                 "admin123",
-                "Admin User",
-                Role.ADMIN
+                "Admin User"
         );
 
-        // Create regular user
-        regularUserToken = TestUtils.registerAndGetToken(
+        // Create regular user and get their ID
+        TestUtils.RegistrationResult regularUserResult = TestUtils.registerAndGetResult(
                 restClient,
                 "user@example.com",
                 "user123",
                 "Regular User",
                 Role.RIDER
         );
+        regularUserToken = regularUserResult.getToken();
+        // Get user ID by calling the API
+        byte[] userResponseBytes = restClient
+                .get()
+                .uri("/api/auth/me")
+                .header("Authorization", "Bearer " + regularUserToken)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+        try {
+            String userResponseBody = new String(userResponseBytes);
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> user = TestUtils.getObjectMapper().readValue(userResponseBody, java.util.Map.class);
+            regularUserId = Long.valueOf(user.get("id").toString());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get user ID", e);
+        }
 
         // Create a driver user for creating rides
         String driverToken = TestUtils.registerAndGetToken(
@@ -80,7 +115,8 @@ public class AdminControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$").isArray()
-                .jsonPath("$[0].rideId").exists();
+                .jsonPath("$[0].id").exists()
+                .jsonPath("$[0].email").exists();
     }
 
     @Test
@@ -96,16 +132,16 @@ public class AdminControllerIT {
 
     @Test
     void shouldGetUserByIdAsAdmin() {
-        // Test with ID 1 (assuming at least one user exists from setup)
+        // Test with the regular user we created in setup
         restClient
                 .get()
-                .uri("/api/admin/users/1")
+                .uri("/api/admin/users/" + regularUserId)
                 .header("Authorization", "Bearer " + adminToken)
                 .exchange()
                 .expectStatus()
                 .isOk()
                 .expectBody()
-                .jsonPath("$.rideId").exists()
+                .jsonPath("$.id").isEqualTo(regularUserId.intValue())
                 .jsonPath("$.email").exists();
     }
 
@@ -116,7 +152,7 @@ public class AdminControllerIT {
 
         restClient
                 .put()
-                .uri("/api/admin/users/1/enable")
+                .uri("/api/admin/users/" + regularUserId + "/enable")
                 .header("Authorization", "Bearer " + adminToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(request)
@@ -153,7 +189,7 @@ public class AdminControllerIT {
                 .expectStatus()
                 .isOk()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo(rideId.intValue())
+                .jsonPath("$.rideId").isEqualTo(rideId.intValue())
                 .jsonPath("$.driverId").exists();
     }
 

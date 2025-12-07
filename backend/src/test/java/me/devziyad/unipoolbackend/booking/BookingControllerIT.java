@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 
 @AutoConfigureRestTestClient
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.test.context.ActiveProfiles("test")
 public class BookingControllerIT {
 
     @Autowired
@@ -65,25 +66,60 @@ public class BookingControllerIT {
 
     @Test
     void shouldCreateBookingAsRider() {
-        CreateBookingRequest request = new CreateBookingRequest();
-        request.setRideId(rideId);
-        request.setSeats(2);
-
-        restClient
-                .post()
-                .uri("/api/bookings")
+        // Get ride details to extract valid locations and times
+        byte[] rideResponseBytes = restClient
+                .get()
+                .uri("/api/rides/" + rideId)
                 .header("Authorization", "Bearer " + riderToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
                 .exchange()
                 .expectStatus()
-                .isCreated()
-                .expectHeader()
-                .contentType(MediaType.APPLICATION_JSON)
+                .isOk()
                 .expectBody()
-                .jsonPath("$.rideId").exists()
-                .jsonPath("$.rideId").isEqualTo(rideId.intValue())
-                .jsonPath("$.seats").isEqualTo(2);
+                .returnResult()
+                .getResponseBody();
+        
+        try {
+            String rideResponseBody = new String(rideResponseBytes);
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> ride = TestUtils.getObjectMapper().readValue(rideResponseBody, java.util.Map.class);
+            
+            Long pickupLocationId = Long.valueOf(ride.get("pickupLocationId").toString());
+            Long dropoffLocationId = Long.valueOf(ride.get("destinationLocationId").toString());
+            java.time.Instant departureStart = java.time.Instant.parse(ride.get("departureTimeStart").toString());
+            java.time.Instant departureEnd = java.time.Instant.parse(ride.get("departureTimeEnd").toString());
+            
+            // Set pickup times within the ride's departure time range
+            java.time.Instant pickupTimeStart = departureStart;
+            java.time.Instant pickupTimeEnd = departureStart.plus(30, java.time.temporal.ChronoUnit.MINUTES);
+            if (pickupTimeEnd.isAfter(departureEnd)) {
+                pickupTimeEnd = departureEnd;
+            }
+            
+            CreateBookingRequest request = new CreateBookingRequest();
+            request.setRideId(rideId);
+            request.setSeats(2);
+            request.setPickupLocationId(pickupLocationId);
+            request.setDropoffLocationId(dropoffLocationId);
+            request.setPickupTimeStart(pickupTimeStart);
+            request.setPickupTimeEnd(pickupTimeEnd);
+
+            restClient
+                    .post()
+                    .uri("/api/bookings")
+                    .header("Authorization", "Bearer " + riderToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .exchange()
+                    .expectStatus()
+                    .isCreated()
+                    .expectHeader()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .expectBody()
+                    .jsonPath("$.rideId").isEqualTo(rideId.intValue())
+                    .jsonPath("$.availableSeats").exists();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create booking request", e);
+        }
     }
 
     @Test
@@ -108,16 +144,17 @@ public class BookingControllerIT {
         // First create a booking
         Long bookingId = TestUtils.createBooking(restClient, riderToken, rideId, 2);
 
-        // Then get it
+        // Then get it (must include Authorization header)
         restClient
                 .get()
                 .uri("/api/bookings/" + bookingId)
+                .header("Authorization", "Bearer " + riderToken)
                 .exchange()
                 .expectStatus()
                 .isOk()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo(bookingId.intValue())
-                .jsonPath("$.rideId").exists();
+                .jsonPath("$.bookingId").isEqualTo(bookingId.intValue())
+                .jsonPath("$.rideId").isEqualTo(rideId.intValue());
     }
 
     @Test

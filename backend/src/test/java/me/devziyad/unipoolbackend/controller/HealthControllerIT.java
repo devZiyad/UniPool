@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @AutoConfigureRestTestClient
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.test.context.ActiveProfiles("test")
 public class HealthControllerIT {
 
     @Autowired

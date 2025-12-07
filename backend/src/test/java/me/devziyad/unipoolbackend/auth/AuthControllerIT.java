@@ -13,6 +13,7 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 
 @AutoConfigureRestTestClient
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.test.context.ActiveProfiles("test")
 public class AuthControllerIT {
 
     @Autowired
@@ -76,10 +77,11 @@ public class AuthControllerIT {
                 Role.RIDER
         );
 
-        // Then login with the actual email that was registered
+        // Then login with the actual email and password that were registered
+        // (password may have been auto-fixed to include special character)
         LoginRequest loginRequest = TestUtils.createLoginRequest(
                 registration.getEmail(),
-                "password123"
+                registration.getPassword()
         );
 
         restClient

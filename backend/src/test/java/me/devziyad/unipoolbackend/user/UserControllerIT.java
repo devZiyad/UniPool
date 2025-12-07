@@ -14,23 +14,48 @@ import org.springframework.test.web.servlet.client.RestTestClient;
 
 @AutoConfigureRestTestClient
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@org.springframework.test.context.ActiveProfiles("test")
 public class UserControllerIT {
 
     @Autowired
     private RestTestClient restClient;
 
     private String userToken;
+    private Long userId;
+    private String userEmail;
 
     @BeforeEach
     void setUp() {
-        // Create user
-        userToken = TestUtils.registerAndGetToken(
+        // Create user and get their ID
+        TestUtils.RegistrationResult userResult = TestUtils.registerAndGetResult(
                 restClient,
                 "user@example.com",
                 "password123",
                 "Test User",
                 Role.RIDER
         );
+        userToken = userResult.getToken();
+        userEmail = userResult.getEmail(); // Store the actual email (may have been made unique)
+        
+        // Get user ID
+        byte[] userResponseBytes = restClient
+                .get()
+                .uri("/api/auth/me")
+                .header("Authorization", "Bearer " + userToken)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+        try {
+            String userResponseBody = new String(userResponseBytes);
+            @SuppressWarnings("unchecked")
+            java.util.Map<String, Object> user = TestUtils.getObjectMapper().readValue(userResponseBody, java.util.Map.class);
+            userId = Long.valueOf(user.get("id").toString());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to get user ID", e);
+        }
     }
 
     @Test
@@ -46,30 +71,33 @@ public class UserControllerIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .expectBody()
                 .jsonPath("$.id").exists()
-                .jsonPath("$.email").isEqualTo("user@example.com")
+                .jsonPath("$.email").isEqualTo(userEmail) // Use the actual email from registration
                 .jsonPath("$.fullName").isEqualTo("Test User");
     }
 
     @Test
     void shouldRejectGetCurrentUserWithoutAuth() {
+        // Spring Security returns 403 FORBIDDEN when no authentication token is provided
         restClient
                 .get()
                 .uri("/api/users/me")
                 .exchange()
                 .expectStatus()
-                .isUnauthorized();
+                .isForbidden();
     }
 
     @Test
     void shouldGetUserById() {
+        // This endpoint requires authentication per security config
         restClient
                 .get()
-                .uri("/api/users/1")
+                .uri("/api/users/" + userId)
+                .header("Authorization", "Bearer " + userToken)
                 .exchange()
                 .expectStatus()
                 .isOk()
                 .expectBody()
-                .jsonPath("$.id").exists()
+                .jsonPath("$.id").isEqualTo(userId.intValue())
                 .jsonPath("$.email").exists();
     }
 
@@ -98,6 +126,7 @@ public class UserControllerIT {
         UpdateUserRequest request = new UpdateUserRequest();
         request.setFullName("Updated Name");
 
+        // Spring Security returns 403 FORBIDDEN when no authentication token is provided
         restClient
                 .put()
                 .uri("/api/users/me")
@@ -105,14 +134,14 @@ public class UserControllerIT {
                 .body(request)
                 .exchange()
                 .expectStatus()
-                .isUnauthorized();
+                .isForbidden();
     }
 
     @Test
     void shouldChangePassword() {
         ChangePasswordRequest request = new ChangePasswordRequest();
-        request.setOldPassword("password123");
-        request.setNewPassword("newpassword123");
+        request.setOldPassword("password123!"); // Password was auto-fixed during registration
+        request.setNewPassword("newpassword123!"); // Must include special character
 
         restClient
                 .put()

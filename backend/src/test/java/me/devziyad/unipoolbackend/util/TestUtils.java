@@ -32,6 +32,13 @@ public class TestUtils {
 
     private static final ObjectMapper objectMapper = createObjectMapper();
     
+    /**
+     * Get the ObjectMapper instance for use in tests
+     */
+    public static ObjectMapper getObjectMapper() {
+        return objectMapper;
+    }
+    
     private static ObjectMapper createObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         // Register JavaTimeModule for JSR310 date/time support
@@ -48,7 +55,21 @@ public class TestUtils {
     private static final AtomicLong emailCounter = new AtomicLong(0);
 
     /**
+     * Ensures password meets validation requirements (letter, number, special character)
+     * If password doesn't meet requirements, appends "!" to make it valid
+     */
+    private static String ensureValidPassword(String password) {
+        // Password must contain: letter, number, and special character (@$!%*?&#)
+        // If password doesn't have special character, add one
+        if (password != null && !password.matches(".*[@$!%*?&#].*")) {
+            return password + "!";
+        }
+        return password;
+    }
+
+    /**
      * Creates a RegisterRequest for testing with unique email
+     * Automatically ensures password meets validation requirements
      */
     public static RegisterRequest createRegisterRequest(String email, String password, String fullName, Role role) {
         RegisterRequest request = new RegisterRequest();
@@ -59,22 +80,30 @@ public class TestUtils {
             ? email.replace("@", "+" + counter + "@")
             : email + "+" + counter;
         request.setEmail(uniqueEmail);
-        request.setPassword(password);
+        // Ensure password meets validation requirements
+        request.setPassword(ensureValidPassword(password));
         request.setFullName(fullName);
-        request.setRole(role != null ? role.name() : Role.RIDER.name());
+        // Don't allow ADMIN role in registration - it will be rejected
+        if (role != null && role != Role.ADMIN) {
+            request.setRole(role.name());
+        } else {
+            request.setRole(Role.RIDER.name());
+        }
         return request;
     }
     
     /**
-     * Registration result containing token and the actual email used
+     * Registration result containing token, email, and password that were actually used
      */
     public static class RegistrationResult {
         private final String token;
         private final String email;
+        private final String password;
         
-        public RegistrationResult(String token, String email) {
+        public RegistrationResult(String token, String email, String password) {
             this.token = token;
             this.email = email;
+            this.password = password;
         }
         
         public String getToken() {
@@ -83,6 +112,10 @@ public class TestUtils {
         
         public String getEmail() {
             return email;
+        }
+        
+        public String getPassword() {
+            return password;
         }
     }
 
@@ -106,11 +139,12 @@ public class TestUtils {
     }
     
     /**
-     * Registers a user and returns both token and the actual email used
+     * Registers a user and returns token, email, and password that were actually used
      */
     public static RegistrationResult registerAndGetResult(RestTestClient restClient, String email, String password, String fullName, Role role) {
         RegisterRequest registerRequest = createRegisterRequest(email, password, fullName, role);
         String actualEmail = registerRequest.getEmail();
+        String actualPassword = registerRequest.getPassword(); // This is the password that was actually used (may have been modified)
         
         byte[] responseBytes = restClient
                 .post()
@@ -127,7 +161,7 @@ public class TestUtils {
         try {
             String responseBody = new String(responseBytes);
             AuthResponse authResponse = objectMapper.readValue(responseBody, AuthResponse.class);
-            return new RegistrationResult(authResponse.getToken(), actualEmail);
+            return new RegistrationResult(authResponse.getToken(), actualEmail, actualPassword);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse auth response", e);
         }
@@ -258,11 +292,19 @@ public class TestUtils {
      * Creates a ride for a driver
      */
     public static RideResponse createRide(RestTestClient restClient, String driverToken, Long vehicleId, Long pickupLocationId, Long destinationLocationId) {
+        return createRide(restClient, driverToken, vehicleId, pickupLocationId, destinationLocationId, 2);
+    }
+
+    /**
+     * Creates a ride for a driver with a custom hours offset for departure time
+     * @param hoursOffset Hours from now for the departure time start (to avoid overlapping rides)
+     */
+    public static RideResponse createRide(RestTestClient restClient, String driverToken, Long vehicleId, Long pickupLocationId, Long destinationLocationId, long hoursOffset) {
         CreateRideRequest request = new CreateRideRequest();
         request.setVehicleId(vehicleId);
         request.setPickupLocationId(pickupLocationId);
         request.setDestinationLocationId(destinationLocationId);
-        Instant departureStart = instantNowPlusHours(2);
+        Instant departureStart = instantNowPlusHours(hoursOffset);
         request.setDepartureTimeStart(departureStart);
         request.setDepartureTimeEnd(departureStart.plus(30, ChronoUnit.MINUTES));
         request.setTotalSeats(4);
@@ -292,33 +334,182 @@ public class TestUtils {
 
     /**
      * Creates a booking for a rider and returns the booking ID
+     * This method requires fetching the ride details to get valid locations and times
      */
     public static Long createBooking(RestTestClient restClient, String riderToken, Long rideId, Integer seats) {
-        CreateBookingRequest request = new CreateBookingRequest();
-        request.setRideId(rideId);
-        request.setSeats(seats);
-
-        byte[] responseBytes = restClient
-                .post()
-                .uri("/api/bookings")
+        // First, get the ride to extract valid locations and times
+        // Use riderToken for authentication (any authenticated user can view rides)
+        byte[] rideResponseBytes = restClient
+                .get()
+                .uri("/api/rides/" + rideId)
                 .header("Authorization", "Bearer " + riderToken)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
                 .exchange()
                 .expectStatus()
-                .isCreated()
+                .isOk()
                 .expectBody()
                 .returnResult()
                 .getResponseBody();
-
+        
         try {
-            String responseBody = new String(responseBytes);
+            String rideResponseBody = new String(rideResponseBytes);
             @SuppressWarnings("unchecked")
-            Map<String, Object> booking = objectMapper.readValue(responseBody, Map.class);
-            return Long.valueOf(booking.get("id").toString());
+            Map<String, Object> ride = objectMapper.readValue(rideResponseBody, Map.class);
+            
+            // Extract ride details
+            Long pickupLocationId = Long.valueOf(ride.get("pickupLocationId").toString());
+            Long dropoffLocationId = Long.valueOf(ride.get("destinationLocationId").toString());
+            
+            // Parse departure times from the ride
+            String departureStartStr = ride.get("departureTimeStart").toString();
+            String departureEndStr = ride.get("departureTimeEnd").toString();
+            Instant departureStart = Instant.parse(departureStartStr);
+            Instant departureEnd = Instant.parse(departureEndStr);
+            
+            // Set pickup times within the ride's departure time range
+            // Use the start time and add 30 minutes for the end time
+            Instant pickupTimeStart = departureStart;
+            Instant pickupTimeEnd = departureStart.plus(30, ChronoUnit.MINUTES);
+            
+            // Ensure pickupTimeEnd doesn't exceed ride's departureTimeEnd
+            if (pickupTimeEnd.isAfter(departureEnd)) {
+                pickupTimeEnd = departureEnd;
+            }
+            
+            // Create booking request with all required fields
+            CreateBookingRequest request = new CreateBookingRequest();
+            request.setRideId(rideId);
+            request.setSeats(seats);
+            request.setPickupLocationId(pickupLocationId);
+            request.setDropoffLocationId(dropoffLocationId);
+            request.setPickupTimeStart(pickupTimeStart);
+            request.setPickupTimeEnd(pickupTimeEnd);
+
+            // Create the booking (returns RideResponse)
+            restClient
+                    .post()
+                    .uri("/api/bookings")
+                    .header("Authorization", "Bearer " + riderToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .exchange()
+                    .expectStatus()
+                    .isCreated()
+                    .expectBody()
+                    .returnResult();
+
+            // The booking creation endpoint returns a RideResponse, not BookingResponse
+            // The bookings might not be included in the response due to lazy loading
+            // Fetch the rider's bookings to get the newly created booking ID
+            byte[] myBookingsResponseBytes = restClient
+                    .get()
+                    .uri("/api/bookings/me")
+                    .header("Authorization", "Bearer " + riderToken)
+                    .exchange()
+                    .expectStatus()
+                    .isOk()
+                    .expectBody()
+                    .returnResult()
+                    .getResponseBody();
+            
+            String myBookingsResponseBody = new String(myBookingsResponseBytes);
+            @SuppressWarnings("unchecked")
+            java.util.List<Map<String, Object>> myBookings = objectMapper.readValue(myBookingsResponseBody, java.util.List.class);
+            
+            if (myBookings == null || myBookings.isEmpty()) {
+                throw new RuntimeException("No bookings found for rider after creation");
+            }
+            
+            // Find the booking for this ride (should be the most recent one)
+            Map<String, Object> newBooking = null;
+            for (Map<String, Object> booking : myBookings) {
+                Object bookingRideIdObj = booking.get("rideId");
+                if (bookingRideIdObj != null && Long.valueOf(bookingRideIdObj.toString()).equals(rideId)) {
+                    newBooking = booking;
+                    break;
+                }
+            }
+            
+            if (newBooking == null) {
+                // If we can't find by rideId, use the first booking (most recent)
+                newBooking = myBookings.get(0);
+            }
+            
+            Object bookingIdObj = newBooking.get("bookingId");
+            if (bookingIdObj == null) {
+                bookingIdObj = newBooking.get("id"); // Fallback for compatibility
+            }
+            if (bookingIdObj == null) {
+                throw new RuntimeException("Could not find bookingId in booking response");
+            }
+            return Long.valueOf(bookingIdObj.toString());
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse booking response", e);
+            throw new RuntimeException("Failed to create booking", e);
         }
+    }
+
+    /**
+     * Creates an admin user directly in the database (bypasses registration restrictions)
+     * Use this in test setup when you need an admin user for testing
+     * 
+     * @param userRepository UserRepository bean (inject in test class)
+     * @param passwordEncoder PasswordEncoder bean (inject in test class)
+     * @param email Email for the admin user
+     * @param password Password (will be validated and fixed if needed)
+     * @param fullName Full name for the admin user
+     * @return The created User entity
+     */
+    public static me.devziyad.unipoolbackend.user.User createAdminUserDirectly(
+            me.devziyad.unipoolbackend.user.UserRepository userRepository,
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+            String email,
+            String password,
+            String fullName) {
+        
+        // Ensure password meets requirements
+        String validPassword = ensureValidPassword(password);
+        
+        // Make email unique
+        long counter = emailCounter.incrementAndGet();
+        String uniqueEmail = email.contains("@") 
+            ? email.replace("@", "+" + counter + "@")
+            : email + "+" + counter;
+        
+        me.devziyad.unipoolbackend.user.User admin = me.devziyad.unipoolbackend.user.User.builder()
+                .universityId("ADMIN" + System.currentTimeMillis() + "_" + counter)
+                .email(uniqueEmail)
+                .passwordHash(passwordEncoder.encode(validPassword))
+                .fullName(fullName)
+                .role(Role.ADMIN)
+                .enabled(true)
+                .walletBalance(java.math.BigDecimal.ZERO)
+                .ratingCountAsDriver(0)
+                .ratingCountAsRider(0)
+                .build();
+        
+        return userRepository.save(admin);
+    }
+
+    /**
+     * Creates an admin user and returns the login token
+     * 
+     * @param userRepository UserRepository bean (inject in test class)
+     * @param passwordEncoder PasswordEncoder bean (inject in test class)
+     * @param jwtService JwtService bean (inject in test class)
+     * @param email Email for the admin user
+     * @param password Password (will be validated and fixed if needed)
+     * @param fullName Full name for the admin user
+     * @return The auth token for the created admin user
+     */
+    public static String createAdminUserAndGetToken(
+            me.devziyad.unipoolbackend.user.UserRepository userRepository,
+            org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+            me.devziyad.unipoolbackend.security.JwtService jwtService,
+            String email,
+            String password,
+            String fullName) {
+        
+        me.devziyad.unipoolbackend.user.User admin = createAdminUserDirectly(userRepository, passwordEncoder, email, password, fullName);
+        return jwtService.generateToken(admin.getId(), admin.getEmail());
     }
 }
 
