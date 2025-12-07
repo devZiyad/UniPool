@@ -15,6 +15,7 @@ import java.time.Instant;
 @AllArgsConstructor
 public class BookingResponse {
     private Long bookingId;
+    private Long rideId;
     private Long passengerId;
     private String passengerName;
     private Integer seatsBooked;

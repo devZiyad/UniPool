@@ -2598,18 +2598,24 @@ curl -X POST http://localhost:8080/api/admin/database/regenerate \
 
 ```json
 {
-  "id": 1,
+  "bookingId": 1,
   "rideId": 1,
-  "riderId": 1,
-  "riderName": "Jane Doe",
+  "passengerId": 1,
+  "passengerName": "Jane Doe",
   "seatsBooked": 2,
+  "pickupLocationId": 1,
+  "pickupLocationLabel": "University Main Gate",
+  "pickupLatitude": 26.3192576,
+  "pickupLongitude": 50.62656,
+  "dropoffLocationId": 2,
+  "dropoffLocationLabel": "City Center",
+  "dropoffLatitude": 26.31998846367632,
+  "dropoffLongitude": 50.63316896301268,
+  "pickupTimeStart": "2024-12-15T14:30:00Z",
+  "pickupTimeEnd": "2024-12-15T14:45:00Z",
+  "createdAt": "2024-01-15T10:30:00Z",
   "status": "CONFIRMED",
   "costForThisRider": 20.00,
-  "pickupLocation": { ... },
-  "dropoffLocation": { ... },
-  "pickupTimeStart": "2024-12-15T14:30:00",
-  "pickupTimeEnd": "2024-12-15T14:45:00",
-  "createdAt": "2024-01-15T10:30:00",
   "cancelledAt": null
 }
 ```

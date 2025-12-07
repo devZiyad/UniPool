@@ -51,6 +51,7 @@ public class BookingServiceImpl implements BookingService {
     private BookingResponse toResponse(Booking booking) {
         return BookingResponse.builder()
                 .bookingId(booking.getId())
+                .rideId(booking.getRide().getId())
                 .passengerId(booking.getRider().getId())
                 .passengerName(booking.getRider().getFullName())
                 .seatsBooked(booking.getSeatsBooked())
