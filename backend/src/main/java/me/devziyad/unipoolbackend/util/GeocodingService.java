@@ -2,6 +2,7 @@ package me.devziyad.unipoolbackend.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -18,8 +19,9 @@ public class GeocodingService {
     private static final String NOMINATIM_SEARCH_URL = NOMINATIM_BASE_URL + "/search";
     private static final String NOMINATIM_REVERSE_URL = NOMINATIM_BASE_URL + "/reverse";
     private final RestTemplate restTemplate;
+    private final String countryCodes;
 
-    public GeocodingService() {
+    public GeocodingService(@Value("${geocoding.country-codes:}") String countryCodes) {
         this.restTemplate = new RestTemplate();
         // Set user agent to avoid 403
         List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
@@ -28,6 +30,7 @@ public class GeocodingService {
             return execution.execute(request, body);
         });
         restTemplate.setInterceptors(interceptors);
+        this.countryCodes = countryCodes != null && !countryCodes.trim().isEmpty() ? countryCodes.trim() : null;
     }
 
     /**
@@ -36,9 +39,16 @@ public class GeocodingService {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> searchLocation(String query) {
         try {
-            String url = String.format("%s?q=%s&format=json&limit=5&accept-language=en",
-                    NOMINATIM_SEARCH_URL, query.replace(" ", "+"));
-
+            StringBuilder urlBuilder = new StringBuilder();
+            urlBuilder.append(String.format("%s?q=%s&format=json&limit=5&accept-language=en",
+                    NOMINATIM_SEARCH_URL, query.replace(" ", "+")));
+            
+            // Add country code filter if configured
+            if (countryCodes != null) {
+                urlBuilder.append("&countrycodes=").append(countryCodes);
+            }
+            
+            String url = urlBuilder.toString();
             Object response = restTemplate.getForObject(url, Object.class);
             if (response instanceof List<?> results) {
                 return (List<Map<String, Object>>) results;
