@@ -14,7 +14,9 @@ import java.util.Map;
 public class GeocodingService {
 
     private static final Logger logger = LoggerFactory.getLogger(GeocodingService.class);
-    private static final String NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org/search";
+    private static final String NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
+    private static final String NOMINATIM_SEARCH_URL = NOMINATIM_BASE_URL + "/search";
+    private static final String NOMINATIM_REVERSE_URL = NOMINATIM_BASE_URL + "/reverse";
     private final RestTemplate restTemplate;
 
     public GeocodingService() {
@@ -35,7 +37,7 @@ public class GeocodingService {
     public List<Map<String, Object>> searchLocation(String query) {
         try {
             String url = String.format("%s?q=%s&format=json&limit=5",
-                    NOMINATIM_BASE_URL, query.replace(" ", "+"));
+                    NOMINATIM_SEARCH_URL, query.replace(" ", "+"));
 
             Object response = restTemplate.getForObject(url, Object.class);
             if (response instanceof List<?> results) {
@@ -54,16 +56,16 @@ public class GeocodingService {
     @SuppressWarnings("unchecked")
     public String reverseGeocode(double lat, double lon) {
         try {
+            // Nominatim reverse geocoding returns a single object, not a list
             String url = String.format("%s?lat=%s&lon=%s&format=json",
-                    NOMINATIM_BASE_URL, lat, lon);
+                    NOMINATIM_REVERSE_URL, lat, lon);
 
             Object response = restTemplate.getForObject(url, Object.class);
-            if (response instanceof List<?> results && !results.isEmpty()) {
-                Object firstResult = results.get(0);
-                if (firstResult instanceof Map<?, ?> resultMap) {
-                    Map<String, Object> result = (Map<String, Object>) resultMap;
-                    Object displayName = result.get("display_name");
-                    return displayName != null ? displayName.toString() : null;
+            if (response instanceof Map<?, ?> resultMap) {
+                Map<String, Object> result = (Map<String, Object>) resultMap;
+                Object displayName = result.get("display_name");
+                if (displayName != null) {
+                    return displayName.toString();
                 }
             }
         } catch (Exception e) {
