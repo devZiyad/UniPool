@@ -7,6 +7,7 @@ import me.devziyad.unipoolbackend.auth.AuthService;
 import me.devziyad.unipoolbackend.booking.dto.BookingResponse;
 import me.devziyad.unipoolbackend.booking.dto.CreateBookingRequest;
 import me.devziyad.unipoolbackend.booking.dto.UpdateBookingStatusRequest;
+import me.devziyad.unipoolbackend.common.BookingStatus;
 import me.devziyad.unipoolbackend.ride.dto.RideResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -65,5 +66,11 @@ public class BookingController {
             @Valid @RequestBody UpdateBookingStatusRequest request) {
         Long driverId = authService.getCurrentUser().getId();
         return ResponseEntity.ok(bookingService.updateBookingStatus(bookingId, driverId, request.getStatus()));
+    }
+
+    @PostMapping("/{bookingId}/accept")
+    public ResponseEntity<@NonNull BookingResponse> acceptBooking(@PathVariable Long bookingId) {
+        Long driverId = authService.getCurrentUser().getId();
+        return ResponseEntity.ok(bookingService.updateBookingStatus(bookingId, driverId, BookingStatus.CONFIRMED));
     }
 }

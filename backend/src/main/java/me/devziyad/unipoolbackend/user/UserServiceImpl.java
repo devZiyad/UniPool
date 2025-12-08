@@ -6,6 +6,7 @@ import me.devziyad.unipoolbackend.audit.ActionType;
 import me.devziyad.unipoolbackend.audit.AuditService;
 import me.devziyad.unipoolbackend.booking.BookingRepository;
 import me.devziyad.unipoolbackend.common.Role;
+import me.devziyad.unipoolbackend.exception.BusinessException;
 import me.devziyad.unipoolbackend.exception.ForbiddenException;
 import me.devziyad.unipoolbackend.exception.ResourceNotFoundException;
 import me.devziyad.unipoolbackend.exception.UnauthorizedException;
@@ -75,6 +76,10 @@ public class UserServiceImpl implements UserService {
             user.setFullName(request.getFullName());
         }
         if (request.getPhoneNumber() != null) {
+            // Check if phone number is already taken by another user
+            if (userRepository.existsByPhoneNumberAndIdNot(request.getPhoneNumber(), id)) {
+                throw new BusinessException("Phone number is already in use by another user");
+            }
             user.setPhoneNumber(request.getPhoneNumber());
         }
 

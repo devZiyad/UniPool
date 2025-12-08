@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -89,6 +90,30 @@ public class GlobalExceptionHandler {
         logger.warn("Access denied: {}", ex.getMessage());
         ErrorResponse error = new ErrorResponse("Access denied", HttpStatus.FORBIDDEN.value(), Instant.now());
         return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        logger.warn("Data integrity violation: {}", ex.getMessage());
+        
+        String message = "Data integrity violation";
+        String exceptionMessage = ex.getMessage();
+        
+        // Check for common constraint violations
+        if (exceptionMessage != null) {
+            if (exceptionMessage.contains("PHONE_NUMBER") || exceptionMessage.contains("phone_number")) {
+                message = "Phone number is already in use";
+            } else if (exceptionMessage.contains("EMAIL") || exceptionMessage.contains("email")) {
+                message = "Email is already in use";
+            } else if (exceptionMessage.contains("UNIVERSITY_ID") || exceptionMessage.contains("university_id")) {
+                message = "University ID is already in use";
+            } else if (exceptionMessage.contains("unique") || exceptionMessage.contains("UNIQUE")) {
+                message = "A record with this value already exists";
+            }
+        }
+        
+        ErrorResponse error = new ErrorResponse(message, HttpStatus.CONFLICT.value(), Instant.now());
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler(Exception.class)
