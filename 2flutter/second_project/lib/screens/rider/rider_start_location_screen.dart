@@ -9,6 +9,7 @@ import '../../services/location_service.dart';
 import '../../models/location.dart';
 import '../../widgets/map_widget.dart';
 import '../../widgets/app_drawer.dart';
+import '../../utils/polyline_decoder.dart';
 
 class RiderStartLocationScreen extends StatefulWidget {
   const RiderStartLocationScreen({super.key});
@@ -26,6 +27,7 @@ class _RiderStartLocationScreenState extends State<RiderStartLocationScreen> {
   LatLng? _selectedLocation;
   bool _isLoadingLocation = false;
   bool _isInitializing = true;
+  List<LatLng>? _routePoints;
 
   @override
   void initState() {
@@ -148,15 +150,25 @@ class _RiderStartLocationScreenState extends State<RiderStartLocationScreen> {
   Future<void> _onMapTap(LatLng point) async {
     setState(() {
       _selectedLocation = point;
-      _isLoadingLocation = false; // No loading needed when pinning
+      _isLoadingLocation = true;
     });
 
-    // Create location directly from coordinates (skip SerpApi)
+    // Get address using reverse geocoding
+    String address =
+        '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+    try {
+      address = await LocationService.reverseGeocode(
+        point.latitude,
+        point.longitude,
+      );
+    } catch (e) {
+      // Keep default coordinates if reverse geocoding fails
+    }
+
     final location = Location(
       id: null,
       label: 'Selected Location',
-      address:
-          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}',
+      address: address,
       latitude: point.latitude,
       longitude: point.longitude,
       userId: null,
@@ -164,9 +176,9 @@ class _RiderStartLocationScreenState extends State<RiderStartLocationScreen> {
     );
 
     setState(() {
-      _searchController.text =
-          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+      _searchController.text = address;
       _suggestions = [location];
+      _isLoadingLocation = false;
     });
   }
 
@@ -180,7 +192,60 @@ class _RiderStartLocationScreenState extends State<RiderStartLocationScreen> {
       context,
       listen: false,
     ).setPickupLocation(location);
+    _fetchRouteIfReady();
     Navigator.pushNamed(context, '/rider/time-filters');
+  }
+
+  Future<void> _fetchRouteIfReady() async {
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final pickup = rideProvider.pickupLocation;
+    final destination = rideProvider.destinationLocation;
+
+    if (pickup != null && destination != null) {
+      try {
+        final routeData = await LocationService.getRoute(
+          pickup.latitude,
+          pickup.longitude,
+          destination.latitude,
+          destination.longitude,
+        );
+
+        if (routeData != null) {
+          List<LatLng>? decodedPoints;
+
+          // Check if we have encoded polyline string
+          if (routeData['routePolyline'] != null) {
+            final polyline = routeData['routePolyline'] as String;
+            decodedPoints = decodePolyline(polyline);
+          }
+          // Check if we have GeoJSON coordinates
+          else if (routeData['coordinates'] != null) {
+            final coords = routeData['coordinates'] as List<List<double>>;
+            decodedPoints = coords.map((coord) {
+              // GeoJSON format is [longitude, latitude]
+              return LatLng(coord[1], coord[0]);
+            }).toList();
+          }
+
+          setState(() {
+            _routePoints = decodedPoints;
+          });
+        } else {
+          setState(() {
+            _routePoints = null;
+          });
+        }
+      } catch (e) {
+        print('Error fetching route: $e');
+        setState(() {
+          _routePoints = null;
+        });
+      }
+    } else {
+      setState(() {
+        _routePoints = null;
+      });
+    }
   }
 
   @override
@@ -216,6 +281,8 @@ class _RiderStartLocationScreenState extends State<RiderStartLocationScreen> {
                     ),
                   ]
                 : null,
+            // Hide route on start location selection screen
+            polylines: null,
           ),
           // Center pin indicator (only show when no location selected)
           if (_selectedLocation == null)

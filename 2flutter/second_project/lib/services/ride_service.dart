@@ -12,11 +12,12 @@ class RideService {
     required int totalSeats,
     double? basePrice,
     double? pricePerSeat,
+    int? routeId,
   }) async {
     // Convert to UTC for API (API expects all times in UTC)
     final departureTimeStartUtc = departureTimeStart.toUtc();
     final departureTimeEndUtc = departureTimeEnd.toUtc();
-    
+
     final requestBody = {
       'vehicleId': vehicleId,
       'pickupLocationId': pickupLocationId,
@@ -26,6 +27,7 @@ class RideService {
       'totalSeats': totalSeats,
       if (basePrice != null) 'basePrice': basePrice,
       if (pricePerSeat != null) 'pricePerSeat': pricePerSeat,
+      if (routeId != null) 'routeId': routeId,
     };
 
     print('POST /api/rides - Request Body: ${jsonEncode(requestBody)}');
@@ -73,16 +75,16 @@ class RideService {
     if (departureTimeFrom != null) {
       // Times should already be in UTC when passed here, but convert to be safe
       // API expects all times in UTC
-      final timeFromUtc = departureTimeFrom.isUtc 
-          ? departureTimeFrom 
+      final timeFromUtc = departureTimeFrom.isUtc
+          ? departureTimeFrom
           : departureTimeFrom.toUtc();
       body['departureTimeFrom'] = timeFromUtc.toIso8601String();
     }
     if (departureTimeTo != null) {
       // Times should already be in UTC when passed here, but convert to be safe
       // API expects all times in UTC
-      final timeToUtc = departureTimeTo.isUtc 
-          ? departureTimeTo 
+      final timeToUtc = departureTimeTo.isUtc
+          ? departureTimeTo
           : departureTimeTo.toUtc();
       body['departureTimeTo'] = timeToUtc.toIso8601String();
     }

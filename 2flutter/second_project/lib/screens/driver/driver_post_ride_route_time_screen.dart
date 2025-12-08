@@ -104,14 +104,12 @@ class _DriverPostRideRouteTimeScreenState
   Future<Vehicle?> _showVehicleSelectionDialog() async {
     try {
       final vehicles = await VehicleService.getMyVehicles();
-      
+
       if (vehicles.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                'No vehicles found. Please add a vehicle first.',
-              ),
+              content: Text('No vehicles found. Please add a vehicle first.'),
             ),
           );
         }
@@ -139,7 +137,9 @@ class _DriverPostRideRouteTimeScreenState
                     title: Text(
                       '${vehicle.make} ${vehicle.model}',
                       style: TextStyle(
-                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isActive
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                     subtitle: Text(
@@ -283,6 +283,10 @@ class _DriverPostRideRouteTimeScreenState
     });
 
     try {
+      final driverProvider = Provider.of<DriverProvider>(
+        context,
+        listen: false,
+      );
       final vehicle = selectedVehicle;
 
       // Create locations if they don't have IDs (e.g., selected from map)
@@ -330,6 +334,7 @@ class _DriverPostRideRouteTimeScreenState
         departureTimeStart: departureTimeStart,
         departureTimeEnd: departureTimeEnd,
         totalSeats: _totalSeats,
+        routeId: driverProvider.routeId,
       );
 
       if (mounted) {

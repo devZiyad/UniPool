@@ -249,7 +249,9 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error creating pickup location: ${e.toString()}'),
+                content: Text(
+                  'Error creating pickup location: ${e.toString()}',
+                ),
                 duration: const Duration(seconds: 5),
                 backgroundColor: Colors.red,
               ),
@@ -271,13 +273,17 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
             latitude: destinationLocation.latitude,
             longitude: destinationLocation.longitude,
           );
-          print('Created destination location with ID: ${destinationLocation.id}');
+          print(
+            'Created destination location with ID: ${destinationLocation.id}',
+          );
         } catch (e) {
           print('Error creating destination location: $e');
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error creating destination location: ${e.toString()}'),
+                content: Text(
+                  'Error creating destination location: ${e.toString()}',
+                ),
                 duration: const Duration(seconds: 5),
                 backgroundColor: Colors.red,
               ),
@@ -295,7 +301,9 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Location IDs are missing. Please try selecting locations again.'),
+              content: Text(
+                'Location IDs are missing. Please try selecting locations again.',
+              ),
               duration: Duration(seconds: 5),
               backgroundColor: Colors.red,
             ),
@@ -332,6 +340,11 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
       print('  departureTimeEnd: ${departureTimeEnd.toIso8601String()}');
       print('  totalSeats: $_totalSeats');
 
+      final driverProvider = Provider.of<DriverProvider>(
+        context,
+        listen: false,
+      );
+
       await RideService.createRide(
         vehicleId: vehicle.id,
         pickupLocationId: pickupLocation.id!,
@@ -339,6 +352,7 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
         departureTimeStart: departureTimeStart,
         departureTimeEnd: departureTimeEnd,
         totalSeats: _totalSeats,
+        routeId: driverProvider.routeId,
       );
 
       if (mounted) {
@@ -405,9 +419,9 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) {
@@ -430,9 +444,7 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
         : rideProvider.destinationLocation;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isDriver ? 'Post Ride' : 'Search Rides'),
-      ),
+      appBar: AppBar(title: Text(_isDriver ? 'Post Ride' : 'Search Rides')),
       drawer: AppDrawer(),
       body: Stack(
         children: [
@@ -519,8 +531,9 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
                                     const SizedBox(width: 8),
                                     Text(
                                       _startDate != null
-                                          ? DateFormat('MMM dd, yyyy')
-                                              .format(_startDate!)
+                                          ? DateFormat(
+                                              'MMM dd, yyyy',
+                                            ).format(_startDate!)
                                           : 'Select date',
                                       textAlign: TextAlign.center,
                                     ),
@@ -553,8 +566,9 @@ class _RiderTimeFiltersScreenState extends State<RiderTimeFiltersScreen> {
                                     const SizedBox(width: 8),
                                     Text(
                                       _endDate != null
-                                          ? DateFormat('MMM dd, yyyy')
-                                              .format(_endDate!)
+                                          ? DateFormat(
+                                              'MMM dd, yyyy',
+                                            ).format(_endDate!)
                                           : 'Select date',
                                       textAlign: TextAlign.center,
                                     ),

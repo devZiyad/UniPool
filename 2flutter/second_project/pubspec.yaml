@@ -36,6 +36,9 @@ dependencies:
   
   # UI
   flutter_svg: ^2.0.9
+  
+  # URL launcher for WhatsApp links
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:

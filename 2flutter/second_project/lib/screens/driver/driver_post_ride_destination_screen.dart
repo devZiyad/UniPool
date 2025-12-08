@@ -8,6 +8,7 @@ import '../../services/location_service.dart';
 import '../../models/location.dart';
 import '../../widgets/map_widget.dart';
 import '../../widgets/app_drawer.dart';
+import '../../utils/polyline_decoder.dart';
 
 class DriverPostRideDestinationScreen extends StatefulWidget {
   const DriverPostRideDestinationScreen({super.key});
@@ -25,10 +26,18 @@ class _DriverPostRideDestinationScreenState
   LatLng _currentLocation = const LatLng(26.0667, 50.5577);
   LatLng? _selectedLocation;
   bool _isLoadingLocation = false;
+  List<LatLng>? _routePoints;
 
   @override
   void initState() {
     super.initState();
+    _getCurrentLocation();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Fetch location every time the page becomes visible
     _getCurrentLocation();
   }
 
@@ -95,15 +104,25 @@ class _DriverPostRideDestinationScreenState
   Future<void> _onMapTap(LatLng point) async {
     setState(() {
       _selectedLocation = point;
-      _isLoadingLocation = false; // No loading needed when pinning
+      _isLoadingLocation = true;
     });
 
-    // Create location directly from coordinates (skip SerpApi)
+    // Get address using reverse geocoding
+    String address =
+        '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+    try {
+      address = await LocationService.reverseGeocode(
+        point.latitude,
+        point.longitude,
+      );
+    } catch (e) {
+      // Keep default coordinates if reverse geocoding fails
+    }
+
     final location = Location(
       id: null,
       label: 'Selected Location',
-      address:
-          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}',
+      address: address,
       latitude: point.latitude,
       longitude: point.longitude,
       userId: null,
@@ -111,9 +130,9 @@ class _DriverPostRideDestinationScreenState
     );
 
     setState(() {
-      _searchController.text =
-          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+      _searchController.text = address;
       _suggestions = [location];
+      _isLoadingLocation = false;
     });
   }
 
@@ -122,7 +141,74 @@ class _DriverPostRideDestinationScreenState
       context,
       listen: false,
     ).setDestinationLocation(location);
+    _fetchRouteIfReady();
     Navigator.pushNamed(context, '/driver/post-ride/start-location');
+  }
+
+  Future<void> _fetchRouteIfReady() async {
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+    final pickup = driverProvider.pickupLocation;
+    final destination = driverProvider.destinationLocation;
+
+    if (pickup != null && destination != null) {
+      try {
+        final routeData = await LocationService.getRoute(
+          pickup.latitude,
+          pickup.longitude,
+          destination.latitude,
+          destination.longitude,
+        );
+
+        if (routeData != null) {
+          final routeId = routeData['routeId'];
+          final routeIdInt = routeId is int
+              ? routeId
+              : (routeId != null ? int.tryParse(routeId.toString()) : null);
+
+          // Store routeId in provider
+          Provider.of<DriverProvider>(
+            context,
+            listen: false,
+          ).setRouteId(routeIdInt);
+
+          List<LatLng>? decodedPoints;
+
+          // Check if we have encoded polyline string
+          if (routeData['routePolyline'] != null) {
+            final polyline = routeData['routePolyline'] as String;
+            decodedPoints = decodePolyline(polyline);
+          }
+          // Check if we have GeoJSON coordinates
+          else if (routeData['coordinates'] != null) {
+            final coords = routeData['coordinates'] as List<List<double>>;
+            decodedPoints = coords.map((coord) {
+              // GeoJSON format is [longitude, latitude]
+              return LatLng(coord[1], coord[0]);
+            }).toList();
+          }
+
+          setState(() {
+            _routePoints = decodedPoints;
+          });
+        } else {
+          Provider.of<DriverProvider>(context, listen: false).setRouteId(null);
+          setState(() {
+            _routePoints = null;
+          });
+        }
+      } catch (e) {
+        print('Error fetching route: $e');
+        Provider.of<DriverProvider>(context, listen: false).setRouteId(null);
+        setState(() {
+          _routePoints = null;
+        });
+      }
+    } else {
+      Provider.of<DriverProvider>(context, listen: false).setRouteId(null);
+      setState(() {
+        _routePoints = null;
+      });
+    }
   }
 
   @override
@@ -154,6 +240,8 @@ class _DriverPostRideDestinationScreenState
                     ),
                   ]
                 : null,
+            // Hide route on destination selection screen
+            polylines: null,
           ),
           // Center pin indicator (only show when no location selected)
           if (_selectedLocation == null)

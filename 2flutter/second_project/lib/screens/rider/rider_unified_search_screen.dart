@@ -14,6 +14,7 @@ import '../../models/location.dart';
 import '../../models/vehicle.dart';
 import '../../widgets/map_widget.dart';
 import '../../widgets/app_drawer.dart';
+import '../../utils/polyline_decoder.dart';
 
 enum SearchStep { destination, startLocation, timeFilters }
 
@@ -34,6 +35,8 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   LatLng? _selectedStartLocation;
   bool _isInitializing = true;
   bool _hasUserLocation = false;
+  List<LatLng>? _routePoints;
+  int? _routeId;
 
   // Destination search
   final TextEditingController _destinationSearchController =
@@ -41,8 +44,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   List<Location> _destinationSuggestions = [];
 
   // Start location search
-  final TextEditingController _startSearchController =
-      TextEditingController();
+  final TextEditingController _startSearchController = TextEditingController();
   List<Location> _startSuggestions = [];
 
   // Time filters
@@ -76,10 +78,26 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
           setState(() {
             _currentStep = SearchStep.timeFilters;
           });
+        } else if (routeName == '/rider/destination-search' ||
+            routeName == '/driver/post-ride/destination-search') {
+          // Fetch location when navigating to destination step
+          setState(() {
+            _currentStep = SearchStep.destination;
+          });
+          _getCurrentLocation();
         }
       }
     });
     _getCurrentLocation();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Fetch location every time the page becomes visible (e.g., when navigating back)
+    if (_currentStep == SearchStep.destination) {
+      _getCurrentLocation();
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -165,9 +183,9 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error searching: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
       }
     }
   }
@@ -177,11 +195,22 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
       _selectedDestinationLocation = point;
     });
 
+    // Get address using reverse geocoding
+    String address =
+        '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+    try {
+      address = await LocationService.reverseGeocode(
+        point.latitude,
+        point.longitude,
+      );
+    } catch (e) {
+      // Keep default coordinates if reverse geocoding fails
+    }
+
     final location = Location(
       id: null,
       label: 'Selected Location',
-      address:
-          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}',
+      address: address,
       latitude: point.latitude,
       longitude: point.longitude,
       userId: null,
@@ -189,23 +218,29 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
     );
 
     setState(() {
-      _destinationSearchController.text =
-          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+      _destinationSearchController.text = address;
       _destinationSuggestions = [location];
     });
+    _fetchRouteIfReady();
   }
 
   void _selectDestination(Location location) {
-    Provider.of<RideProvider>(context, listen: false)
-        .setDestinationLocation(location);
-    Provider.of<DriverProvider>(context, listen: false)
-        .setDestinationLocation(location);
+    Provider.of<RideProvider>(
+      context,
+      listen: false,
+    ).setDestinationLocation(location);
+    Provider.of<DriverProvider>(
+      context,
+      listen: false,
+    ).setDestinationLocation(location);
     setState(() {
       _currentStep = SearchStep.startLocation;
       // Don't auto-set start location - let user choose
       _selectedStartLocation = null;
+      _routePoints = null; // Clear route when destination changes
     });
     _initializeStartLocation();
+    _fetchRouteIfReady();
   }
 
   // Start location search methods
@@ -228,9 +263,9 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error searching: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
       }
     }
   }
@@ -240,11 +275,22 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
       _selectedStartLocation = point;
     });
 
+    // Get address using reverse geocoding
+    String address =
+        '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+    try {
+      address = await LocationService.reverseGeocode(
+        point.latitude,
+        point.longitude,
+      );
+    } catch (e) {
+      // Keep default coordinates if reverse geocoding fails
+    }
+
     final location = Location(
       id: null,
       label: 'Selected Location',
-      address:
-          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}',
+      address: address,
       latitude: point.latitude,
       longitude: point.longitude,
       userId: null,
@@ -252,10 +298,10 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
     );
 
     setState(() {
-      _startSearchController.text =
-          '${point.latitude.toStringAsFixed(6)}, ${point.longitude.toStringAsFixed(6)}';
+      _startSearchController.text = address;
       _startSuggestions = [location];
     });
+    _fetchRouteIfReady();
   }
 
   void _initializeStartLocation() {
@@ -274,10 +320,14 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
       );
 
       // Set as default pickup location in providers
-      Provider.of<RideProvider>(context, listen: false)
-          .setPickupLocation(location);
-      Provider.of<DriverProvider>(context, listen: false)
-          .setPickupLocation(location);
+      Provider.of<RideProvider>(
+        context,
+        listen: false,
+      ).setPickupLocation(location);
+      Provider.of<DriverProvider>(
+        context,
+        listen: false,
+      ).setPickupLocation(location);
 
       setState(() {
         if (_selectedStartLocation == null) {
@@ -285,7 +335,8 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
               '${_userLocation!.latitude.toStringAsFixed(6)}, ${_userLocation!.longitude.toStringAsFixed(6)}';
         }
         // Only add to suggestions if not already there
-        if (_startSuggestions.isEmpty || _startSuggestions.first.label != 'Current Location') {
+        if (_startSuggestions.isEmpty ||
+            _startSuggestions.first.label != 'Current Location') {
           _startSuggestions = [location];
         }
       });
@@ -293,14 +344,18 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   }
 
   void _selectStartLocation(Location location) {
-    Provider.of<RideProvider>(context, listen: false)
-        .setPickupLocation(location);
-    Provider.of<DriverProvider>(context, listen: false)
-        .setPickupLocation(location);
-    
+    Provider.of<RideProvider>(
+      context,
+      listen: false,
+    ).setPickupLocation(location);
+    Provider.of<DriverProvider>(
+      context,
+      listen: false,
+    ).setPickupLocation(location);
+
     // Only set _selectedStartLocation if it's a manually pinned location
     // (not the current location)
-    if (location.label != 'Current Location' || 
+    if (location.label != 'Current Location' ||
         _userLocation == null ||
         location.latitude != _userLocation!.latitude ||
         location.longitude != _userLocation!.longitude) {
@@ -313,10 +368,107 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
         _selectedStartLocation = null;
       });
     }
-    
+
     setState(() {
       _currentStep = SearchStep.timeFilters;
     });
+    _fetchRouteIfReady();
+  }
+
+  Future<void> _fetchRouteIfReady() async {
+    // Get locations from providers
+    final rideProvider = Provider.of<RideProvider>(context, listen: false);
+    final driverProvider = Provider.of<DriverProvider>(context, listen: false);
+
+    final pickup = _isDriver
+        ? driverProvider.pickupLocation
+        : rideProvider.pickupLocation;
+    final destination = _isDriver
+        ? driverProvider.destinationLocation
+        : rideProvider.destinationLocation;
+
+    // Only fetch route if both locations are available
+    if (pickup != null && destination != null) {
+      try {
+        final routeData = await LocationService.getRoute(
+          pickup.latitude,
+          pickup.longitude,
+          destination.latitude,
+          destination.longitude,
+        );
+
+        if (routeData != null) {
+          final routeId = routeData['routeId'];
+          List<LatLng>? decodedPoints;
+
+          // Check if we have encoded polyline string
+          if (routeData['routePolyline'] != null) {
+            final polyline = routeData['routePolyline'] as String;
+            decodedPoints = decodePolyline(polyline);
+          }
+          // Check if we have GeoJSON coordinates
+          else if (routeData['coordinates'] != null) {
+            final coords = routeData['coordinates'] as List<List<double>>;
+            decodedPoints = coords.map((coord) {
+              // GeoJSON format is [longitude, latitude]
+              return LatLng(coord[1], coord[0]);
+            }).toList();
+          }
+
+          final routeIdInt = routeId is int
+              ? routeId
+              : (routeId != null ? int.tryParse(routeId.toString()) : null);
+
+          // Store routeId in providers
+          if (_isDriver) {
+            Provider.of<DriverProvider>(
+              context,
+              listen: false,
+            ).setRouteId(routeIdInt);
+          }
+
+          if (decodedPoints != null && decodedPoints.isNotEmpty) {
+            setState(() {
+              _routePoints = decodedPoints;
+              _routeId = routeIdInt;
+            });
+          } else {
+            setState(() {
+              _routePoints = null;
+              _routeId = routeIdInt;
+            });
+          }
+        } else {
+          if (_isDriver) {
+            Provider.of<DriverProvider>(
+              context,
+              listen: false,
+            ).setRouteId(null);
+          }
+          setState(() {
+            _routePoints = null;
+            _routeId = null;
+          });
+        }
+      } catch (e) {
+        print('Error fetching route: $e');
+        if (_isDriver) {
+          Provider.of<DriverProvider>(context, listen: false).setRouteId(null);
+        }
+        setState(() {
+          _routePoints = null;
+          _routeId = null;
+        });
+      }
+    } else {
+      if (_isDriver) {
+        Provider.of<DriverProvider>(context, listen: false).setRouteId(null);
+      }
+      setState(() {
+        _routePoints = null;
+        _routeId = null;
+      });
+    }
   }
 
   // Time filter methods
@@ -410,14 +562,12 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   Future<Vehicle?> _showVehicleSelectionDialog() async {
     try {
       final vehicles = await VehicleService.getMyVehicles();
-      
+
       if (vehicles.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text(
-                'No vehicles found. Please add a vehicle first.',
-              ),
+              content: Text('No vehicles found. Please add a vehicle first.'),
             ),
           );
         }
@@ -445,7 +595,9 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
                     title: Text(
                       '${vehicle.make} ${vehicle.model}',
                       style: TextStyle(
-                        fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isActive
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
                     ),
                     subtitle: Text(
@@ -484,9 +636,9 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
 
   Future<void> _postRide() async {
     if (_startTime == null || _endTime == null || _startDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select time range')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select time range')));
       return;
     }
 
@@ -530,8 +682,10 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
     });
 
     try {
-      final driverProvider =
-          Provider.of<DriverProvider>(context, listen: false);
+      final driverProvider = Provider.of<DriverProvider>(
+        context,
+        listen: false,
+      );
       final vehicle = selectedVehicle;
 
       var pickupLocation = driverProvider.pickupLocation!;
@@ -547,7 +701,9 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Error creating pickup location: ${e.toString()}'),
+                content: Text(
+                  'Error creating pickup location: ${e.toString()}',
+                ),
                 duration: const Duration(seconds: 5),
                 backgroundColor: Colors.red,
               ),
@@ -573,8 +729,9 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content:
-                    Text('Error creating destination location: ${e.toString()}'),
+                content: Text(
+                  'Error creating destination location: ${e.toString()}',
+                ),
                 duration: const Duration(seconds: 5),
                 backgroundColor: Colors.red,
               ),
@@ -627,6 +784,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
         departureTimeStart: departureTimeStart,
         departureTimeEnd: departureTimeEnd,
         totalSeats: _totalSeats,
+        routeId: _routeId,
       );
 
       if (mounted) {
@@ -636,10 +794,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
       print('Error creating ride: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
       setState(() {
@@ -651,9 +806,9 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   Future<void> _searchRides() async {
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
     if (_startTime == null || _endTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select time range')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please select time range')));
       return;
     }
 
@@ -687,9 +842,9 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) {
@@ -702,57 +857,53 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
 
   List<Marker> _getMarkers() {
     List<Marker> markers = [];
-    
+
     // Show user's current location with arrow icon (persist across steps)
     if (_hasUserLocation && _userLocation != null) {
-      markers.add(Marker(
-        point: _userLocation!,
-        width: 50,
-        height: 50,
-        child: Transform.rotate(
-          angle: 0.785398, // 45 degrees in radians (pointing down-right)
-          child: const Icon(
-            Icons.navigation,
-            color: Colors.green,
-            size: 50,
+      markers.add(
+        Marker(
+          point: _userLocation!,
+          width: 50,
+          height: 50,
+          child: Transform.rotate(
+            angle: 0.785398, // 45 degrees in radians (pointing down-right)
+            child: const Icon(Icons.navigation, color: Colors.green, size: 50),
           ),
         ),
-      ));
+      );
     }
-    
+
     // Show destination marker with pin icon if user pinned a location
     if (_selectedDestinationLocation != null) {
-      markers.add(Marker(
-        point: _selectedDestinationLocation!,
-        width: 50,
-        height: 50,
-        child: const Icon(
-          Icons.place,
-          color: Colors.red,
-          size: 50,
+      markers.add(
+        Marker(
+          point: _selectedDestinationLocation!,
+          width: 50,
+          height: 50,
+          child: const Icon(Icons.place, color: Colors.red, size: 50),
         ),
-      ));
+      );
     }
-    
+
     // Show start location marker with pin icon only if user pinned a location
     // (not if it's just the user's current location)
-    if (_selectedStartLocation != null && 
-        _currentStep == SearchStep.startLocation &&
-        (_userLocation == null || 
-         _selectedStartLocation!.latitude != _userLocation!.latitude ||
-         _selectedStartLocation!.longitude != _userLocation!.longitude)) {
-      markers.add(Marker(
-        point: _selectedStartLocation!,
-        width: 50,
-        height: 50,
-        child: const Icon(
-          Icons.place,
-          color: Colors.blue,
-          size: 50,
+    // Keep pin visible during time filters and seat selection screen
+    if (_selectedStartLocation != null &&
+        (_currentStep == SearchStep.startLocation ||
+            _currentStep == SearchStep.timeFilters) &&
+        (_userLocation == null ||
+            _selectedStartLocation!.latitude != _userLocation!.latitude ||
+            _selectedStartLocation!.longitude != _userLocation!.longitude)) {
+      markers.add(
+        Marker(
+          point: _selectedStartLocation!,
+          width: 50,
+          height: 50,
+          child: const Icon(Icons.place, color: Colors.blue, size: 50),
         ),
-      ));
+      );
     }
-    
+
     return markers;
   }
 
@@ -796,9 +947,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isInitializing) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -813,6 +962,8 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
                       _currentStep = SearchStep.startLocation;
                     } else if (_currentStep == SearchStep.startLocation) {
                       _currentStep = SearchStep.destination;
+                      // Fetch location when navigating to destination step
+                      _getCurrentLocation();
                     }
                   });
                 },
@@ -831,15 +982,25 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
             myLocationEnabled: true,
             onTap: _onMapTap,
             markers: _getMarkers(),
+            polylines:
+                (_currentStep == SearchStep.timeFilters &&
+                    _routePoints != null &&
+                    _routePoints!.isNotEmpty)
+                ? [
+                    Polyline(
+                      points: _routePoints!,
+                      color: Colors.blue,
+                      strokeWidth: 4,
+                    ),
+                  ]
+                : null,
           ),
           if (_getCenterPin() != null) _getCenterPin()!,
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: SafeArea(
-              child: _buildBottomPanel(),
-            ),
+            child: SafeArea(child: _buildBottomPanel()),
           ),
         ],
       ),
@@ -872,48 +1033,48 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          const Text(
-            'Where are you going today?',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Tap on the map or search to select destination',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _destinationSearchController,
-            decoration: InputDecoration(
-              hintText: 'Search destinations',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+            const Text(
+              'Where are you going today?',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            onChanged: _searchDestinations,
-          ),
-          if (_destinationSuggestions.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Tap on the map or search to select destination',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
             const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: ListView.builder(
-                itemCount: _destinationSuggestions.length,
-                itemBuilder: (context, index) {
-                  final location = _destinationSuggestions[index];
-                  return ListTile(
-                    leading: const Icon(
-                      Icons.location_on,
-                      color: Colors.grey,
-                    ),
-                    title: Text(location.label),
-                    subtitle: Text(location.address ?? ''),
-                    onTap: () => _selectDestination(location),
-                  );
-                },
+            TextField(
+              controller: _destinationSearchController,
+              decoration: InputDecoration(
+                hintText: 'Search destinations',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
+              onChanged: _searchDestinations,
             ),
-          ],
+            if (_destinationSuggestions.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  itemCount: _destinationSuggestions.length,
+                  itemBuilder: (context, index) {
+                    final location = _destinationSuggestions[index];
+                    return ListTile(
+                      leading: const Icon(
+                        Icons.location_on,
+                        color: Colors.grey,
+                      ),
+                      title: Text(location.label),
+                      subtitle: Text(location.address ?? ''),
+                      onTap: () => _selectDestination(location),
+                    );
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -935,116 +1096,114 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-          const Text(
-            'Where are you going from today?',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Tap on the map or search to change location',
-            style: TextStyle(fontSize: 12, color: Colors.grey),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _startSearchController,
-            decoration: InputDecoration(
-              hintText: 'Search start location',
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+            const Text(
+              'Where are you going from today?',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            onChanged: _searchStartLocations,
-          ),
-          if (_startSuggestions.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Tap on the map or search to change location',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
             const SizedBox(height: 16),
-            SizedBox(
-              height: 200,
-              child: ListView.builder(
-                itemCount: _startSuggestions.length,
-                itemBuilder: (context, index) {
-                  final location = _startSuggestions[index];
-                  final isCurrentLocation = location.label == 'Current Location';
-                  return ListTile(
-                    leading: isCurrentLocation
-                        ? Transform.rotate(
-                            angle: 0.785398, // 45 degrees in radians
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(
-                                Icons.navigation,
-                                color: Colors.green,
-                                size: 24,
-                              ),
-                            ),
-                          )
-                        : const Icon(
-                            Icons.location_on,
-                            color: Colors.grey,
-                          ),
-                    title: Text(location.label),
-                    subtitle: Text(location.address ?? ''),
-                    onTap: () => _selectStartLocation(location),
-                  );
-                },
+            TextField(
+              controller: _startSearchController,
+              decoration: InputDecoration(
+                hintText: 'Search start location',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
+              onChanged: _searchStartLocations,
             ),
-          ],
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _userLocation != null
-                ? () {
-                    // Use current location
-                    if (_userLocation != null) {
-                      final location = Location(
-                        id: null,
-                        label: 'Current Location',
-                        address:
-                            '${_userLocation!.latitude.toStringAsFixed(6)}, ${_userLocation!.longitude.toStringAsFixed(6)}',
-                        latitude: _userLocation!.latitude,
-                        longitude: _userLocation!.longitude,
-                        userId: null,
-                        isFavorite: false,
-                      );
-                      _selectStartLocation(location);
+            if (_startSuggestions.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  itemCount: _startSuggestions.length,
+                  itemBuilder: (context, index) {
+                    final location = _startSuggestions[index];
+                    final isCurrentLocation =
+                        location.label == 'Current Location';
+                    return ListTile(
+                      leading: isCurrentLocation
+                          ? Transform.rotate(
+                              angle: 0.785398, // 45 degrees in radians
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.navigation,
+                                  color: Colors.green,
+                                  size: 24,
+                                ),
+                              ),
+                            )
+                          : const Icon(Icons.location_on, color: Colors.grey),
+                      title: Text(location.label),
+                      subtitle: Text(location.address ?? ''),
+                      onTap: () => _selectStartLocation(location),
+                    );
+                  },
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _userLocation != null
+                  ? () {
+                      // Use current location
+                      if (_userLocation != null) {
+                        final location = Location(
+                          id: null,
+                          label: 'Current Location',
+                          address:
+                              '${_userLocation!.latitude.toStringAsFixed(6)}, ${_userLocation!.longitude.toStringAsFixed(6)}',
+                          latitude: _userLocation!.latitude,
+                          longitude: _userLocation!.longitude,
+                          userId: null,
+                          isFavorite: false,
+                        );
+                        _selectStartLocation(location);
+                      }
                     }
-                  }
-                : null,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                  : null,
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Transform.rotate(
+                    angle: 0.785398, // 45 degrees in radians
+                    child: const Icon(
+                      Icons.navigation,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Use Current Location',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Transform.rotate(
-                  angle: 0.785398, // 45 degrees in radians
-                  child: const Icon(
-                    Icons.navigation,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Use Current Location',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
           ],
         ),
       ),
@@ -1065,161 +1224,152 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-                Text(
-                  _isDriver ? 'Post Your Ride' : 'Search for Rides',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+            Text(
+              _isDriver ? 'Post Your Ride' : 'Search for Rides',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 24),
+            // Date selection
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Start Date'),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: _selectStartDate,
+                        child: Text(
+                          _startDate != null
+                              ? DateFormat('MMM dd, yyyy').format(_startDate!)
+                              : 'Select Date',
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-                // Date selection
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Start Date'),
-                          const SizedBox(height: 8),
-                          OutlinedButton(
-                            onPressed: _selectStartDate,
-                            child: Text(
-                              _startDate != null
-                                  ? DateFormat('MMM dd, yyyy')
-                                      .format(_startDate!)
-                                  : 'Select Date',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('End Date'),
-                          const SizedBox(height: 8),
-                          OutlinedButton(
-                            onPressed: _selectEndDate,
-                            child: Text(
-                              _endDate != null
-                                  ? DateFormat('MMM dd, yyyy').format(_endDate!)
-                                  : 'Select Date',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Time selection
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Start Time'),
-                          const SizedBox(height: 8),
-                          OutlinedButton(
-                            onPressed: _selectStartTime,
-                            child: Text(
-                              _startTime != null
-                                  ? _formatTimeOfDay(_startTime!)
-                                  : 'Select Time',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('End Time'),
-                          const SizedBox(height: 8),
-                          OutlinedButton(
-                            onPressed: _selectEndTime,
-                            child: Text(
-                              _endTime != null
-                                  ? _formatTimeOfDay(_endTime!)
-                                  : 'Select Time',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Seats selector
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_isDriver ? 'Available Seats' : 'Seats Needed'),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle),
-                          onPressed: _totalSeats > 1
-                              ? () {
-                                  setState(() {
-                                    _totalSeats--;
-                                  });
-                                }
-                              : null,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('End Date'),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: _selectEndDate,
+                        child: Text(
+                          _endDate != null
+                              ? DateFormat('MMM dd, yyyy').format(_endDate!)
+                              : 'Select Date',
                         ),
-                        Text(
-                          '$_totalSeats',
-                          style: const TextStyle(fontSize: 24),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle),
-                          onPressed: () {
-                            setState(() {
-                              _totalSeats++;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 32),
-                // Action button
-                ElevatedButton(
-                  onPressed: (_isDriver ? _isPosting : _isSearching)
-                      ? null
-                      : (_isDriver ? _postRide : _searchRides),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+                      ),
+                    ],
                   ),
-                  child: (_isDriver ? _isPosting : _isSearching)
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : Text(_isDriver ? 'Post Ride' : 'Search Rides'),
                 ),
               ],
             ),
-          ),
-        );
+            const SizedBox(height: 24),
+            // Time selection
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Start Time'),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: _selectStartTime,
+                        child: Text(
+                          _startTime != null
+                              ? _formatTimeOfDay(_startTime!)
+                              : 'Select Time',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('End Time'),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: _selectEndTime,
+                        child: Text(
+                          _endTime != null
+                              ? _formatTimeOfDay(_endTime!)
+                              : 'Select Time',
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // Seats selector
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(_isDriver ? 'Available Seats' : 'Seats Needed'),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle),
+                      onPressed: _totalSeats > 1
+                          ? () {
+                              setState(() {
+                                _totalSeats--;
+                              });
+                            }
+                          : null,
+                    ),
+                    Text('$_totalSeats', style: const TextStyle(fontSize: 24)),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle),
+                      onPressed: () {
+                        setState(() {
+                          _totalSeats++;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            // Action button
+            ElevatedButton(
+              onPressed: (_isDriver ? _isPosting : _isSearching)
+                  ? null
+                  : (_isDriver ? _postRide : _searchRides),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: (_isDriver ? _isPosting : _isSearching)
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(_isDriver ? 'Post Ride' : 'Search Rides'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
-

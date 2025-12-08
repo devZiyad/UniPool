@@ -13,6 +13,9 @@ class Booking {
   final String? dropoffLocationLabel;
   final DateTime? pickupTimeStart;
   final DateTime? pickupTimeEnd;
+  // Additional fields for display
+  final String? riderPhoneNumber;
+  final double? riderRating;
 
   Booking({
     required this.id,
@@ -28,6 +31,8 @@ class Booking {
     this.dropoffLocationLabel,
     this.pickupTimeStart,
     this.pickupTimeEnd,
+    this.riderPhoneNumber,
+    this.riderRating,
   });
 
   factory Booking.fromJson(Map<String, dynamic> json) {
@@ -37,21 +42,25 @@ class Booking {
     final riderId = json['riderId'] ?? json['passengerId'];
     // Handle both 'riderName' and 'passengerName' field names
     final riderName = json['riderName'] ?? json['passengerName'] ?? 'Unknown';
-    
+
     // Validate required fields
     if (id == null) {
-      throw Exception('Booking ID is missing in response. Available keys: ${json.keys.join(", ")}');
+      throw Exception(
+        'Booking ID is missing in response. Available keys: ${json.keys.join(", ")}',
+      );
     }
-    
+
     return Booking(
       id: id is int ? id : int.parse(id.toString()),
       rideId: json['rideId'] ?? 0,
-      riderId: riderId != null ? (riderId is int ? riderId : int.parse(riderId.toString())) : 0,
+      riderId: riderId != null
+          ? (riderId is int ? riderId : int.parse(riderId.toString()))
+          : 0,
       riderName: riderName,
       seatsBooked: json['seatsBooked'] ?? json['seats'] ?? 0,
       status: json['status'] ?? 'PENDING',
       costForThisRider: (json['costForThisRider'] ?? 0.0).toDouble(),
-      createdAt: json['createdAt'] != null 
+      createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])
           : DateTime.now(),
       cancelledAt: json['cancelledAt'] != null
