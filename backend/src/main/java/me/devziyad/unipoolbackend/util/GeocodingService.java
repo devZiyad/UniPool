@@ -36,7 +36,7 @@ public class GeocodingService {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> searchLocation(String query) {
         try {
-            String url = String.format("%s?q=%s&format=json&limit=5",
+            String url = String.format("%s?q=%s&format=json&limit=5&accept-language=en",
                     NOMINATIM_SEARCH_URL, query.replace(" ", "+"));
 
             Object response = restTemplate.getForObject(url, Object.class);
@@ -57,7 +57,7 @@ public class GeocodingService {
     public String reverseGeocode(double lat, double lon) {
         try {
             // Nominatim reverse geocoding returns a single object, not a list
-            String url = String.format("%s?lat=%s&lon=%s&format=json",
+            String url = String.format("%s?lat=%s&lon=%s&format=json&accept-language=en",
                     NOMINATIM_REVERSE_URL, lat, lon);
 
             Object response = restTemplate.getForObject(url, Object.class);
