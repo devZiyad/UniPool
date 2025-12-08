@@ -16,10 +16,9 @@ import me.devziyad.unipoolbackend.ride.dto.*;
 import me.devziyad.unipoolbackend.user.User;
 import me.devziyad.unipoolbackend.user.UserRepository;
 import me.devziyad.unipoolbackend.util.DistanceUtil;
-import me.devziyad.unipoolbackend.util.RoutingService;
-import me.devziyad.unipoolbackend.util.RoutingService.RouteInfo;
 import me.devziyad.unipoolbackend.vehicle.Vehicle;
 import me.devziyad.unipoolbackend.vehicle.VehicleRepository;
+import me.devziyad.unipoolbackend.route.RouteRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -41,7 +40,7 @@ public class RideServiceImpl implements RideService {
     private final VehicleRepository vehicleRepository;
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
-    private final RoutingService routingService;
+    private final RouteRepository routeRepository;
     private final AuditService auditService;
 
     private HttpServletRequest getCurrentRequest() {
@@ -87,7 +86,7 @@ public class RideServiceImpl implements RideService {
                 .pricePerSeat(ride.getPricePerSeat())
                 .status(ride.getStatus())
                 .createdAt(ride.getCreatedAt())
-                .routePolyline(ride.getRoutePolyline())
+                .routeId(ride.getRoute() != null ? ride.getRoute().getId() : null)
                 .bookings(bookings)
                 .build();
     }
@@ -179,30 +178,38 @@ public class RideServiceImpl implements RideService {
             throw new BusinessException("Total seats must be at least 1");
         }
 
-        // Calculate distance and route
+        // Get route by routeId
+        me.devziyad.unipoolbackend.route.Route route = routeRepository.findById(request.getRouteId())
+                .orElseThrow(() -> new ResourceNotFoundException("Route not found"));
+
+        // Validate route belongs to the driver
+        if (!route.getCreatedBy().getId().equals(driverId)) {
+            throw new ForbiddenException("You can only use routes you created");
+        }
+
+        // Validate route coordinates match pickup and destination locations (optional check)
+        double routeStartLatDiff = Math.abs(route.getStartLatitude() - pickupLocation.getLatitude());
+        double routeStartLonDiff = Math.abs(route.getStartLongitude() - pickupLocation.getLongitude());
+        double routeEndLatDiff = Math.abs(route.getEndLatitude() - destinationLocation.getLatitude());
+        double routeEndLonDiff = Math.abs(route.getEndLongitude() - destinationLocation.getLongitude());
+        
+        // Allow small differences (0.01 degrees ≈ 1km) for coordinate precision
+        if (routeStartLatDiff > 0.01 || routeStartLonDiff > 0.01 || 
+            routeEndLatDiff > 0.01 || routeEndLonDiff > 0.01) {
+            throw new BusinessException("Route coordinates do not match pickup and destination locations");
+        }
+
+        // Calculate haversine distance for reference
         double haversineDistance = DistanceUtil.haversineDistance(
                 pickupLocation.getLatitude(), pickupLocation.getLongitude(),
                 destinationLocation.getLatitude(), destinationLocation.getLongitude()
         );
 
-        RouteInfo routeInfo = routingService.getRouteInfo(
-                pickupLocation.getLatitude(), pickupLocation.getLongitude(),
-                destinationLocation.getLatitude(), destinationLocation.getLongitude()
-        );
-
-        // Validate distance is reasonable (not negative or unrealistic)
-        if (routeInfo.getDistanceKm() < 0) {
-            throw new BusinessException("Invalid route distance");
-        }
-        if (routeInfo.getDistanceKm() > 10000) { // 10,000 km max
-            throw new BusinessException("Route distance exceeds maximum allowed distance");
-        }
-
-        // Calculate pricing
+        // Calculate pricing using route distance
         BigDecimal basePrice = request.getBasePrice();
         if (basePrice == null) {
             // Default pricing: 0.5 per km
-            basePrice = BigDecimal.valueOf(routeInfo.getDistanceKm() * 0.5)
+            basePrice = BigDecimal.valueOf(route.getDistanceKm() * 0.5)
                     .setScale(2, RoundingMode.HALF_UP);
         } else {
             // Validate provided price is positive and reasonable
@@ -231,7 +238,7 @@ public class RideServiceImpl implements RideService {
         List<Ride> activeRides = rideRepository.findActiveRidesByDriver(driverId);
         Instant newDepartureTimeStart = request.getDepartureTimeStart();
         Instant newDepartureTimeEnd = request.getDepartureTimeEnd();
-        int newEstimatedDuration = routeInfo.getDurationMinutes();
+        int newEstimatedDuration = route.getEstimatedDurationMinutes();
         Instant newEndTime = newDepartureTimeEnd.plusSeconds(newEstimatedDuration * 60L);
 
         for (Ride existingRide : activeRides) {
@@ -256,12 +263,12 @@ public class RideServiceImpl implements RideService {
                 .totalSeats(request.getTotalSeats())
                 .availableSeats(request.getTotalSeats())
                 .estimatedDistanceKm(haversineDistance)
-                .routeDistanceKm(routeInfo.getDistanceKm())
-                .estimatedDurationMinutes(routeInfo.getDurationMinutes())
+                .routeDistanceKm(route.getDistanceKm())
+                .estimatedDurationMinutes(route.getEstimatedDurationMinutes())
                 .basePrice(basePrice)
                 .pricePerSeat(pricePerSeat)
                 .status(RideStatus.POSTED)
-                .routePolyline(routeInfo.getPolyline())
+                .route(route)
                 .build();
 
         ride = rideRepository.save(ride);
@@ -476,16 +483,50 @@ public class RideServiceImpl implements RideService {
             ride.setPricePerSeat(request.getPricePerSeat());
         }
 
-        // Recalculate route if locations changed
-        if (request.getPickupLocationId() != null || request.getDestinationLocationId() != null) {
-            RouteInfo routeInfo = routingService.getRouteInfo(
-                    ride.getPickupLocation().getLatitude(), ride.getPickupLocation().getLongitude(),
-                    ride.getDestinationLocation().getLatitude(), ride.getDestinationLocation().getLongitude()
-            );
-            ride.setRouteDistanceKm(routeInfo.getDistanceKm());
-            ride.setEstimatedDurationMinutes(routeInfo.getDurationMinutes());
-            ride.setRoutePolyline(routeInfo.getPolyline());
+        // Note: Route is now managed separately, so we don't recalculate it here
+        // If locations change, the driver should update the route separately
+
+        return toResponse(rideRepository.save(ride));
+    }
+
+    @Override
+    @Transactional
+    public RideResponse updateRideRoute(Long id, Long routeId, Long driverId) {
+        Ride ride = rideRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Ride not found"));
+
+        if (!ride.getDriver().getId().equals(driverId)) {
+            throw new ForbiddenException("You can only update your own rides");
         }
+
+        if (ride.getStatus() != RideStatus.POSTED) {
+            throw new BusinessException("Cannot update route for a ride that is not in POSTED status");
+        }
+
+        me.devziyad.unipoolbackend.route.Route route = routeRepository.findById(routeId)
+                .orElseThrow(() -> new ResourceNotFoundException("Route not found"));
+
+        // Validate route belongs to the driver
+        if (!route.getCreatedBy().getId().equals(driverId)) {
+            throw new ForbiddenException("You can only use routes you created");
+        }
+
+        // Validate route coordinates match pickup and destination locations
+        double routeStartLatDiff = Math.abs(route.getStartLatitude() - ride.getPickupLocation().getLatitude());
+        double routeStartLonDiff = Math.abs(route.getStartLongitude() - ride.getPickupLocation().getLongitude());
+        double routeEndLatDiff = Math.abs(route.getEndLatitude() - ride.getDestinationLocation().getLatitude());
+        double routeEndLonDiff = Math.abs(route.getEndLongitude() - ride.getDestinationLocation().getLongitude());
+        
+        // Allow small differences (0.01 degrees ≈ 1km) for coordinate precision
+        if (routeStartLatDiff > 0.01 || routeStartLonDiff > 0.01 || 
+            routeEndLatDiff > 0.01 || routeEndLonDiff > 0.01) {
+            throw new BusinessException("Route coordinates do not match pickup and destination locations");
+        }
+
+        // Update route and recalculate ride metrics
+        ride.setRoute(route);
+        ride.setRouteDistanceKm(route.getDistanceKm());
+        ride.setEstimatedDurationMinutes(route.getEstimatedDurationMinutes());
 
         return toResponse(rideRepository.save(ride));
     }

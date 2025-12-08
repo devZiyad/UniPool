@@ -37,5 +37,8 @@ public class CreateRideRequest {
     
     @DecimalMin(value = "0.0", inclusive = false, message = "Price per seat must be positive")
     private BigDecimal pricePerSeat;
+    
+    @NotNull(message = "Route ID is required")
+    private Long routeId;
 }
 

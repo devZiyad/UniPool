@@ -81,8 +81,9 @@ public class Ride {
     @Builder.Default
     private Instant createdAt = Instant.now();
 
-    @Column(columnDefinition = "TEXT")
-    private String routePolyline;
+    @ManyToOne
+    @JoinColumn(name = "route_id")
+    private me.devziyad.unipoolbackend.route.Route route;
 
     @OneToMany(mappedBy = "ride", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Builder.Default

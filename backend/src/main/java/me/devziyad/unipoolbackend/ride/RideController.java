@@ -63,6 +63,14 @@ public class RideController {
         return ResponseEntity.ok(rideService.updateRideStatus(id, request.getStatus(), driverId));
     }
 
+    @PutMapping("/{id}/route")
+    public ResponseEntity<@NonNull RideResponse> updateRideRoute(
+            @PathVariable Long id,
+            @RequestBody UpdateRideRouteRequest request) {
+        Long driverId = authService.getCurrentUser().getId();
+        return ResponseEntity.ok(rideService.updateRideRoute(id, request.getRouteId(), driverId));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<@NonNull Void> cancelRide(@PathVariable Long id) {
         Long driverId = authService.getCurrentUser().getId();
@@ -78,6 +86,12 @@ public class RideController {
     @lombok.Data
     public static class UpdateStatusRequest {
         private RideStatus status;
+    }
+
+    @lombok.Data
+    public static class UpdateRideRouteRequest {
+        @jakarta.validation.constraints.NotNull(message = "Route ID is required")
+        private Long routeId;
     }
 }
 

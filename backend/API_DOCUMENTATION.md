@@ -813,6 +813,151 @@ curl -X POST http://localhost:8080/api/locations/distance \
 
 ---
 
+### POST /api/locations/route
+
+Create a route from start and end coordinates.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "startLatitude": 40.7128,
+  "startLongitude": -74.0060,
+  "endLatitude": 40.7580,
+  "endLongitude": -73.9855
+}
+```
+
+**Field Validation:**
+- `startLatitude` (required): Start latitude (-90 to 90)
+- `startLongitude` (required): Start longitude (-180 to 180)
+- `endLatitude` (required): End latitude (-90 to 90)
+- `endLongitude` (required): End longitude (-180 to 180)
+
+**Note:** This endpoint uses OSRM to calculate the route, distance, duration, and polyline. The route can then be used when creating a ride. See [Routing and Distance Calculation](#routing-and-distance-calculation) for more details.
+
+**Response:** `201 Created` (RouteResponse)
+```json
+{
+  "routeId": 1,
+  "createdByUserId": 1,
+  "createdByName": "John Driver",
+  "startLatitude": 40.7128,
+  "startLongitude": -74.0060,
+  "endLatitude": 40.7580,
+  "endLongitude": -73.9855,
+  "distanceKm": 5.2,
+  "estimatedDurationMinutes": 15,
+  "polyline": "{\"type\":\"LineString\",\"coordinates\":[[-74.0060,40.7128],[-73.9855,40.7580]]}",
+  "createdAt": "2024-12-15T10:30:00Z",
+  "updatedAt": "2024-12-15T10:30:00Z"
+}
+```
+
+**Status Codes:**
+- `201 Created` - Route created successfully
+- `400 Bad Request` - Invalid coordinates or validation errors
+- `404 Not Found` - User not found
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:8080/api/locations/route \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "startLatitude": 40.7128,
+    "startLongitude": -74.0060,
+    "endLatitude": 40.7580,
+    "endLongitude": -73.9855
+  }'
+```
+
+---
+
+### GET /api/locations/route/{id}
+
+Get route by ID.
+
+**Authentication:** Required
+
+**Path Parameters:**
+- `id` (required): Route ID
+
+**Response:** `200 OK` (RouteResponse)
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:8080/api/locations/route/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### PUT /api/locations/route/{id}
+
+Update route coordinates.
+
+**Authentication:** Required (Route owner only)
+
+**Path Parameters:**
+- `id` (required): Route ID
+
+**Request Body:**
+```json
+{
+  "startLatitude": 40.7130,
+  "startLongitude": -74.0062,
+  "endLatitude": 40.7582,
+  "endLongitude": -73.9857
+}
+```
+
+**Field Validation:**
+- `startLatitude` (optional): Start latitude (-90 to 90)
+- `startLongitude` (optional): Start longitude (-180 to 180)
+- `endLatitude` (optional): End latitude (-90 to 90)
+- `endLongitude` (optional): End longitude (-180 to 180)
+
+**Note:** If any coordinates are updated, the route will be recalculated using OSRM.
+
+**Response:** `200 OK` (RouteResponse)
+
+**Status Codes:**
+- `200 OK` - Route updated successfully
+- `400 Bad Request` - Invalid coordinates or validation errors
+- `403 Forbidden` - You don't have permission to update this route
+- `404 Not Found` - Route not found
+
+**cURL Example:**
+```bash
+curl -X PUT http://localhost:8080/api/locations/route/1 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "startLatitude": 40.7130,
+    "startLongitude": -74.0062
+  }'
+```
+
+---
+
+### GET /api/locations/route/me
+
+Get all routes created by the current user.
+
+**Authentication:** Required
+
+**Response:** `200 OK` (array of RouteResponse)
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:8080/api/locations/route/me \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
 ### POST /api/locations/search
 
 Search for locations by query string.
@@ -887,8 +1032,10 @@ The backend uses **OSRM (Open Source Routing Machine)** for accurate route calcu
 - Estimated duration is calculated using an average speed of 40 km/h
 
 **Endpoints Using Routing:**
-- `POST /api/rides` - Calculates route distance and duration when creating a ride
-- `PUT /api/rides/{id}` - Recalculates route if locations are updated
+- `POST /api/locations/route` - Creates a route with distance, duration, and polyline
+- `PUT /api/locations/route/{id}` - Recalculates route if coordinates are updated
+- `POST /api/rides` - Uses a pre-created route when creating a ride
+- `PUT /api/rides/{id}/route` - Updates the route associated with a ride
 - `POST /api/locations/distance` - Calculates distance between two locations
 
 **Performance:**
@@ -918,7 +1065,8 @@ Create a new ride.
   "departureTimeEnd": "2024-12-15T14:45:00",
   "totalSeats": 4,
   "basePrice": 10.00,
-  "pricePerSeat": 5.00
+  "pricePerSeat": 5.00,
+  "routeId": 1
 }
 ```
 
@@ -931,10 +1079,18 @@ Create a new ride.
 - `totalSeats` (required): Positive integer
 - `basePrice` (optional): Positive decimal
 - `pricePerSeat` (optional): Positive decimal
+- `routeId` (required): Route ID (must be created by the driver using `/api/locations/route`)
 
 **Note:** 
 - Rides require both `departureTimeStart` and `departureTimeEnd` to define the departure time window.
-- Route distance and estimated duration are automatically calculated using OSRM when creating a ride. See [Routing and Distance Calculation](#routing-and-distance-calculation) for more details.
+- **Before creating a ride, drivers must first create a route using `POST /api/locations/route`** with the start and end coordinates matching the pickup and destination locations.
+- The route coordinates must match the pickup and destination locations (within 0.01 degrees ≈ 1km tolerance).
+- Route distance and estimated duration are taken from the associated route.
+
+**Workflow:**
+1. Driver creates a route: `POST /api/locations/route` with start/end coordinates
+2. Driver creates a ride: `POST /api/rides` with the `routeId` from step 1
+3. (Optional) Driver can update the route: `PUT /api/rides/{id}/route` if needed
 
 **Response:** `201 Created` (RideResponse)
 
@@ -950,7 +1106,8 @@ curl -X POST http://localhost:8080/api/rides \
     "departureTimeStart": "2024-12-15T14:30:00",
     "departureTimeEnd": "2024-12-15T14:45:00",
     "totalSeats": 4,
-    "pricePerSeat": 5.00
+    "pricePerSeat": 5.00,
+    "routeId": 1
   }'
 ```
 
@@ -1097,6 +1254,50 @@ curl -X PUT http://localhost:8080/api/rides/1 \
   -d '{
     "totalSeats": 5,
     "pricePerSeat": 6.00
+  }'
+```
+
+---
+
+### PUT /api/rides/{id}/route
+
+Update the route associated with a ride.
+
+**Authentication:** Required (Driver only - must be the driver of the ride)
+
+**Path Parameters:**
+- `id` (required): Ride ID
+
+**Request Body:**
+```json
+{
+  "routeId": 2
+}
+```
+
+**Field Validation:**
+- `routeId` (required): Route ID (must be created by the driver)
+
+**Status Transition Rules:**
+- Can only update route for rides with `POSTED` status
+- The route must belong to the driver
+- The route coordinates must match the ride's pickup and destination locations (within 0.01 degrees ≈ 1km tolerance)
+
+**Response:** `200 OK` (RideResponse)
+
+**Status Codes:**
+- `200 OK` - Route updated successfully
+- `400 Bad Request` - Route coordinates don't match ride locations, or ride is not in POSTED status
+- `403 Forbidden` - Only the driver can update the route, or route doesn't belong to driver
+- `404 Not Found` - Ride or route not found
+
+**cURL Example:**
+```bash
+curl -X PUT http://localhost:8080/api/rides/1/route \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "routeId": 2
   }'
 ```
 

@@ -44,7 +44,7 @@ public class RideResponse {
     private BigDecimal pricePerSeat;
     private RideStatus status;
     private Instant createdAt;
-    private String routePolyline;
+    private Long routeId;
     private List<BookingResponse> bookings;
 }
 

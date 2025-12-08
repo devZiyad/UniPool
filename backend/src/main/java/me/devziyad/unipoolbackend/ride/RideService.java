@@ -13,6 +13,7 @@ public interface RideService {
     List<RideResponse> getMyRidesAsDriver(Long driverId);
     RideResponse updateRide(Long id, UpdateRideRequest request, Long driverId);
     RideResponse updateRideStatus(Long id, RideStatus status, Long driverId);
+    RideResponse updateRideRoute(Long id, Long routeId, Long driverId);
     void cancelRide(Long id, Long driverId);
     Integer getAvailableSeats(Long id);
 }
