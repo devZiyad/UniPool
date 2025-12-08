@@ -1435,6 +1435,60 @@ Allows drivers to confirm or cancel pending bookings for their rides.
 
 ---
 
+### POST /api/bookings/{bookingId}/accept
+
+Accept a pending booking (Driver only).
+
+Convenience endpoint that confirms a pending booking. This is equivalent to calling `PUT /api/bookings/{bookingId}/status` with `{"status": "CONFIRMED"}`.
+
+**Authentication:** Required (Driver role - must be the driver of the ride)
+
+**Path Parameters:**
+- `bookingId` (required): Booking ID
+
+**Status Transition Rules:**
+- Can only accept bookings with `PENDING` status
+- Seats are reserved if available. If not enough seats are available, the request will fail.
+
+**Response:** `200 OK` (BookingResponse)
+```json
+{
+  "bookingId": 1,
+  "rideId": 1,
+  "passengerId": 2,
+  "passengerName": "Jane Rider",
+  "seatsBooked": 2,
+  "pickupLocationId": 3,
+  "pickupLocationLabel": "University Main Gate",
+  "pickupLatitude": 40.7128,
+  "pickupLongitude": -74.0060,
+  "dropoffLocationId": 4,
+  "dropoffLocationLabel": "City Center",
+  "dropoffLatitude": 40.7580,
+  "dropoffLongitude": -73.9855,
+  "pickupTimeStart": "2024-01-20T14:30:00Z",
+  "pickupTimeEnd": "2024-01-20T15:00:00Z",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "status": "CONFIRMED",
+  "costForThisRider": 20.00,
+  "cancelledAt": null
+}
+```
+
+**Status Codes:**
+- `200 OK` - Booking accepted successfully
+- `400 Bad Request` - Booking is not in PENDING status, not enough available seats, or validation errors
+- `403 Forbidden` - Only the driver of the ride can accept bookings
+- `404 Not Found` - Booking not found
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:8080/api/bookings/1/accept \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
 ### POST /api/bookings/{bookingId}/cancel
 
 Cancel a booking.
