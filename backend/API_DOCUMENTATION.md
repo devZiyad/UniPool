@@ -2071,6 +2071,157 @@ curl -X POST http://localhost:8080/api/notifications/me/read-all \
 
 ---
 
+## Notification Preferences
+
+Users can create custom notification preferences that specify what type of notifications they want to receive, custom text, and when to receive them.
+
+### POST /api/notifications/preferences
+
+Create a new notification preference.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "type": "RIDE_REMINDER",
+  "customText": "Don't forget your ride is starting soon!",
+  "scheduledTime": "2024-12-15T14:30:00Z"
+}
+```
+
+**Fields:**
+- `type` (required): The type of notification (BOOKING_CONFIRMED, BOOKING_CANCELLED, PAYMENT_RECEIVED, RIDE_REMINDER, RIDE_IN_PROGRESS, RIDE_COMPLETED)
+- `customText` (required): Custom text for the notification
+- `scheduledTime` (optional): When to receive the notification (ISO 8601 format). If null, notification will be sent based on event triggers
+
+**Response:** `200 OK` (NotificationPreferenceResponse)
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:8080/api/notifications/preferences \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "RIDE_REMINDER",
+    "customText": "Don'\''t forget your ride is starting soon!",
+    "scheduledTime": "2024-12-15T14:30:00Z"
+  }'
+```
+
+---
+
+### GET /api/notifications/preferences
+
+Get all notification preferences for current user.
+
+**Authentication:** Required
+
+**Response:** `200 OK` (array of NotificationPreferenceResponse)
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:8080/api/notifications/preferences \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### GET /api/notifications/preferences/{id}
+
+Get a specific notification preference by ID.
+
+**Authentication:** Required (Preference owner)
+
+**Path Parameters:**
+- `id` (required): Notification preference ID
+
+**Response:** `200 OK` (NotificationPreferenceResponse) or `404 Not Found` or `403 Forbidden`
+
+**cURL Example:**
+```bash
+curl -X GET http://localhost:8080/api/notifications/preferences/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### PUT /api/notifications/preferences/{id}
+
+Update a notification preference.
+
+**Authentication:** Required (Preference owner)
+
+**Path Parameters:**
+- `id` (required): Notification preference ID
+
+**Request Body:**
+```json
+{
+  "type": "BOOKING_CONFIRMED",
+  "customText": "Your booking has been confirmed!",
+  "scheduledTime": "2024-12-15T15:00:00Z",
+  "enabled": true
+}
+```
+
+**Fields (all optional):**
+- `type`: The type of notification
+- `customText`: Custom text for the notification
+- `scheduledTime`: When to receive the notification (ISO 8601 format)
+- `enabled`: Whether the preference is enabled
+
+**Response:** `200 OK` (NotificationPreferenceResponse) or `404 Not Found` or `403 Forbidden`
+
+**cURL Example:**
+```bash
+curl -X PUT http://localhost:8080/api/notifications/preferences/1 \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customText": "Updated notification text",
+    "enabled": false
+  }'
+```
+
+---
+
+### DELETE /api/notifications/preferences/{id}
+
+Delete a notification preference.
+
+**Authentication:** Required (Preference owner)
+
+**Path Parameters:**
+- `id` (required): Notification preference ID
+
+**Response:** `200 OK` (empty body) or `404 Not Found` or `403 Forbidden`
+
+**cURL Example:**
+```bash
+curl -X DELETE http://localhost:8080/api/notifications/preferences/1 \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+### NotificationPreferenceResponse
+
+```json
+{
+  "id": 1,
+  "userId": 1,
+  "type": "RIDE_REMINDER",
+  "customText": "Don't forget your ride is starting soon!",
+  "scheduledTime": "2024-12-15T14:30:00Z",
+  "enabled": true,
+  "createdAt": "2024-12-10T10:00:00Z",
+  "updatedAt": "2024-12-10T10:00:00Z"
+}
+```
+
+---
+
 ## Analytics
 
 ### GET /api/analytics/driver/earnings

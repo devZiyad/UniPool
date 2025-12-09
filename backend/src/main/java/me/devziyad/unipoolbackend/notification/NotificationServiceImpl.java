@@ -4,7 +4,10 @@ import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.common.NotificationType;
 import me.devziyad.unipoolbackend.exception.ForbiddenException;
 import me.devziyad.unipoolbackend.exception.ResourceNotFoundException;
+import me.devziyad.unipoolbackend.notification.dto.CreateNotificationPreferenceRequest;
+import me.devziyad.unipoolbackend.notification.dto.NotificationPreferenceResponse;
 import me.devziyad.unipoolbackend.notification.dto.NotificationResponse;
+import me.devziyad.unipoolbackend.notification.dto.UpdateNotificationPreferenceRequest;
 import me.devziyad.unipoolbackend.user.User;
 import me.devziyad.unipoolbackend.user.UserRepository;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final UserNotificationPreferenceRepository preferenceRepository;
 
     private NotificationResponse toResponse(Notification notification) {
         return NotificationResponse.builder()
@@ -88,5 +92,93 @@ public class NotificationServiceImpl implements NotificationService {
         List<Notification> list = notificationRepository.findByUserIdAndReadFalse(userId);
         list.forEach(n -> n.setRead(true));
         notificationRepository.saveAll(list);
+    }
+
+    private NotificationPreferenceResponse toPreferenceResponse(UserNotificationPreference preference) {
+        return NotificationPreferenceResponse.builder()
+                .id(preference.getId())
+                .userId(preference.getUser().getId())
+                .type(preference.getType())
+                .customText(preference.getCustomText())
+                .scheduledTime(preference.getScheduledTime())
+                .enabled(preference.getEnabled())
+                .createdAt(preference.getCreatedAt())
+                .updatedAt(preference.getUpdatedAt())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public NotificationPreferenceResponse createNotificationPreference(Long userId, CreateNotificationPreferenceRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        UserNotificationPreference preference = UserNotificationPreference.builder()
+                .user(user)
+                .type(request.getType())
+                .customText(request.getCustomText())
+                .scheduledTime(request.getScheduledTime())
+                .enabled(true)
+                .build();
+
+        return toPreferenceResponse(preferenceRepository.save(preference));
+    }
+
+    @Override
+    public List<NotificationPreferenceResponse> getNotificationPreferencesForUser(Long userId) {
+        return preferenceRepository.findByUserId(userId).stream()
+                .map(this::toPreferenceResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public NotificationPreferenceResponse getNotificationPreferenceById(Long preferenceId, Long userId) {
+        UserNotificationPreference preference = preferenceRepository.findById(preferenceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification preference not found"));
+
+        if (!preference.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("You can only access your own notification preferences");
+        }
+
+        return toPreferenceResponse(preference);
+    }
+
+    @Override
+    @Transactional
+    public NotificationPreferenceResponse updateNotificationPreference(Long preferenceId, Long userId, UpdateNotificationPreferenceRequest request) {
+        UserNotificationPreference preference = preferenceRepository.findById(preferenceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification preference not found"));
+
+        if (!preference.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("You can only update your own notification preferences");
+        }
+
+        if (request.getType() != null) {
+            preference.setType(request.getType());
+        }
+        if (request.getCustomText() != null) {
+            preference.setCustomText(request.getCustomText());
+        }
+        if (request.getScheduledTime() != null) {
+            preference.setScheduledTime(request.getScheduledTime());
+        }
+        if (request.getEnabled() != null) {
+            preference.setEnabled(request.getEnabled());
+        }
+
+        return toPreferenceResponse(preferenceRepository.save(preference));
+    }
+
+    @Override
+    @Transactional
+    public void deleteNotificationPreference(Long preferenceId, Long userId) {
+        UserNotificationPreference preference = preferenceRepository.findById(preferenceId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notification preference not found"));
+
+        if (!preference.getUser().getId().equals(userId)) {
+            throw new ForbiddenException("You can only delete your own notification preferences");
+        }
+
+        preferenceRepository.delete(preference);
     }
 }
