@@ -5,9 +5,11 @@ import 'package:flutter_map/flutter_map.dart';
 import '../../providers/ride_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/ride.dart';
+import '../../models/vehicle_type.dart';
 import '../../services/booking_service.dart';
 import '../../services/location_service.dart';
 import '../../widgets/map_widget.dart';
+import '../../widgets/vehicle_type_icon.dart';
 import '../../utils/polyline_decoder.dart';
 
 class RiderRideListScreen extends StatefulWidget {
@@ -193,12 +195,27 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                 padding: const EdgeInsets.all(16),
                                 child: Row(
                                   children: [
-                                    Icon(
-                                      Icons.directions_car,
-                                      color: isSelected
-                                          ? Colors.green
-                                          : Colors.grey,
-                                      size: 40,
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? Colors.green.withOpacity(0.1)
+                                            : Colors.grey.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: isSelected
+                                              ? Colors.green
+                                              : Colors.transparent,
+                                          width: 2,
+                                        ),
+                                      ),
+                                      child: VehicleTypeIcon(
+                                        vehicleType: VehicleType.fromString(
+                                          ride.vehicleType,
+                                        ),
+                                        width: 32,
+                                        height: 32,
+                                      ),
                                     ),
                                     const SizedBox(width: 16),
                                     Expanded(

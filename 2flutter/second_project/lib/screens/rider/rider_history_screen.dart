@@ -2,19 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../services/booking_service.dart';
 import '../../services/ride_service.dart';
-import '../../services/rating_service.dart';
 import '../../models/booking.dart';
 import '../../models/ride.dart';
 import '../../widgets/app_drawer.dart';
 
-class RiderBookingsScreen extends StatefulWidget {
-  const RiderBookingsScreen({super.key});
+class RiderHistoryScreen extends StatefulWidget {
+  const RiderHistoryScreen({super.key});
 
   @override
-  State<RiderBookingsScreen> createState() => _RiderBookingsScreenState();
+  State<RiderHistoryScreen> createState() => _RiderHistoryScreenState();
 }
 
-class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
+class _RiderHistoryScreenState extends State<RiderHistoryScreen> {
   List<Booking> _bookings = [];
   Map<int, Ride> _rideDetails = {};
   bool _isLoading = true;
@@ -48,70 +47,29 @@ class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
         }
       }
 
-      // Filter out bookings where the ride is cancelled or completed
-      // But check for completed rides that need rating
-      final validBookings = <Booking>[];
-      Booking? completedBookingNeedingRating;
-
+      // Filter for completed bookings only
+      final completedBookings = <Booking>[];
       for (final booking in bookings) {
         final ride = rideDetailsMap[booking.rideId];
         if (ride == null) {
-          // If we couldn't load the ride, skip it
           continue;
         }
 
-        final rideStatus = ride.status.toUpperCase();
-
-        // Skip cancelled rides
-        if (rideStatus == 'CANCELLED') {
-          continue;
-        }
-
-        // Check if booking is completed and needs rating
-        // (Bookings are now marked as COMPLETED when ride is completed)
+        // Only include bookings with status COMPLETED
         if (booking.status.toUpperCase() == 'COMPLETED') {
-          // Check if rating already exists
-          final hasRating = await RatingService.hasRatingForBooking(booking.id);
-          if (!hasRating) {
-            // This booking needs rating - store it for navigation
-            if (completedBookingNeedingRating == null) {
-              completedBookingNeedingRating = booking;
-            }
-            // Don't add to validBookings - completed bookings shouldn't show in bookings list
-            continue;
-          }
-        }
-
-        // Only show PENDING and CONFIRMED bookings (not completed)
-        if (booking.status.toUpperCase() == 'PENDING' ||
-            booking.status.toUpperCase() == 'CONFIRMED') {
-          validBookings.add(booking);
+          completedBookings.add(booking);
         }
       }
 
       if (mounted) {
         setState(() {
-          _bookings = validBookings;
+          _bookings = completedBookings;
           _rideDetails = rideDetailsMap;
           _isLoading = false;
         });
-
-        // Navigate to rating screen if there's a completed booking that needs rating
-        if (completedBookingNeedingRating != null) {
-          // Small delay to ensure UI is ready
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted) {
-              Navigator.pushNamed(
-                context,
-                '/rider/rating',
-                arguments: completedBookingNeedingRating,
-              );
-            }
-          });
-        }
       }
     } catch (e) {
-      print('Error loading bookings: $e');
+      print('Error loading completed bookings: $e');
       if (mounted) {
         setState(() {
           _error = e.toString();
@@ -153,22 +111,11 @@ class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
     return 'Time not specified';
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'PENDING':
-        return Colors.orange;
-      case 'CONFIRMED':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Bookings'),
+        title: const Text('Ride History'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -202,10 +149,10 @@ class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.event_busy, size: 64, color: Colors.grey[400]),
+                  Icon(Icons.history, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
-                    'No active bookings',
+                    'No completed bookings',
                     style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                   ),
                 ],
@@ -238,15 +185,13 @@ class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
                                   vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: _getStatusColor(
-                                    booking.status,
-                                  ).withOpacity(0.2),
+                                  color: Colors.green.withOpacity(0.2),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: Text(
-                                  booking.status,
+                                child: const Text(
+                                  'COMPLETED',
                                   style: TextStyle(
-                                    color: _getStatusColor(booking.status),
+                                    color: Colors.green,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 12,
                                   ),
@@ -519,3 +464,4 @@ class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
     );
   }
 }
+

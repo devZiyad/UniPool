@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/vehicle.dart';
 import '../../services/vehicle_service.dart';
 import '../../widgets/app_drawer.dart';
+import '../../widgets/vehicle_type_icon.dart';
 
 class VehiclesManagementScreen extends StatefulWidget {
   const VehiclesManagementScreen({super.key});
@@ -103,26 +104,6 @@ class _VehiclesManagementScreenState extends State<VehiclesManagementScreen> {
     }
   }
 
-  Future<void> _activateVehicle(Vehicle vehicle) async {
-    try {
-      await VehicleService.activateVehicle(vehicle.id);
-      if (mounted) {
-        _loadVehicles();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${vehicle.make} ${vehicle.model} is now active'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error activating vehicle: $e')),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -173,15 +154,12 @@ class _VehiclesManagementScreenState extends State<VehiclesManagementScreen> {
                         child: Column(
                           children: [
                             ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: (vehicle.active ?? false)
-                                ? Colors.green
-                                : Colors.grey,
-                                child: const Icon(
-                                  Icons.directions_car,
-                                  color: Colors.white,
-                                ),
-                              ),
+                          leading: VehicleTypeIcon(
+                            vehicleType: vehicle.vehicleType,
+                            width: 40,
+                            height: 40,
+                            color: Colors.black,
+                          ),
                               title: Text(
                                 '${vehicle.make} ${vehicle.model}',
                                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -202,8 +180,6 @@ class _VehiclesManagementScreenState extends State<VehiclesManagementScreen> {
                                 await _editVehicle(vehicle);
                               } else if (value == 'delete') {
                                 await _deleteVehicle(vehicle);
-                              } else if (value == 'activate') {
-                                await _activateVehicle(vehicle);
                               }
                             },
                             itemBuilder: (context) => [
@@ -217,17 +193,6 @@ class _VehiclesManagementScreenState extends State<VehiclesManagementScreen> {
                                   ],
                                 ),
                               ),
-                              if (!(vehicle.active ?? false))
-                                const PopupMenuItem(
-                                  value: 'activate',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.check_circle, size: 20),
-                                      SizedBox(width: 8),
-                                      Text('Set as Active'),
-                                    ],
-                                  ),
-                                ),
                               const PopupMenuItem(
                                 value: 'delete',
                                 child: Row(

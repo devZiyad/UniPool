@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../models/vehicle.dart';
+import '../../models/vehicle_type.dart';
 import '../../services/vehicle_service.dart';
 import '../../widgets/app_drawer.dart';
+import '../../widgets/vehicle_type_icon.dart';
 
 class AddVehicleScreen extends StatefulWidget {
   final Vehicle? vehicle;
@@ -19,6 +21,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
   late TextEditingController _colorController;
   late TextEditingController _plateNumberController;
   late TextEditingController _seatCountController;
+  VehicleType? _selectedVehicleType;
   bool _isSubmitting = false;
   bool _isEditMode = false;
 
@@ -31,6 +34,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
     _colorController = TextEditingController(text: widget.vehicle?.color ?? '');
     _plateNumberController = TextEditingController(text: widget.vehicle?.plateNumber ?? '');
     _seatCountController = TextEditingController(text: widget.vehicle?.seatCount.toString() ?? '4');
+    _selectedVehicleType = widget.vehicle?.vehicleType;
   }
 
   @override
@@ -63,6 +67,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               : _colorController.text.trim(),
           plateNumber: _plateNumberController.text.trim(),
           seatCount: int.parse(_seatCountController.text),
+          vehicleType: _selectedVehicleType,
         );
 
         if (mounted) {
@@ -80,6 +85,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               : _colorController.text.trim(),
           plateNumber: _plateNumberController.text.trim(),
           seatCount: int.parse(_seatCountController.text),
+          vehicleType: _selectedVehicleType,
         );
 
         if (mounted) {
@@ -187,6 +193,36 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                     return 'Please enter a valid seat count';
                   }
                   return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<VehicleType>(
+                value: _selectedVehicleType,
+                decoration: const InputDecoration(
+                  labelText: 'Vehicle Type',
+                  hintText: 'Select vehicle type',
+                  border: OutlineInputBorder(),
+                ),
+                items: VehicleType.values.map((type) {
+                  return DropdownMenuItem<VehicleType>(
+                    value: type,
+                    child: Row(
+                      children: [
+                        VehicleTypeIcon(
+                          vehicleType: type,
+                          width: 24,
+                          height: 24,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(type.displayName),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedVehicleType = value;
+                  });
                 },
               ),
               const SizedBox(height: 24),

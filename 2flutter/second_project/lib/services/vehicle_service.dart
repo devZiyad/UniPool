@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../models/vehicle.dart';
+import '../models/vehicle_type.dart';
 import 'api_client.dart';
 
 class VehicleService {
@@ -9,6 +10,7 @@ class VehicleService {
     String? color,
     required String plateNumber,
     required int seatCount,
+    VehicleType? vehicleType,
   }) async {
     final response = await ApiClient.post('/vehicles', {
       'make': make,
@@ -16,6 +18,7 @@ class VehicleService {
       if (color != null) 'color': color,
       'plateNumber': plateNumber,
       'seatCount': seatCount,
+      if (vehicleType != null) 'type': vehicleType.apiValue,
     });
 
     return Vehicle.fromJson(jsonDecode(response.body));
@@ -46,6 +49,7 @@ class VehicleService {
     String? plateNumber,
     int? seatCount,
     bool? active,
+    VehicleType? vehicleType,
   }) async {
     final Map<String, dynamic> body = {};
     if (make != null) body['make'] = make;
@@ -54,6 +58,7 @@ class VehicleService {
     if (plateNumber != null) body['plateNumber'] = plateNumber;
     if (seatCount != null) body['seatCount'] = seatCount;
     if (active != null) body['active'] = active;
+    if (vehicleType != null) body['type'] = vehicleType.apiValue;
 
     final response = await ApiClient.put('/vehicles/$id', body);
     return Vehicle.fromJson(jsonDecode(response.body));

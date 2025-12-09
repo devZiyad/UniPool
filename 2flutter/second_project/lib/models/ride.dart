@@ -29,6 +29,7 @@ class Ride {
   final String status;
   final DateTime createdAt;
   final String? routePolyline;
+  final String? vehicleType;
 
   Ride({
     required this.id,
@@ -61,6 +62,7 @@ class Ride {
     required this.status,
     required this.createdAt,
     this.routePolyline,
+    this.vehicleType,
   });
 
   factory Ride.fromJson(Map<String, dynamic> json) {
@@ -222,6 +224,7 @@ class Ride {
         toString(json['createdAt'], 'createdAt'),
       ).toLocal(),
       routePolyline: routePolylineStr,
+      vehicleType: json['type']?.toString() ?? json['vehicleType']?.toString(),
     );
   }
 

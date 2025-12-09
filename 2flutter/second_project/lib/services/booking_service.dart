@@ -137,4 +137,11 @@ class BookingService {
   static Future<void> rejectBooking(int bookingId) async {
     await ApiClient.post('/bookings/$bookingId/reject', {});
   }
+
+  static Future<Booking> updateBookingStatus(int bookingId, String status) async {
+    final response = await ApiClient.put('/bookings/$bookingId/status', {
+      'status': status,
+    });
+    return Booking.fromJson(jsonDecode(response.body));
+  }
 }

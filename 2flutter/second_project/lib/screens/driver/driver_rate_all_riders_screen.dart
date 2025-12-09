@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../services/rating_service.dart';
 import '../../services/ride_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/booking_service.dart';
 import '../../providers/driver_provider.dart';
 import '../../models/ride.dart';
 import '../../models/booking.dart';
@@ -103,7 +104,31 @@ class _DriverRateAllRidersScreenState extends State<DriverRateAllRidersScreen> {
     });
 
     try {
-      // Submit rating for each rider
+      // FIRST: Mark ride as completed
+      await RideService.updateRideStatus(widget.ride.id, 'COMPLETED');
+
+      // SECOND: Immediately mark all bookings as completed BEFORE any rating dialogs
+      try {
+        final allBookings = await BookingService.getBookingsForRide(widget.ride.id);
+        for (final booking in allBookings) {
+          // Only update bookings that are not already completed or cancelled
+          if (booking.status.toUpperCase() != 'COMPLETED' && 
+              booking.status.toUpperCase() != 'CANCELLED') {
+            try {
+              await BookingService.updateBookingStatus(booking.id, 'COMPLETED');
+              print('Marked booking ${booking.id} as COMPLETED');
+            } catch (e) {
+              print('Error marking booking ${booking.id} as completed: $e');
+              // Continue with other bookings even if one fails
+            }
+          }
+        }
+      } catch (e) {
+        print('Error fetching or updating bookings: $e');
+        // Continue even if booking updates fail
+      }
+
+      // THIRD: Submit rating for each rider (after bookings are marked as completed)
       for (final booking in _bookings) {
         try {
           await RatingService.createRating(
@@ -118,9 +143,6 @@ class _DriverRateAllRidersScreenState extends State<DriverRateAllRidersScreen> {
           // Continue with other ratings even if one fails
         }
       }
-
-      // Mark ride as completed
-      await RideService.updateRideStatus(widget.ride.id, 'COMPLETED');
 
       // Send notifications to all riders that the ride is completed
       final riderIds = _bookings.map((b) => b.riderId).toList();

@@ -1,3 +1,5 @@
+import 'vehicle_type.dart';
+
 class Vehicle {
   final int id;
   final String make;
@@ -9,6 +11,7 @@ class Vehicle {
   final String ownerName;
   final bool? active;
   final DateTime createdAt;
+  final VehicleType? vehicleType;
 
   Vehicle({
     required this.id,
@@ -21,6 +24,7 @@ class Vehicle {
     required this.ownerName,
     this.active,
     required this.createdAt,
+    this.vehicleType,
   });
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
@@ -35,6 +39,7 @@ class Vehicle {
       ownerName: json['ownerName'],
       active: json['active'],
       createdAt: DateTime.parse(json['createdAt']),
+      vehicleType: VehicleType.fromString(json['type'] ?? json['vehicleType']),
     );
   }
 

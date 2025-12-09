@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import '../services/booking_service.dart';
-import '../services/ride_service.dart';
 import '../services/rating_service.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
@@ -46,30 +45,28 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
       // Find completed bookings that need rating
       for (final booking in bookings) {
-        if (booking.status.toUpperCase() == 'CONFIRMED') {
+        // Check for COMPLETED bookings (bookings are now marked as COMPLETED when ride is completed)
+        if (booking.status.toUpperCase() == 'COMPLETED') {
           try {
-            final ride = await RideService.getRide(booking.rideId);
-            if (ride.status.toUpperCase() == 'COMPLETED') {
-              // Check if rating exists
-              final hasRating = await RatingService.hasRatingForBooking(
-                booking.id,
-              );
-              if (!hasRating && mounted) {
-                // Navigate to rating screen
-                Future.delayed(const Duration(milliseconds: 500), () {
-                  if (mounted) {
-                    Navigator.pushNamed(
-                      context,
-                      '/rider/rating',
-                      arguments: booking,
-                    );
-                  }
-                });
-                break; // Only navigate to first unrated completed booking
-              }
+            // Check if rating exists
+            final hasRating = await RatingService.hasRatingForBooking(
+              booking.id,
+            );
+            if (!hasRating && mounted) {
+              // Navigate to rating screen
+              Future.delayed(const Duration(milliseconds: 500), () {
+                if (mounted) {
+                  Navigator.pushNamed(
+                    context,
+                    '/rider/rating',
+                    arguments: booking,
+                  );
+                }
+              });
+              break; // Only navigate to first unrated completed booking
             }
           } catch (e) {
-            print('Error checking ride ${booking.rideId}: $e');
+            print('Error checking booking ${booking.id}: $e');
           }
         }
       }

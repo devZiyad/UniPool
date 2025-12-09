@@ -57,14 +57,6 @@ class AppDrawer extends StatelessWidget {
               Navigator.pushNamed(context, '/profile-settings');
             },
           ),
-          ListTile(
-            leading: const Icon(Icons.directions_car),
-            title: const Text('My Vehicles'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/vehicles');
-            },
-          ),
           // Only show Switch Mode if university ID is verified
           if (user != null && user.universityIdVerified) ...[
             const Divider(),
@@ -105,12 +97,29 @@ class AppDrawer extends StatelessWidget {
                 Navigator.pushNamed(context, '/rider/bookings');
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Ride History'),
+              subtitle: const Text('View your completed bookings'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/rider/history');
+              },
+            ),
           ],
           // Driver-specific options (show for DRIVER or BOTH roles)
           if (user != null &&
               (user.role.toUpperCase() == 'DRIVER' ||
                   user.role.toUpperCase() == 'BOTH')) ...[
             const Divider(),
+            ListTile(
+              leading: const Icon(Icons.directions_car),
+              title: const Text('My Vehicles'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/vehicles');
+              },
+            ),
             ListTile(
               leading: const Icon(Icons.home),
               title: const Text('Home - Post Ride'),
@@ -128,6 +137,15 @@ class AppDrawer extends StatelessWidget {
               onTap: () {
                 Navigator.pop(context);
                 Navigator.pushNamed(context, '/driver/ride-management');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text('Ride History'),
+              subtitle: const Text('View completed bookings'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/driver/history');
               },
             ),
           ],
