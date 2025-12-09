@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models/ride.dart';
 import '../../services/ride_service.dart';
 import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
 import '../../providers/driver_provider.dart';
 
 class DriverRideChecklistScreen extends StatefulWidget {
@@ -260,6 +261,30 @@ class _DriverRideChecklistScreenState extends State<DriverRideChecklistScreen> {
 
     try {
       await RideService.updateRideStatus(widget.ride.id, 'COMPLETED');
+
+      // Send notifications to all riders that the ride is completed
+      final driverProvider = Provider.of<DriverProvider>(
+        context,
+        listen: false,
+      );
+      await driverProvider.loadBookingsForRide(widget.ride.id);
+      final bookings = driverProvider.acceptedBookings;
+
+      final riderIds = bookings.map((b) => b.riderId).toList();
+      if (riderIds.isNotEmpty) {
+        try {
+          await NotificationService.notifyRidersInRide(
+            rideId: widget.ride.id,
+            riderIds: riderIds,
+            title: 'Ride Completed',
+            body: 'Your ride has been completed. Please rate your driver.',
+          );
+        } catch (e) {
+          print('Error sending completion notifications: $e');
+          // Continue even if notifications fail
+        }
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

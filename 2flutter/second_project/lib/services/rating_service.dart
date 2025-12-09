@@ -22,4 +22,15 @@ class RatingService {
     final List<dynamic> data = jsonDecode(response.body);
     return data.map((json) => Rating.fromJson(json)).toList();
   }
+
+  /// Check if a rating exists for a booking
+  static Future<bool> hasRatingForBooking(int bookingId) async {
+    try {
+      final response = await ApiClient.get('/ratings/booking/$bookingId');
+      return response.statusCode == 200;
+    } catch (e) {
+      // 404 means no rating exists
+      return false;
+    }
+  }
 }

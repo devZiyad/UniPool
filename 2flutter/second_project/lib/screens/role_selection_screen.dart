@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
+import '../services/booking_service.dart';
+import '../services/ride_service.dart';
+import '../services/rating_service.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
@@ -28,17 +31,52 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
       duration: const Duration(milliseconds: 500),
     );
     _riderAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
     _driverAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
+    // Check for completed rides that need rating
+    _checkForCompletedRides();
+  }
+
+  Future<void> _checkForCompletedRides() async {
+    try {
+      final bookings = await BookingService.getMyBookings();
+
+      // Find completed bookings that need rating
+      for (final booking in bookings) {
+        if (booking.status.toUpperCase() == 'CONFIRMED') {
+          try {
+            final ride = await RideService.getRide(booking.rideId);
+            if (ride.status.toUpperCase() == 'COMPLETED') {
+              // Check if rating exists
+              final hasRating = await RatingService.hasRatingForBooking(
+                booking.id,
+              );
+              if (!hasRating && mounted) {
+                // Navigate to rating screen
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  if (mounted) {
+                    Navigator.pushNamed(
+                      context,
+                      '/rider/rating',
+                      arguments: booking,
+                    );
+                  }
+                });
+                break; // Only navigate to first unrated completed booking
+              }
+            }
+          } catch (e) {
+            print('Error checking ride ${booking.rideId}: $e');
+          }
+        }
+      }
+    } catch (e) {
+      print('Error checking for completed rides: $e');
+      // Don't show error to user, just log it
+    }
   }
 
   @override
@@ -49,16 +87,16 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
   Future<void> _selectRider() async {
     if (_riderExpanding || _driverExpanding) return;
-    
+
     setState(() {
       _riderExpanding = true;
     });
-    
+
     _animationController.forward();
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     if (!mounted) return;
-    
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
       final updatedUser = await UserService.updateRole('RIDER');
@@ -66,7 +104,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     } catch (e) {
       // If role update fails, still allow navigation
     }
-    
+
     if (mounted) {
       Navigator.pushReplacementNamed(context, '/rider/destination-search');
     }
@@ -74,16 +112,16 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
   Future<void> _selectDriver() async {
     if (_riderExpanding || _driverExpanding) return;
-    
+
     setState(() {
       _driverExpanding = true;
     });
-    
+
     _animationController.forward();
     await Future.delayed(const Duration(milliseconds: 500));
-    
+
     if (!mounted) return;
-    
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     try {
       final updatedUser = await UserService.updateRole('DRIVER');
@@ -91,7 +129,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     } catch (e) {
       // If role update fails, still allow navigation
     }
-    
+
     if (mounted) {
       Navigator.pushReplacementNamed(
         context,
@@ -112,9 +150,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
               final scale = _riderExpanding
                   ? 1.0 + (_riderAnimation.value * 3.0)
                   : _riderHovered
-                      ? 1.05
-                      : 1.0;
-              
+                  ? 1.05
+                  : 1.0;
+
               return Positioned.fill(
                 child: _riderExpanding
                     ? Container(
@@ -166,10 +204,14 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                                 child: Align(
                                   alignment: Alignment.topLeft,
                                   child: Padding(
-                                    padding: const EdgeInsets.only(top: 80, left: 40),
+                                    padding: const EdgeInsets.only(
+                                      top: 80,
+                                      left: 40,
+                                    ),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Icon(
                                           Icons.person,
@@ -190,7 +232,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                                           'Search and join rides',
                                           style: TextStyle(
                                             fontSize: 16,
-                                            color: Colors.white.withOpacity(0.9),
+                                            color: Colors.white.withOpacity(
+                                              0.9,
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -212,9 +256,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
               final scale = _driverExpanding
                   ? 1.0 + (_driverAnimation.value * 3.0)
                   : _driverHovered
-                      ? 1.05
-                      : 1.0;
-              
+                  ? 1.05
+                  : 1.0;
+
               return Positioned.fill(
                 child: _driverExpanding
                     ? Container(
@@ -266,10 +310,14 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                                 child: Align(
                                   alignment: Alignment.bottomRight,
                                   child: Padding(
-                                    padding: const EdgeInsets.only(bottom: 80, right: 40),
+                                    padding: const EdgeInsets.only(
+                                      bottom: 80,
+                                      right: 40,
+                                    ),
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
                                       children: [
                                         Icon(
                                           Icons.directions_car,
@@ -290,7 +338,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
                                           'Post rides and host passengers',
                                           style: TextStyle(
                                             fontSize: 16,
-                                            color: Colors.white.withOpacity(0.9),
+                                            color: Colors.white.withOpacity(
+                                              0.9,
+                                            ),
                                           ),
                                           textAlign: TextAlign.right,
                                         ),
@@ -320,7 +370,7 @@ class DiagonalClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
-    
+
     if (isTop) {
       // Top-left triangle: top-left corner, top-right corner, bottom-left corner
       path.moveTo(0, 0);
@@ -334,7 +384,7 @@ class DiagonalClipper extends CustomClipper<Path> {
       path.lineTo(0, size.height);
       path.close();
     }
-    
+
     return path;
   }
 
