@@ -3,6 +3,7 @@ package me.devziyad.unipoolbackend.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -62,20 +63,35 @@ public class GeocodingService {
 
     /**
      * Reverse geocode: get address from coordinates
+     * Results are cached to avoid repeated API calls for the same coordinates.
+     * Coordinates are rounded to 6 decimal places (~0.1 meter precision) for cache key.
      */
     @SuppressWarnings("unchecked")
+    @Cacheable(value = "reverseGeocode", 
+               key = "T(java.lang.String).format('%.6f_%.6f', #lat, #lon)", 
+               unless = "#result == null")
     public String reverseGeocode(double lat, double lon) {
+        // Round coordinates to 6 decimal places (~0.1 meter precision) for consistent caching
+        // This prevents cache misses due to floating point precision differences
+        double roundedLat = Math.round(lat * 1000000.0) / 1000000.0;
+        double roundedLon = Math.round(lon * 1000000.0) / 1000000.0;
+        
         try {
+            logger.debug("Reverse geocoding coordinates: lat={}, lon={} (rounded from lat={}, lon={})", 
+                    roundedLat, roundedLon, lat, lon);
+            
             // Nominatim reverse geocoding returns a single object, not a list
             String url = String.format("%s?lat=%s&lon=%s&format=json&accept-language=en",
-                    NOMINATIM_REVERSE_URL, lat, lon);
+                    NOMINATIM_REVERSE_URL, roundedLat, roundedLon);
 
             Object response = restTemplate.getForObject(url, Object.class);
             if (response instanceof Map<?, ?> resultMap) {
                 Map<String, Object> result = (Map<String, Object>) resultMap;
                 Object displayName = result.get("display_name");
                 if (displayName != null) {
-                    return displayName.toString();
+                    String address = displayName.toString();
+                    logger.debug("Reverse geocoded address: {}", address);
+                    return address;
                 }
             }
         } catch (Exception e) {
