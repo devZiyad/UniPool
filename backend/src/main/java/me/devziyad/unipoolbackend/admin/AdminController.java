@@ -3,9 +3,11 @@ package me.devziyad.unipoolbackend.admin;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.auth.AuthService;
+import me.devziyad.unipoolbackend.booking.Booking;
 import me.devziyad.unipoolbackend.booking.BookingRepository;
 import me.devziyad.unipoolbackend.booking.BookingService;
 import me.devziyad.unipoolbackend.booking.dto.BookingResponse;
+import me.devziyad.unipoolbackend.common.BookingStatus;
 import me.devziyad.unipoolbackend.common.Role;
 import me.devziyad.unipoolbackend.exception.ForbiddenException;
 import me.devziyad.unipoolbackend.payment.PaymentRepository;
@@ -195,12 +197,24 @@ public class AdminController {
     }
 
     @PutMapping("/rides/{id}/complete")
+    @Transactional
     public ResponseEntity<Void> forceCompleteRide(@PathVariable Long id) {
         checkAdmin();
         Ride ride = rideRepository.findById(id)
                 .orElseThrow(() -> new me.devziyad.unipoolbackend.exception.ResourceNotFoundException("Ride not found"));
         ride.setStatus(RideStatus.COMPLETED);
         rideRepository.save(ride);
+        
+        // Mark all CONFIRMED bookings as COMPLETED
+        List<Booking> confirmedBookings = bookingRepository.findByRideId(ride.getId()).stream()
+                .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED)
+                .collect(Collectors.toList());
+        
+        for (Booking booking : confirmedBookings) {
+            booking.setStatus(BookingStatus.COMPLETED);
+        }
+        bookingRepository.saveAll(confirmedBookings);
+        
         return ResponseEntity.ok().build();
     }
 

@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.audit.ActionType;
 import me.devziyad.unipoolbackend.audit.AuditService;
+import me.devziyad.unipoolbackend.booking.BookingRepository;
+import me.devziyad.unipoolbackend.common.BookingStatus;
 import me.devziyad.unipoolbackend.common.RideStatus;
 import me.devziyad.unipoolbackend.exception.BusinessException;
 import me.devziyad.unipoolbackend.exception.ForbiddenException;
@@ -41,6 +43,7 @@ public class RideServiceImpl implements RideService {
     private final LocationRepository locationRepository;
     private final UserRepository userRepository;
     private final RouteRepository routeRepository;
+    private final BookingRepository bookingRepository;
     private final AuditService auditService;
 
     private HttpServletRequest getCurrentRequest() {
@@ -550,6 +553,18 @@ public class RideServiceImpl implements RideService {
 
         ride.setStatus(status);
         ride = rideRepository.save(ride);
+
+        // If ride is being completed, mark all CONFIRMED bookings as COMPLETED
+        if (status == RideStatus.COMPLETED) {
+            List<Booking> confirmedBookings = bookingRepository.findByRideId(ride.getId()).stream()
+                    .filter(booking -> booking.getStatus() == BookingStatus.CONFIRMED)
+                    .collect(Collectors.toList());
+            
+            for (Booking booking : confirmedBookings) {
+                booking.setStatus(BookingStatus.COMPLETED);
+            }
+            bookingRepository.saveAll(confirmedBookings);
+        }
 
         // Audit log
         java.util.Map<String, Object> metadata = new java.util.HashMap<>();
