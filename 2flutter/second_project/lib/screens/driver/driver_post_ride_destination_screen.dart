@@ -121,7 +121,7 @@ class _DriverPostRideDestinationScreenState
 
     final location = Location(
       id: null,
-      label: 'Selected Location',
+      label: address, // Use address as label instead of "Selected Location"
       address: address,
       latitude: point.latitude,
       longitude: point.longitude,
@@ -141,6 +141,10 @@ class _DriverPostRideDestinationScreenState
       context,
       listen: false,
     ).setDestinationLocation(location);
+    // Pin the selected destination on the map
+    setState(() {
+      _selectedLocation = LatLng(location.latitude, location.longitude);
+    });
     _fetchRouteIfReady();
     Navigator.pushNamed(context, '/driver/post-ride/start-location');
   }

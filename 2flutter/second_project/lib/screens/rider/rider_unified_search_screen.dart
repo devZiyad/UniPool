@@ -173,16 +173,28 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
     }
 
     try {
+      print('_searchDestinations: Searching for "$query"');
       final locations = await LocationService.searchLocations(
         query,
         latitude: _currentLocation.latitude,
         longitude: _currentLocation.longitude,
       );
-      setState(() {
-        _destinationSuggestions = locations;
-      });
-    } catch (e) {
+      print('_searchDestinations: Got ${locations.length} locations');
       if (mounted) {
+        setState(() {
+          _destinationSuggestions = locations;
+          print(
+            '_searchDestinations: Updated state with ${_destinationSuggestions.length} suggestions',
+          );
+        });
+      }
+    } catch (e, stackTrace) {
+      print('_searchDestinations: Error: $e');
+      print('_searchDestinations: Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _destinationSuggestions = [];
+        });
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
@@ -209,7 +221,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
 
     final location = Location(
       id: null,
-      label: 'Selected Location',
+      label: address, // Use address as label instead of "Selected Location"
       address: address,
       latitude: point.latitude,
       longitude: point.longitude,
@@ -238,6 +250,11 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
       // Don't auto-set start location - let user choose
       _selectedStartLocation = null;
       _routePoints = null; // Clear route when destination changes
+      // Pin the selected destination on the map
+      _selectedDestinationLocation = LatLng(
+        location.latitude,
+        location.longitude,
+      );
     });
     _initializeStartLocation();
     _fetchRouteIfReady();
@@ -253,16 +270,28 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
     }
 
     try {
+      print('_searchStartLocations: Searching for "$query"');
       final locations = await LocationService.searchLocations(
         query,
         latitude: _currentLocation.latitude,
         longitude: _currentLocation.longitude,
       );
-      setState(() {
-        _startSuggestions = locations;
-      });
-    } catch (e) {
+      print('_searchStartLocations: Got ${locations.length} locations');
       if (mounted) {
+        setState(() {
+          _startSuggestions = locations;
+          print(
+            '_searchStartLocations: Updated state with ${_startSuggestions.length} suggestions',
+          );
+        });
+      }
+    } catch (e, stackTrace) {
+      print('_searchStartLocations: Error: $e');
+      print('_searchStartLocations: Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _startSuggestions = [];
+        });
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error searching: $e')));
@@ -289,7 +318,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
 
     final location = Location(
       id: null,
-      label: 'Selected Location',
+      label: address, // Use address as label instead of "Selected Location"
       address: address,
       latitude: point.latitude,
       longitude: point.longitude,

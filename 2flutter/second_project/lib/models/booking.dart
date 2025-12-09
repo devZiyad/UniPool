@@ -11,6 +11,10 @@ class Booking {
   // Additional fields from API
   final String? pickupLocationLabel;
   final String? dropoffLocationLabel;
+  final double? pickupLatitude;
+  final double? pickupLongitude;
+  final double? dropoffLatitude;
+  final double? dropoffLongitude;
   final DateTime? pickupTimeStart;
   final DateTime? pickupTimeEnd;
   // Additional fields for display
@@ -29,6 +33,10 @@ class Booking {
     this.cancelledAt,
     this.pickupLocationLabel,
     this.dropoffLocationLabel,
+    this.pickupLatitude,
+    this.pickupLongitude,
+    this.dropoffLatitude,
+    this.dropoffLongitude,
     this.pickupTimeStart,
     this.pickupTimeEnd,
     this.riderPhoneNumber,
@@ -68,6 +76,26 @@ class Booking {
           : null,
       pickupLocationLabel: json['pickupLocationLabel'],
       dropoffLocationLabel: json['dropoffLocationLabel'],
+      pickupLatitude: json['pickupLatitude'] != null
+          ? (json['pickupLatitude'] is double
+                ? json['pickupLatitude']
+                : double.parse(json['pickupLatitude'].toString()))
+          : null,
+      pickupLongitude: json['pickupLongitude'] != null
+          ? (json['pickupLongitude'] is double
+                ? json['pickupLongitude']
+                : double.parse(json['pickupLongitude'].toString()))
+          : null,
+      dropoffLatitude: json['dropoffLatitude'] != null
+          ? (json['dropoffLatitude'] is double
+                ? json['dropoffLatitude']
+                : double.parse(json['dropoffLatitude'].toString()))
+          : null,
+      dropoffLongitude: json['dropoffLongitude'] != null
+          ? (json['dropoffLongitude'] is double
+                ? json['dropoffLongitude']
+                : double.parse(json['dropoffLongitude'].toString()))
+          : null,
       pickupTimeStart: json['pickupTimeStart'] != null
           ? DateTime.parse(json['pickupTimeStart']).toLocal()
           : null,

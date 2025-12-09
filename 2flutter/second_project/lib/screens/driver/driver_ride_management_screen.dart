@@ -6,6 +6,8 @@ import '../../providers/driver_provider.dart';
 import '../../widgets/app_drawer.dart';
 import '../../services/ride_service.dart';
 import '../../services/booking_service.dart';
+import '../../services/location_service.dart';
+import '../../services/notification_service.dart';
 import '../../models/ride.dart';
 
 class DriverRideManagementScreen extends StatefulWidget {
@@ -23,6 +25,11 @@ class _DriverRideManagementScreenState
   Ride? _currentRideDetails;
   bool _isLoadingDetails = false;
   bool _isDeleting = false;
+  // Reverse geocoded addresses for the ride
+  String? _ridePickupAddress;
+  String? _rideDestinationAddress;
+  // Map of booking ID to reverse geocoded addresses
+  Map<int, Map<String, String>> _bookingAddresses = {};
 
   @override
   void initState() {
@@ -38,10 +45,11 @@ class _DriverRideManagementScreenState
       await driverProvider.loadMyRides();
 
       if (mounted) {
-        // Filter out cancelled rides
-        final activeRides = driverProvider.myRides
-            .where((ride) => ride.status.toUpperCase() != 'CANCELLED')
-            .toList();
+        // Filter out cancelled and completed rides
+        final activeRides = driverProvider.myRides.where((ride) {
+          final status = ride.status.toUpperCase();
+          return status != 'CANCELLED' && status != 'COMPLETED';
+        }).toList();
 
         if (activeRides.isNotEmpty) {
           // Ensure current index is valid
@@ -86,10 +94,11 @@ class _DriverRideManagementScreenState
         setState(() {
           _isLoading = false;
         });
-        // Filter out cancelled rides and load details for the first ride (case-insensitive)
-        final activeRides = driverProvider.myRides
-            .where((ride) => ride.status.toUpperCase() != 'CANCELLED')
-            .toList();
+        // Filter out cancelled and completed rides and load details for the first ride (case-insensitive)
+        final activeRides = driverProvider.myRides.where((ride) {
+          final status = ride.status.toUpperCase();
+          return status != 'CANCELLED' && status != 'COMPLETED';
+        }).toList();
         print(
           'RideManagementScreen._loadRides - Total rides: ${driverProvider.myRides.length}',
         );
@@ -125,21 +134,61 @@ class _DriverRideManagementScreenState
   Future<void> _loadRideDetails(int rideId) async {
     setState(() {
       _isLoadingDetails = true;
+      _ridePickupAddress = null;
+      _rideDestinationAddress = null;
+      _bookingAddresses = {};
     });
 
     try {
       final rideDetails = await RideService.getRide(rideId);
+
+      // Reverse geocode ride's pickup and destination
+      String? pickupAddress;
+      String? destinationAddress;
+
+      try {
+        pickupAddress = await LocationService.reverseGeocode(
+          rideDetails.pickupLatitude,
+          rideDetails.pickupLongitude,
+        );
+      } catch (e) {
+        print('Error reverse geocoding pickup: $e');
+        pickupAddress = rideDetails.pickupLocationLabel;
+      }
+
+      try {
+        destinationAddress = await LocationService.reverseGeocode(
+          rideDetails.destinationLatitude,
+          rideDetails.destinationLongitude,
+        );
+      } catch (e) {
+        print('Error reverse geocoding destination: $e');
+        destinationAddress = rideDetails.destinationLocationLabel;
+      }
+
       if (mounted) {
         setState(() {
           _currentRideDetails = rideDetails;
-          _isLoadingDetails = false;
+          _ridePickupAddress = pickupAddress;
+          _rideDestinationAddress = destinationAddress;
         });
+
         // Load bookings for this ride
         final driverProvider = Provider.of<DriverProvider>(
           context,
           listen: false,
         );
         await driverProvider.loadBookingsForRide(rideId);
+
+        // Reverse geocode addresses for all bookings
+        await _reverseGeocodeBookings(driverProvider.acceptedBookings);
+        await _reverseGeocodeBookings(driverProvider.pendingBookings);
+
+        if (mounted) {
+          setState(() {
+            _isLoadingDetails = false;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -156,11 +205,138 @@ class _DriverRideManagementScreenState
     }
   }
 
+  Future<void> _startRide(Ride ride) async {
+    try {
+      // Update ride status to IN_PROGRESS
+      await RideService.updateRideStatus(ride.id, 'IN_PROGRESS');
+
+      // Get all accepted bookings for this ride
+      final driverProvider = Provider.of<DriverProvider>(
+        context,
+        listen: false,
+      );
+      await driverProvider.loadBookingsForRide(ride.id);
+      final bookings = driverProvider.acceptedBookings;
+
+      // Send notifications to all riders
+      final riderIds = bookings.map((b) => b.riderId).toList();
+      if (riderIds.isNotEmpty) {
+        try {
+          await NotificationService.notifyRidersInRide(
+            rideId: ride.id,
+            riderIds: riderIds,
+            title: 'Ride Started',
+            body:
+                'Your driver has started the ride. Please be ready at your pickup location.',
+          );
+        } catch (e) {
+          print('Error sending notifications: $e');
+          // Continue even if notifications fail
+        }
+      }
+
+      // Reload ride details to get updated status
+      await _loadRideDetails(ride.id);
+
+      // Navigate to checklist screen
+      if (mounted) {
+        Navigator.pushNamed(context, '/driver/ride-checklist', arguments: ride);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error starting ride: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _reverseGeocodeBookings(List<dynamic> bookings) async {
+    final Map<int, Map<String, String>> addresses = {};
+
+    for (final booking in bookings) {
+      try {
+        String? pickupAddress;
+        String? destinationAddress;
+
+        // Get pickup coordinates from booking
+        double? pickupLat = booking.pickupLatitude;
+        double? pickupLon = booking.pickupLongitude;
+        double? destLat = booking.dropoffLatitude;
+        double? destLon = booking.dropoffLongitude;
+
+        // If coordinates are not available, try to get from ride details
+        if (pickupLat == null && _currentRideDetails != null) {
+          pickupLat = _currentRideDetails!.pickupLatitude;
+          pickupLon = _currentRideDetails!.pickupLongitude;
+        }
+
+        if (destLat == null && _currentRideDetails != null) {
+          destLat = _currentRideDetails!.destinationLatitude;
+          destLon = _currentRideDetails!.destinationLongitude;
+        }
+
+        // Reverse geocode pickup
+        if (pickupLat != null && pickupLon != null) {
+          try {
+            pickupAddress = await LocationService.reverseGeocode(
+              pickupLat,
+              pickupLon,
+            );
+          } catch (e) {
+            print('Error reverse geocoding booking pickup: $e');
+            pickupAddress = booking.pickupLocationLabel ?? 'Unknown location';
+          }
+        } else {
+          pickupAddress = booking.pickupLocationLabel ?? 'Unknown location';
+        }
+
+        // Reverse geocode destination
+        if (destLat != null && destLon != null) {
+          try {
+            destinationAddress = await LocationService.reverseGeocode(
+              destLat,
+              destLon,
+            );
+          } catch (e) {
+            print('Error reverse geocoding booking destination: $e');
+            destinationAddress =
+                booking.dropoffLocationLabel ?? 'Unknown location';
+          }
+        } else {
+          destinationAddress =
+              booking.dropoffLocationLabel ?? 'Unknown location';
+        }
+
+        addresses[booking.id] = {
+          'pickup': pickupAddress ?? 'Unknown location',
+          'destination': destinationAddress ?? 'Unknown location',
+        };
+      } catch (e) {
+        print('Error processing booking ${booking.id}: $e');
+        addresses[booking.id] = {
+          'pickup': booking.pickupLocationLabel ?? 'Unknown location',
+          'destination': booking.dropoffLocationLabel ?? 'Unknown location',
+        };
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _bookingAddresses.addAll(addresses);
+      });
+    }
+  }
+
   void _navigateToPreviousRide() {
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-    final activeRides = driverProvider.myRides
-        .where((ride) => ride.status != 'CANCELLED')
-        .toList();
+    final activeRides = driverProvider.myRides.where((ride) {
+      final status = ride.status.toUpperCase();
+      return status != 'CANCELLED' && status != 'COMPLETED';
+    }).toList();
     if (activeRides.isEmpty) return;
 
     setState(() {
@@ -172,9 +348,10 @@ class _DriverRideManagementScreenState
 
   void _navigateToNextRide() {
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-    final activeRides = driverProvider.myRides
-        .where((ride) => ride.status != 'CANCELLED')
-        .toList();
+    final activeRides = driverProvider.myRides.where((ride) {
+      final status = ride.status.toUpperCase();
+      return status != 'CANCELLED' && status != 'COMPLETED';
+    }).toList();
     if (activeRides.isEmpty) return;
 
     setState(() {
@@ -185,9 +362,10 @@ class _DriverRideManagementScreenState
 
   Future<void> _cancelRide() async {
     final driverProvider = Provider.of<DriverProvider>(context, listen: false);
-    final activeRides = driverProvider.myRides
-        .where((ride) => ride.status != 'CANCELLED')
-        .toList();
+    final activeRides = driverProvider.myRides.where((ride) {
+      final status = ride.status.toUpperCase();
+      return status != 'CANCELLED' && status != 'COMPLETED';
+    }).toList();
 
     if (activeRides.isEmpty) return;
 
@@ -239,9 +417,10 @@ class _DriverRideManagementScreenState
           context,
           listen: false,
         );
-        final updatedActiveRides = updatedProvider.myRides
-            .where((ride) => ride.status != 'CANCELLED')
-            .toList();
+        final updatedActiveRides = updatedProvider.myRides.where((ride) {
+          final status = ride.status.toUpperCase();
+          return status != 'CANCELLED' && status != 'COMPLETED';
+        }).toList();
         if (mounted) {
           if (updatedActiveRides.isEmpty) {
             setState(() {
@@ -314,10 +493,11 @@ class _DriverRideManagementScreenState
   @override
   Widget build(BuildContext context) {
     final driverProvider = Provider.of<DriverProvider>(context);
-    // Filter out cancelled rides (case-insensitive comparison)
-    final activeRides = driverProvider.myRides
-        .where((ride) => ride.status.toUpperCase() != 'CANCELLED')
-        .toList();
+    // Filter out cancelled and completed rides (case-insensitive comparison)
+    final activeRides = driverProvider.myRides.where((ride) {
+      final status = ride.status.toUpperCase();
+      return status != 'CANCELLED' && status != 'COMPLETED';
+    }).toList();
 
     if (_isLoading) {
       return Scaffold(
@@ -490,43 +670,85 @@ class _DriverRideManagementScreenState
                                     ),
                                   ),
                                   const SizedBox(height: 16),
-                                  Row(
+                                  // Start location with address
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      const Icon(
-                                        Icons.location_on,
-                                        color: Colors.green,
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on,
+                                            color: Colors.green,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Expanded(
+                                            child: Text(
+                                              'Start Location',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
+                                      const SizedBox(height: 4),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 32,
+                                        ),
                                         child: Text(
-                                          rideToDisplay
-                                                  .pickupLocationLabel
-                                                  .isNotEmpty
-                                              ? rideToDisplay
-                                                    .pickupLocationLabel
-                                              : 'Pickup location',
-                                          style: const TextStyle(fontSize: 16),
+                                          _ridePickupAddress ??
+                                              (rideToDisplay
+                                                      .pickupLocationLabel
+                                                      .isNotEmpty
+                                                  ? rideToDisplay
+                                                        .pickupLocationLabel
+                                                  : 'Pickup location'),
+                                          style: const TextStyle(fontSize: 14),
                                         ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  Row(
+                                  // Destination location with address
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      const Icon(
-                                        Icons.place,
-                                        color: Colors.red,
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.place,
+                                            color: Colors.red,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Expanded(
+                                            child: Text(
+                                              'Destination',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
+                                      const SizedBox(height: 4),
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 32,
+                                        ),
                                         child: Text(
-                                          rideToDisplay
-                                                  .destinationLocationLabel
-                                                  .isNotEmpty
-                                              ? rideToDisplay
-                                                    .destinationLocationLabel
-                                              : 'Destination location',
-                                          style: const TextStyle(fontSize: 16),
+                                          _rideDestinationAddress ??
+                                              (rideToDisplay
+                                                      .destinationLocationLabel
+                                                      .isNotEmpty
+                                                  ? rideToDisplay
+                                                        .destinationLocationLabel
+                                                  : 'Destination location'),
+                                          style: const TextStyle(fontSize: 14),
                                         ),
                                       ),
                                     ],
@@ -794,7 +1016,7 @@ class _DriverRideManagementScreenState
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              // Rider name
+                                              // Rider name and rating
                                               Row(
                                                 children: [
                                                   CircleAvatar(
@@ -815,13 +1037,59 @@ class _DriverRideManagementScreenState
                                                   ),
                                                   const SizedBox(width: 12),
                                                   Expanded(
-                                                    child: Text(
-                                                      booking.riderName,
-                                                      style: const TextStyle(
-                                                        fontSize: 18,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      children: [
+                                                        Text(
+                                                          booking.riderName,
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 18,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .bold,
+                                                              ),
+                                                        ),
+                                                        if (booking
+                                                                .riderRating !=
+                                                            null)
+                                                          Row(
+                                                            children: [
+                                                              const Icon(
+                                                                Icons.star,
+                                                                color: Colors
+                                                                    .amber,
+                                                                size: 16,
+                                                              ),
+                                                              const SizedBox(
+                                                                width: 4,
+                                                              ),
+                                                              Text(
+                                                                booking
+                                                                    .riderRating!
+                                                                    .toStringAsFixed(
+                                                                      1,
+                                                                    ),
+                                                                style: const TextStyle(
+                                                                  fontSize: 14,
+                                                                  color: Colors
+                                                                      .grey,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          )
+                                                        else
+                                                          const Text(
+                                                            'No rating yet',
+                                                            style: TextStyle(
+                                                              fontSize: 14,
+                                                              color:
+                                                                  Colors.grey,
+                                                            ),
+                                                          ),
+                                                      ],
                                                     ),
                                                   ),
                                                   Container(
@@ -866,7 +1134,10 @@ class _DriverRideManagementScreenState
                                               const SizedBox(height: 16),
                                               // Start location
                                               if (booking.pickupLocationLabel !=
-                                                  null)
+                                                      null ||
+                                                  _bookingAddresses[booking
+                                                          .id] !=
+                                                      null)
                                                 Row(
                                                   children: [
                                                     const Icon(
@@ -877,8 +1148,11 @@ class _DriverRideManagementScreenState
                                                     const SizedBox(width: 8),
                                                     Expanded(
                                                       child: Text(
-                                                        booking
-                                                            .pickupLocationLabel!,
+                                                        _bookingAddresses[booking
+                                                                .id]?['pickup'] ??
+                                                            booking
+                                                                .pickupLocationLabel ??
+                                                            'Unknown location',
                                                         style: const TextStyle(
                                                           fontSize: 14,
                                                         ),
@@ -887,9 +1161,11 @@ class _DriverRideManagementScreenState
                                                   ],
                                                 ),
                                               // Destination location
-                                              if (booking
-                                                      .dropoffLocationLabel !=
-                                                  null) ...[
+                                              if (booking.dropoffLocationLabel !=
+                                                      null ||
+                                                  _bookingAddresses[booking
+                                                          .id] !=
+                                                      null) ...[
                                                 const SizedBox(height: 8),
                                                 Row(
                                                   children: [
@@ -901,8 +1177,11 @@ class _DriverRideManagementScreenState
                                                     const SizedBox(width: 8),
                                                     Expanded(
                                                       child: Text(
-                                                        booking
-                                                            .dropoffLocationLabel!,
+                                                        _bookingAddresses[booking
+                                                                .id]?['destination'] ??
+                                                            booking
+                                                                .dropoffLocationLabel ??
+                                                            'Unknown location',
                                                         style: const TextStyle(
                                                           fontSize: 14,
                                                         ),
@@ -941,6 +1220,87 @@ class _DriverRideManagementScreenState
                                                       ),
                                                     ),
                                                   ],
+                                                ),
+                                              ],
+                                              // Phone number with WhatsApp link
+                                              if (booking.riderPhoneNumber !=
+                                                      null &&
+                                                  booking
+                                                      .riderPhoneNumber!
+                                                      .isNotEmpty) ...[
+                                                const SizedBox(height: 12),
+                                                InkWell(
+                                                  onTap: () async {
+                                                    final phoneNumber = booking
+                                                        .riderPhoneNumber!
+                                                        .replaceAll(
+                                                          RegExp(r'[^\d+]'),
+                                                          '',
+                                                        );
+                                                    final whatsappUrl =
+                                                        'https://wa.me/$phoneNumber';
+                                                    try {
+                                                      final url = Uri.parse(
+                                                        whatsappUrl,
+                                                      );
+                                                      if (await canLaunchUrl(
+                                                        url,
+                                                      )) {
+                                                        await launchUrl(url);
+                                                      } else {
+                                                        if (mounted) {
+                                                          ScaffoldMessenger.of(
+                                                            context,
+                                                          ).showSnackBar(
+                                                            const SnackBar(
+                                                              content: Text(
+                                                                'Could not open WhatsApp',
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }
+                                                      }
+                                                    } catch (e) {
+                                                      if (mounted) {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              'Error: ${e.toString()}',
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
+                                                    }
+                                                  },
+                                                  child: Row(
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.phone,
+                                                        size: 20,
+                                                        color: Colors.green,
+                                                      ),
+                                                      const SizedBox(width: 8),
+                                                      Text(
+                                                        booking
+                                                            .riderPhoneNumber!,
+                                                        style: const TextStyle(
+                                                          fontSize: 14,
+                                                          color: Colors.green,
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .underline,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 4),
+                                                      const Icon(
+                                                        Icons.chat,
+                                                        size: 16,
+                                                        color: Colors.green,
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ],
                                               // Accept/Reject buttons for PENDING bookings
@@ -1189,7 +1549,10 @@ class _DriverRideManagementScreenState
                                         ),
                                         const SizedBox(height: 16),
                                         // Start location
-                                        if (booking.pickupLocationLabel != null)
+                                        if (booking.pickupLocationLabel !=
+                                                null ||
+                                            _bookingAddresses[booking.id] !=
+                                                null)
                                           Row(
                                             children: [
                                               const Icon(
@@ -1200,7 +1563,11 @@ class _DriverRideManagementScreenState
                                               const SizedBox(width: 8),
                                               Expanded(
                                                 child: Text(
-                                                  booking.pickupLocationLabel!,
+                                                  _bookingAddresses[booking
+                                                          .id]?['pickup'] ??
+                                                      booking
+                                                          .pickupLocationLabel ??
+                                                      'Unknown location',
                                                   style: const TextStyle(
                                                     fontSize: 14,
                                                   ),
@@ -1210,7 +1577,9 @@ class _DriverRideManagementScreenState
                                           ),
                                         // Destination location
                                         if (booking.dropoffLocationLabel !=
-                                            null) ...[
+                                                null ||
+                                            _bookingAddresses[booking.id] !=
+                                                null) ...[
                                           const SizedBox(height: 8),
                                           Row(
                                             children: [
@@ -1222,7 +1591,11 @@ class _DriverRideManagementScreenState
                                               const SizedBox(width: 8),
                                               Expanded(
                                                 child: Text(
-                                                  booking.dropoffLocationLabel!,
+                                                  _bookingAddresses[booking
+                                                          .id]?['destination'] ??
+                                                      booking
+                                                          .dropoffLocationLabel ??
+                                                      'Unknown location',
                                                   style: const TextStyle(
                                                     fontSize: 14,
                                                   ),
@@ -1315,23 +1688,43 @@ class _DriverRideManagementScreenState
                               }),
                               const SizedBox(height: 24),
                             ],
-                            // Action buttons
-                            if (rideToDisplay.status == 'POSTED')
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/driver/accepted-riders',
-                                  );
-                                },
-                                icon: const Icon(Icons.directions_car),
-                                label: const Text('Start Ride'),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 16,
-                                  ),
+                          ],
+                          // GO button (for POSTED rides) or IN PROGRESS button (for IN_PROGRESS rides)
+                          if (rideToDisplay.status == 'POSTED' ||
+                              rideToDisplay.status == 'IN_PROGRESS') ...[
+                            ElevatedButton.icon(
+                              onPressed: () async {
+                                if (rideToDisplay.status == 'POSTED') {
+                                  // First time - start the ride
+                                  await _startRide(rideToDisplay);
+                                } else {
+                                  // Already in progress - just navigate to checklist
+                                  if (mounted) {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/driver/ride-checklist',
+                                      arguments: rideToDisplay,
+                                    );
+                                  }
+                                }
+                              },
+                              icon: const Icon(Icons.directions_car),
+                              label: Text(
+                                rideToDisplay.status == 'POSTED'
+                                    ? 'GO'
+                                    : 'IN PROGRESS',
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor:
+                                    rideToDisplay.status == 'POSTED'
+                                    ? Colors.green
+                                    : Colors.blue,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
                                 ),
                               ),
+                            ),
                             const SizedBox(height: 16),
                           ],
                           // Cancel ride button

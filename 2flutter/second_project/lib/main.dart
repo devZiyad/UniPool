@@ -20,6 +20,7 @@ import 'screens/driver/driver_incoming_requests_screen.dart';
 import 'screens/driver/driver_accepted_riders_screen.dart';
 import 'screens/driver/driver_navigation_screen.dart';
 import 'screens/driver/driver_rate_passenger_screen.dart';
+import 'screens/driver/driver_ride_checklist_screen.dart';
 import 'screens/vehicles/vehicles_management_screen.dart';
 import 'screens/vehicles/add_vehicle_screen.dart';
 import 'screens/profile/profile_settings_screen.dart';
@@ -80,13 +81,15 @@ class UniPoolApp extends StatelessWidget {
               const DriverIncomingRequestsScreen(),
           '/driver/accepted-riders': (context) =>
               const DriverAcceptedRidersScreen(),
-          // '/driver/navigation' and '/driver/rate-passenger' are handled by onGenerateRoute
+          // '/driver/navigation', '/driver/rate-passenger', and '/driver/ride-checklist' are handled by onGenerateRoute
           // Profile & Settings
           '/profile-settings': (context) => const ProfileSettingsScreen(),
           '/vehicles': (context) => const VehiclesManagementScreen(),
           '/vehicles/add': (context) {
             final vehicle = ModalRoute.of(context)?.settings.arguments;
-            return AddVehicleScreen(vehicle: vehicle is Vehicle ? vehicle : null);
+            return AddVehicleScreen(
+              vehicle: vehicle is Vehicle ? vehicle : null,
+            );
           },
           // Admin routes
           '/admin/users': (context) => const AdminUsersManagementScreen(),
@@ -98,9 +101,7 @@ class UniPoolApp extends StatelessWidget {
             if (ride == null || ride is! Ride) {
               return MaterialPageRoute(
                 builder: (context) => const Scaffold(
-                  body: Center(
-                    child: Text('Error: Ride not provided'),
-                  ),
+                  body: Center(child: Text('Error: Ride not provided')),
                 ),
               );
             }
@@ -113,9 +114,7 @@ class UniPoolApp extends StatelessWidget {
             if (booking == null || booking is! Booking) {
               return MaterialPageRoute(
                 builder: (context) => const Scaffold(
-                  body: Center(
-                    child: Text('Error: Booking not provided'),
-                  ),
+                  body: Center(child: Text('Error: Booking not provided')),
                 ),
               );
             }
@@ -128,9 +127,7 @@ class UniPoolApp extends StatelessWidget {
             if (ride == null || ride is! Ride) {
               return MaterialPageRoute(
                 builder: (context) => const Scaffold(
-                  body: Center(
-                    child: Text('Error: Ride not provided'),
-                  ),
+                  body: Center(child: Text('Error: Ride not provided')),
                 ),
               );
             }
@@ -143,14 +140,25 @@ class UniPoolApp extends StatelessWidget {
             if (booking == null || booking is! Booking) {
               return MaterialPageRoute(
                 builder: (context) => const Scaffold(
-                  body: Center(
-                    child: Text('Error: Booking not provided'),
-                  ),
+                  body: Center(child: Text('Error: Booking not provided')),
                 ),
               );
             }
             return MaterialPageRoute(
               builder: (context) => DriverRatePassengerScreen(booking: booking),
+            );
+          }
+          if (settings.name == '/driver/ride-checklist') {
+            final ride = settings.arguments;
+            if (ride == null || ride is! Ride) {
+              return MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Center(child: Text('Error: Ride not provided')),
+                ),
+              );
+            }
+            return MaterialPageRoute(
+              builder: (context) => DriverRideChecklistScreen(ride: ride),
             );
           }
           return null;

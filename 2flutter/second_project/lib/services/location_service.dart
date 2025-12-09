@@ -58,50 +58,69 @@ class LocationService {
       print('Location search response body: ${response.body}');
 
       final List<dynamic> data = jsonDecode(response.body);
+      print('Location search: Parsed ${data.length} items from response');
 
       // Map the API response (OpenStreetMap/Nominatim format) to Location model
-      final locations = data.map<Location>((json) {
-        // Handle both documented format and actual OpenStreetMap format
-        if (json.containsKey('label') && json.containsKey('latitude')) {
-          // Documented format - use directly
-          return Location.fromJson(json as Map<String, dynamic>);
-        } else {
-          // OpenStreetMap/Nominatim format - map to Location model
-          final latStr = json['lat'] as String? ?? json['latitude']?.toString();
-          final lonStr =
-              json['lon'] as String? ?? json['longitude']?.toString();
-
-          if (latStr == null || lonStr == null) {
-            throw Exception('Missing latitude or longitude in response');
+      final locations = <Location>[];
+      for (final item in data) {
+        try {
+          if (item is! Map<String, dynamic>) {
+            print('Location search: Skipping non-map item: $item');
+            continue;
           }
 
-          final lat = double.tryParse(latStr);
-          final lon = double.tryParse(lonStr);
+          final json = item as Map<String, dynamic>;
 
-          if (lat == null || lon == null) {
-            throw Exception(
-              'Invalid latitude or longitude format: lat=$latStr, lon=$lonStr',
+          // Handle both documented format and actual OpenStreetMap format
+          if (json.containsKey('label') && json.containsKey('latitude')) {
+            // Documented format - use directly
+            locations.add(Location.fromJson(json));
+          } else {
+            // OpenStreetMap/Nominatim format - map to Location model
+            final latStr =
+                json['lat'] as String? ?? json['latitude']?.toString();
+            final lonStr =
+                json['lon'] as String? ?? json['longitude']?.toString();
+
+            if (latStr == null || lonStr == null) {
+              print('Location search: Missing lat/lon in item: $json');
+              continue;
+            }
+
+            final lat = double.tryParse(latStr);
+            final lon = double.tryParse(lonStr);
+
+            if (lat == null || lon == null) {
+              print(
+                'Location search: Invalid lat/lon format: lat=$latStr, lon=$lonStr',
+              );
+              continue;
+            }
+
+            // Use 'name' as label, fallback to 'display_name' if name is not available
+            final name = json['name'] as String?;
+            final displayName = json['display_name'] as String?;
+            final label = name ?? displayName ?? 'Unknown Location';
+
+            // Use 'display_name' as address
+            final address = displayName;
+
+            locations.add(
+              Location(
+                id: null, // Search results don't have backend IDs
+                label: label,
+                address: address,
+                latitude: lat,
+                longitude: lon,
+                isFavorite: false,
+              ),
             );
           }
-
-          // Use 'name' as label, fallback to 'display_name' if name is not available
-          final name = json['name'] as String?;
-          final displayName = json['display_name'] as String?;
-          final label = name ?? displayName ?? 'Unknown Location';
-
-          // Use 'display_name' as address
-          final address = displayName;
-
-          return Location(
-            id: null, // Search results don't have backend IDs
-            label: label,
-            address: address,
-            latitude: lat,
-            longitude: lon,
-            isFavorite: false,
-          );
+        } catch (e) {
+          print('Location search: Error processing item $item: $e');
+          continue;
         }
-      }).toList();
+      }
 
       print('Location search result: ${locations.length} locations found');
 
