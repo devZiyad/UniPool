@@ -385,14 +385,25 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                         '  Ride departureTimeEnd: ${ride.departureTimeEnd?.toIso8601String()}',
                                       );
 
-                                      await BookingService.createBooking(
-                                        rideId: ride.id,
-                                        seats: seatsNeeded,
-                                        pickupLocationId: pickupLocationId,
-                                        dropoffLocationId: dropoffLocationId,
-                                        pickupTimeStart: pickupTimeStart,
-                                        pickupTimeEnd: pickupTimeEnd,
+                                      final booking =
+                                          await BookingService.createBooking(
+                                            rideId: ride.id,
+                                            seats: seatsNeeded,
+                                            pickupLocationId: pickupLocationId,
+                                            dropoffLocationId:
+                                                dropoffLocationId,
+                                            pickupTimeStart: pickupTimeStart,
+                                            pickupTimeEnd: pickupTimeEnd,
+                                          );
+
+                                      // Backend should automatically create a notification for the driver
+                                      // Type: BOOKING_REQUESTED
+                                      // Title: "New Booking Request"
+                                      // Body: "A rider has requested to join your ride #${ride.id}"
+                                      print(
+                                        'Booking created: ${booking.id}. Driver (ID: ${ride.driverId}) should receive notification.',
                                       );
+
                                       if (mounted) {
                                         Navigator.pushNamed(
                                           context,

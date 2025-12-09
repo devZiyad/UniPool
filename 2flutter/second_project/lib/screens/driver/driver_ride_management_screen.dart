@@ -218,9 +218,17 @@ class _DriverRideManagementScreenState
       await driverProvider.loadBookingsForRide(ride.id);
       final bookings = driverProvider.acceptedBookings;
 
-      // Send notifications to all riders
+      // Backend should automatically create notifications for all riders when ride status changes to IN_PROGRESS
+      // Type: RIDE_STARTED
+      // Title: "Ride Started"
+      // Body: "Your driver has started the ride. Please be ready at your pickup location."
       final riderIds = bookings.map((b) => b.riderId).toList();
       if (riderIds.isNotEmpty) {
+        print(
+          'Ride ${ride.id} started. Riders (IDs: $riderIds) should receive notifications.',
+        );
+
+        // Try to send notifications via service (in case backend doesn't auto-create them)
         try {
           await NotificationService.notifyRidersInRide(
             rideId: ride.id,
@@ -230,8 +238,10 @@ class _DriverRideManagementScreenState
                 'Your driver has started the ride. Please be ready at your pickup location.',
           );
         } catch (e) {
-          print('Error sending notifications: $e');
-          // Continue even if notifications fail
+          print(
+            'Notification service call failed (backend may auto-create): $e',
+          );
+          // Continue even if notifications fail - backend should handle it
         }
       }
 
@@ -1372,9 +1382,19 @@ class _DriverRideManagementScreenState
                                                       child: ElevatedButton(
                                                         onPressed: () async {
                                                           try {
-                                                            await BookingService.acceptBooking(
-                                                              booking.id,
+                                                            final acceptedBooking =
+                                                                await BookingService.acceptBooking(
+                                                                  booking.id,
+                                                                );
+
+                                                            // Backend should automatically create a notification for the rider
+                                                            // Type: BOOKING_CONFIRMED
+                                                            // Title: "Booking Confirmed"
+                                                            // Body: "Your booking for ride #${rideToDisplay.id} has been confirmed"
+                                                            print(
+                                                              'Booking accepted: ${acceptedBooking.id}. Rider (ID: ${acceptedBooking.riderId}) should receive notification.',
                                                             );
+
                                                             // Reload bookings
                                                             final driverProvider =
                                                                 Provider.of<

@@ -238,7 +238,7 @@ class _DriverRideChecklistScreenState extends State<DriverRideChecklistScreen> {
       builder: (context) => AlertDialog(
         title: const Text('Confirm Ride Complete'),
         content: const Text(
-          'Are you sure the ride is complete? This will mark the ride as completed.',
+          'You will be taken to rate all riders, then the ride will be marked as completed.',
         ),
         actions: [
           TextButton(
@@ -247,7 +247,7 @@ class _DriverRideChecklistScreenState extends State<DriverRideChecklistScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm'),
+            child: const Text('Continue'),
           ),
         ],
       ),
@@ -255,57 +255,18 @@ class _DriverRideChecklistScreenState extends State<DriverRideChecklistScreen> {
 
     if (confirmed != true) return;
 
-    setState(() {
-      _isCompleting = true;
-    });
-
-    try {
-      await RideService.updateRideStatus(widget.ride.id, 'COMPLETED');
-
-      // Send notifications to all riders that the ride is completed
-      final driverProvider = Provider.of<DriverProvider>(
+    // Navigate to rating screen instead of directly completing
+    if (mounted) {
+      Navigator.pushNamed(
         context,
-        listen: false,
-      );
-      await driverProvider.loadBookingsForRide(widget.ride.id);
-      final bookings = driverProvider.acceptedBookings;
-
-      final riderIds = bookings.map((b) => b.riderId).toList();
-      if (riderIds.isNotEmpty) {
-        try {
-          await NotificationService.notifyRidersInRide(
-            rideId: widget.ride.id,
-            riderIds: riderIds,
-            title: 'Ride Completed',
-            body: 'Your ride has been completed. Please rate your driver.',
-          );
-        } catch (e) {
-          print('Error sending completion notifications: $e');
-          // Continue even if notifications fail
+        '/driver/rate-all-riders',
+        arguments: widget.ride,
+      ).then((completed) {
+        // If ride was completed, pop this screen too
+        if (completed == true && mounted) {
+          Navigator.pop(context, true);
         }
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ride marked as completed'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isCompleting = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error completing ride: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      });
     }
   }
 

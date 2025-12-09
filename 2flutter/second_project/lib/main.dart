@@ -20,6 +20,7 @@ import 'screens/driver/driver_incoming_requests_screen.dart';
 import 'screens/driver/driver_accepted_riders_screen.dart';
 import 'screens/driver/driver_navigation_screen.dart';
 import 'screens/driver/driver_rate_passenger_screen.dart';
+import 'screens/driver/driver_rate_all_riders_screen.dart';
 import 'screens/driver/driver_ride_checklist_screen.dart';
 import 'screens/vehicles/vehicles_management_screen.dart';
 import 'screens/vehicles/add_vehicle_screen.dart';
@@ -159,6 +160,19 @@ class UniPoolApp extends StatelessWidget {
             }
             return MaterialPageRoute(
               builder: (context) => DriverRideChecklistScreen(ride: ride),
+            );
+          }
+          if (settings.name == '/driver/rate-all-riders') {
+            final ride = settings.arguments;
+            if (ride == null || ride is! Ride) {
+              return MaterialPageRoute(
+                builder: (context) => const Scaffold(
+                  body: Center(child: Text('Error: Ride not provided')),
+                ),
+              );
+            }
+            return MaterialPageRoute(
+              builder: (context) => DriverRateAllRidersScreen(ride: ride),
             );
           }
           return null;
