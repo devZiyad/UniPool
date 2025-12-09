@@ -29,6 +29,7 @@ public class VehicleServiceImpl implements VehicleService {
                 .color(vehicle.getColor())
                 .plateNumber(vehicle.getPlateNumber())
                 .seatCount(vehicle.getSeatCount())
+                .type(vehicle.getType())
                 .ownerId(vehicle.getOwner().getId())
                 .ownerName(vehicle.getOwner().getFullName())
                 .createdAt(vehicle.getCreatedAt())
@@ -51,6 +52,7 @@ public class VehicleServiceImpl implements VehicleService {
                 .color(request.getColor())
                 .plateNumber(request.getPlateNumber())
                 .seatCount(request.getSeatCount())
+                .type(request.getType())
                 .owner(owner)
                 .build();
 
@@ -86,6 +88,7 @@ public class VehicleServiceImpl implements VehicleService {
         if (request.getColor() != null) vehicle.setColor(request.getColor());
         if (request.getPlateNumber() != null) vehicle.setPlateNumber(request.getPlateNumber());
         if (request.getSeatCount() != null) vehicle.setSeatCount(request.getSeatCount());
+        if (request.getType() != null) vehicle.setType(request.getType());
 
         return toResponse(vehicleRepository.save(vehicle));
     }

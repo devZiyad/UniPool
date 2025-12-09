@@ -213,6 +213,7 @@ public class TestUtils {
         request.setColor("Blue");
         request.setPlateNumber("TEST" + System.currentTimeMillis());
         request.setSeatCount(4);
+        request.setType(me.devziyad.unipoolbackend.common.VehicleType.SEDAN);
 
         byte[] responseBytes = restClient
                 .post()

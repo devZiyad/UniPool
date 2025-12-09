@@ -2,6 +2,7 @@ package me.devziyad.unipoolbackend.vehicle.dto;
 
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
+import me.devziyad.unipoolbackend.common.VehicleType;
 
 @Data
 public class UpdateVehicleRequest {
@@ -12,4 +13,6 @@ public class UpdateVehicleRequest {
 
     @Positive(message = "Seat count must be positive")
     private Integer seatCount;
+
+    private VehicleType type;
 }

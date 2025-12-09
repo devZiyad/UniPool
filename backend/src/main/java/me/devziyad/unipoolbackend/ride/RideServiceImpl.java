@@ -67,6 +67,7 @@ public class RideServiceImpl implements RideService {
                 .vehicleModel(ride.getVehicle().getModel())
                 .vehiclePlateNumber(ride.getVehicle().getPlateNumber())
                 .vehicleSeatCount(ride.getVehicle().getSeatCount())
+                .vehicleType(ride.getVehicle().getType())
                 .pickupLocationId(ride.getPickupLocation().getId())
                 .pickupLocationLabel(ride.getPickupLocation().getLabel())
                 .pickupLatitude(ride.getPickupLocation().getLatitude())

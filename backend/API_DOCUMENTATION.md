@@ -521,7 +521,8 @@ Create a new vehicle.
   "model": "Camry",
   "color": "Blue",
   "plateNumber": "ABC-1234",
-  "seatCount": 4
+  "seatCount": 4,
+  "type": "SEDAN"
 }
 ```
 
@@ -531,6 +532,7 @@ Create a new vehicle.
 - `color` (optional): String, max 100 characters
 - `plateNumber` (required): String, max 50 characters
 - `seatCount` (required): Positive integer
+- `type` (required): Vehicle type enum (SPORTS, PICKUP, SEDAN, SUV, VAN)
 
 **Response:** `201 Created` (VehicleResponse)
 
@@ -544,7 +546,8 @@ curl -X POST http://localhost:8080/api/vehicles \
     "model": "Camry",
     "color": "Blue",
     "plateNumber": "ABC-1234",
-    "seatCount": 4
+    "seatCount": 4,
+    "type": "SEDAN"
   }'
 ```
 
@@ -598,13 +601,15 @@ Update vehicle.
   "model": "Accord",
   "color": "Red",
   "plateNumber": "XYZ-5678",
-  "seatCount": 5
+  "seatCount": 5,
+  "type": "SEDAN"
 }
 ```
 
 **Field Validation:**
 - All fields optional
 - `seatCount`: Positive integer if provided
+- `type`: Vehicle type enum (SPORTS, PICKUP, SEDAN, SUV, VAN) if provided
 
 **Response:** `200 OK` (VehicleResponse)
 
@@ -2935,6 +2940,7 @@ curl -X POST http://localhost:8080/api/admin/database/regenerate \
   "color": "Blue",
   "plateNumber": "ABC-1234",
   "seatCount": 4,
+  "type": "SEDAN",
   "createdAt": "2024-01-15T10:30:00"
 }
 ```

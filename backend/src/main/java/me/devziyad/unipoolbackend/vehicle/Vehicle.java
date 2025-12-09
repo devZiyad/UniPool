@@ -2,6 +2,7 @@ package me.devziyad.unipoolbackend.vehicle;
 
 import jakarta.persistence.*;
 import lombok.*;
+import me.devziyad.unipoolbackend.common.VehicleType;
 import me.devziyad.unipoolbackend.user.User;
 
 import java.time.Instant;
@@ -36,6 +37,10 @@ public class Vehicle {
 
     @Column(nullable = false)
     private Integer seatCount;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private VehicleType type;
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "owner_id", nullable = false)

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import me.devziyad.unipoolbackend.common.VehicleType;
 
 @Data
 public class CreateVehicleRequest {
@@ -26,4 +27,7 @@ public class CreateVehicleRequest {
     @NotNull(message = "Seat count is required")
     @Positive(message = "Seat count must be positive")
     private Integer seatCount;
+
+    @NotNull(message = "Vehicle type is required")
+    private VehicleType type;
 }

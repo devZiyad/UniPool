@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import me.devziyad.unipoolbackend.booking.dto.BookingResponse;
 import me.devziyad.unipoolbackend.common.RideStatus;
+import me.devziyad.unipoolbackend.common.VehicleType;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -25,6 +26,7 @@ public class RideResponse {
     private String vehicleModel;
     private String vehiclePlateNumber;
     private Integer vehicleSeatCount;
+    private VehicleType vehicleType;
     private Long pickupLocationId;
     private String pickupLocationLabel;
     private Double pickupLatitude;
