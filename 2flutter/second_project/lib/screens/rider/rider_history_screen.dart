@@ -7,7 +7,12 @@ import '../../models/ride.dart';
 import '../../widgets/app_drawer.dart';
 
 class RiderHistoryScreen extends StatefulWidget {
-  const RiderHistoryScreen({super.key});
+  final bool showInTabBar;
+  
+  const RiderHistoryScreen({
+    super.key,
+    this.showInTabBar = false,
+  });
 
   @override
   State<RiderHistoryScreen> createState() => _RiderHistoryScreenState();
@@ -124,7 +129,7 @@ class _RiderHistoryScreenState extends State<RiderHistoryScreen> {
           ),
         ],
       ),
-      drawer: const AppDrawer(),
+      drawer: widget.showInTabBar ? null : const AppDrawer(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

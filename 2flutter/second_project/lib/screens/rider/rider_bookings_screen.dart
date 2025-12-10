@@ -8,7 +8,9 @@ import '../../models/ride.dart';
 import '../../widgets/app_drawer.dart';
 
 class RiderBookingsScreen extends StatefulWidget {
-  const RiderBookingsScreen({super.key});
+  final bool showInTabBar;
+
+  const RiderBookingsScreen({super.key, this.showInTabBar = false});
 
   @override
   State<RiderBookingsScreen> createState() => _RiderBookingsScreenState();
@@ -74,9 +76,7 @@ class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
           final hasRating = await RatingService.hasRatingForBooking(booking.id);
           if (!hasRating) {
             // This booking needs rating - store it for navigation
-            if (completedBookingNeedingRating == null) {
-              completedBookingNeedingRating = booking;
-            }
+            completedBookingNeedingRating ??= booking;
             // Don't add to validBookings - completed bookings shouldn't show in bookings list
             continue;
           }
@@ -177,7 +177,7 @@ class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
           ),
         ],
       ),
-      drawer: const AppDrawer(),
+      drawer: widget.showInTabBar ? null : const AppDrawer(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

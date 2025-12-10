@@ -102,7 +102,7 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // Navigate back to time filters screen
+            // Navigate back to previous screen
             // Check if user is driver or rider to use correct route
             final authProvider = Provider.of<AuthProvider>(
               context,
@@ -117,7 +117,8 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                 '/driver/post-ride/route-time',
               );
             } else {
-              Navigator.pushReplacementNamed(context, '/rider/time-filters');
+              // Navigate back to rider main screen (search tab)
+              Navigator.pushReplacementNamed(context, '/rider');
             }
           },
         ),

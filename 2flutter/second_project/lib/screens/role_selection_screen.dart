@@ -103,7 +103,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     }
 
     if (mounted) {
-      Navigator.pushReplacementNamed(context, '/rider/destination-search');
+      Navigator.pushReplacementNamed(context, '/rider');
     }
   }
 

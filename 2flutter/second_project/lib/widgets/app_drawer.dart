@@ -76,34 +76,12 @@ class AppDrawer extends StatelessWidget {
                   user.role.toUpperCase() == 'BOTH')) ...[
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.search),
-              title: const Text('Search for Ride'),
-              subtitle: const Text(
-                'Find rides by destination and start location',
-              ),
+              leading: const Icon(Icons.home),
+              title: const Text('Rider Home'),
+              subtitle: const Text('Go to rider main screen'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/rider/destination-search');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.event_note),
-              title: const Text('My Bookings'),
-              subtitle: const Text(
-                'View your pending and confirmed bookings',
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/rider/bookings');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text('Ride History'),
-              subtitle: const Text('View your completed bookings'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/rider/history');
+                Navigator.pushReplacementNamed(context, '/rider');
               },
             ),
           ],

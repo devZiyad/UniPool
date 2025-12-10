@@ -20,7 +20,12 @@ import '../../theme/app_theme.dart';
 enum SearchStep { destination, startLocation, timeFilters }
 
 class RiderUnifiedSearchScreen extends StatefulWidget {
-  const RiderUnifiedSearchScreen({super.key});
+  final bool showInTabBar;
+  
+  const RiderUnifiedSearchScreen({
+    super.key,
+    this.showInTabBar = false,
+  });
 
   @override
   State<RiderUnifiedSearchScreen> createState() =>
@@ -926,7 +931,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
               )
             : null,
       ),
-      drawer: AppDrawer(),
+      drawer: widget.showInTabBar ? null : const AppDrawer(),
       body: Stack(
         children: [
           MapWidget(
