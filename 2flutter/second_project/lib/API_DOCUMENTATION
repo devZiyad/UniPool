@@ -558,7 +558,8 @@ Register a new vehicle.
   "model": "Camry",
   "color": "Blue",
   "plateNumber": "ABC-1234",
-  "seatCount": 4
+  "seatCount": 4,
+  "type": "SEDAN"
 }
 ```
 
@@ -568,6 +569,7 @@ Register a new vehicle.
 - `color` (optional): Vehicle color
 - `plateNumber` (required): License plate number
 - `seatCount` (required): Number of seats (must be positive)
+- `type` (required): Vehicle type - `SEDAN`, `SPORTS`, `SUV`, `PICKUP`, or `VAN`
 
 **Response:** `201 Created`
 ```json
@@ -578,6 +580,7 @@ Register a new vehicle.
   "color": "Blue",
   "plateNumber": "ABC-1234",
   "seatCount": 4,
+  "type": "SEDAN",
   "ownerId": 1,
   "ownerName": "John Doe",
   "active": false,
@@ -605,6 +608,7 @@ Get vehicle by ID.
   "color": "Blue",
   "plateNumber": "ABC-1234",
   "seatCount": 4,
+  "type": "SEDAN",
   "ownerId": 1,
   "ownerName": "John Doe",
   "active": false,
@@ -630,6 +634,7 @@ Get all vehicles owned by current user.
     "color": "Blue",
     "plateNumber": "ABC-1234",
     "seatCount": 4,
+    "type": "SEDAN",
     "ownerId": 1,
     "ownerName": "John Doe",
     "active": true,
@@ -667,6 +672,7 @@ Update vehicle information.
   "color": "Red",
   "plateNumber": "XYZ-5678",
   "seatCount": 5,
+  "type": "SEDAN",
   "active": true
 }
 ```
@@ -677,6 +683,7 @@ Update vehicle information.
 - `color`: Vehicle color
 - `plateNumber`: License plate number
 - `seatCount`: Number of seats (must be positive if provided)
+- `type`: Vehicle type - `SEDAN`, `SPORTS`, `SUV`, `PICKUP`, or `VAN`
 - `active`: Whether vehicle is active
 
 **Response:** `200 OK` (VehicleResponse)
@@ -2286,6 +2293,13 @@ Reset the entire database by deleting all data.
 - `CASH` - Cash payment
 - `WALLET` - Wallet balance payment
 
+#### VehicleType
+- `SEDAN` - Sedan car
+- `SPORTS` - Sports car
+- `SUV` - Station wagon/SUV
+- `PICKUP` - Pickup truck
+- `VAN` - Logistic van
+
 #### NotificationType
 - `BOOKING_CONFIRMED` - Booking confirmed notification
 - `BOOKING_CANCELLED` - Booking cancelled notification
@@ -2370,7 +2384,8 @@ Reset the entire database by deleting all data.
   "model": "string (required)",
   "color": "string (optional)",
   "plateNumber": "string (required)",
-  "seatCount": "integer (required, positive)"
+  "seatCount": "integer (required, positive)",
+  "type": "string (required: SEDAN, SPORTS, SUV, PICKUP, VAN)"
 }
 ```
 
@@ -2382,6 +2397,7 @@ Reset the entire database by deleting all data.
   "color": "string (optional)",
   "plateNumber": "string (optional)",
   "seatCount": "integer (optional, positive)",
+  "type": "string (optional: SEDAN, SPORTS, SUV, PICKUP, VAN)",
   "active": "boolean (optional)"
 }
 ```
@@ -2525,6 +2541,7 @@ Reset the entire database by deleting all data.
   "color": "string",
   "plateNumber": "string",
   "seatCount": "integer",
+  "type": "string (SEDAN, SPORTS, SUV, PICKUP, VAN)",
   "ownerId": "integer",
   "ownerName": "string",
   "active": "boolean",

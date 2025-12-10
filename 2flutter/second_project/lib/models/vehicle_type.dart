@@ -23,15 +23,15 @@ enum VehicleType {
   String get assetPath {
     switch (this) {
       case VehicleType.sedan:
-        return 'assets/images/vehicles/SEDAN.svg';
+        return 'assets/images/vehicles/sedan-car-icon.svg';
       case VehicleType.sportsCar:
-        return 'assets/images/vehicles/SPORTS.svg';
+        return 'assets/images/vehicles/sports-car-icon.svg';
       case VehicleType.stationWagon:
-        return 'assets/images/vehicles/SUV.svg';
+        return 'assets/images/vehicles/station-wagon-car-icon.svg';
       case VehicleType.pickupTruck:
-        return 'assets/images/vehicles/PICKUP.svg';
+        return 'assets/images/vehicles/pickup-truck-icon.svg';
       case VehicleType.logisticVan:
-        return 'assets/images/vehicles/VAN.svg';
+        return 'assets/images/vehicles/logistic-van-icon.svg';
     }
   }
 

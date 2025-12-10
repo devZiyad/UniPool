@@ -10,7 +10,7 @@ class VehicleService {
     String? color,
     required String plateNumber,
     required int seatCount,
-    VehicleType? vehicleType,
+    required VehicleType vehicleType,
   }) async {
     final response = await ApiClient.post('/vehicles', {
       'make': make,
@@ -18,7 +18,7 @@ class VehicleService {
       if (color != null) 'color': color,
       'plateNumber': plateNumber,
       'seatCount': seatCount,
-      if (vehicleType != null) 'type': vehicleType.apiValue,
+      'type': vehicleType.apiValue,
     });
 
     return Vehicle.fromJson(jsonDecode(response.body));
