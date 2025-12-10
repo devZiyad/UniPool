@@ -1,9 +1,11 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/user_service.dart';
 import '../services/booking_service.dart';
 import '../services/rating_service.dart';
+import '../theme/app_theme.dart';
 
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
@@ -19,21 +21,18 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
   bool _riderExpanding = false;
   bool _driverExpanding = false;
   late AnimationController _animationController;
-  late Animation<double> _riderAnimation;
-  late Animation<double> _driverAnimation;
+  late Animation<double> _circleAnimation;
 
   @override
   void initState() {
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 600),
     );
-    _riderAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    _driverAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    _circleAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
     );
     // Check for completed rides that need rating
     _checkForCompletedRides();
@@ -90,7 +89,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     });
 
     _animationController.forward();
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 600));
 
     if (!mounted) return;
 
@@ -115,7 +114,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     });
 
     _animationController.forward();
-    await Future.delayed(const Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 600));
 
     if (!mounted) return;
 
@@ -134,222 +133,190 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    // Calculate the maximum radius needed to cover the entire screen from a corner
+    // Distance from corner to opposite corner
+    final maxRadiusSqrt = math.sqrt(
+      size.width * size.width + size.height * size.height,
+    );
+
     return Scaffold(
+      backgroundColor: AppTheme.white,
       body: Stack(
         children: [
           // Rider section (top-left triangle)
-          AnimatedBuilder(
-            animation: _riderAnimation,
-            builder: (context, child) {
-              final scale = _riderExpanding
-                  ? 1.0 + (_riderAnimation.value * 3.0)
-                  : _riderHovered
-                  ? 1.05
-                  : 1.0;
-
-              return Positioned.fill(
-                child: _riderExpanding
-                    ? Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.blue.shade600,
-                              Colors.blue.shade400,
-                            ],
-                          ),
+          Positioned.fill(
+            child: ClipPath(
+              clipper: DiagonalClipper(isTop: true),
+              child: GestureDetector(
+                onTap: _selectRider,
+                child: MouseRegion(
+                  onEnter: (_) {
+                    if (!_riderExpanding && !_driverExpanding) {
+                      setState(() => _riderHovered = true);
+                    }
+                  },
+                  onExit: (_) {
+                    if (!_riderExpanding && !_driverExpanding) {
+                      setState(() => _riderHovered = false);
+                    }
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: _riderHovered
+                            ? [
+                                AppTheme.primaryGreen,
+                                AppTheme.primaryGreenLight,
+                              ]
+                            : [
+                                AppTheme.primaryGreen.withOpacity(0.8),
+                                AppTheme.primaryGreenLight.withOpacity(0.8),
+                              ],
+                      ),
+                    ),
+                    child: Align(
+                      alignment: Alignment.topLeft,
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          top: 80,
+                          left: 40,
                         ),
-                      )
-                    : Transform.scale(
-                        scale: scale,
-                        alignment: Alignment.topLeft,
-                        child: ClipPath(
-                          clipper: DiagonalClipper(isTop: true),
-                          child: MouseRegion(
-                            onEnter: (_) {
-                              if (!_riderExpanding && !_driverExpanding) {
-                                setState(() => _riderHovered = true);
-                              }
-                            },
-                            onExit: (_) {
-                              if (!_riderExpanding && !_driverExpanding) {
-                                setState(() => _riderHovered = false);
-                              }
-                            },
-                            child: GestureDetector(
-                              onTap: _selectRider,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: _riderHovered
-                                        ? [
-                                            Colors.blue.shade600,
-                                            Colors.blue.shade400,
-                                          ]
-                                        : [
-                                            Colors.blue.shade400,
-                                            Colors.blue.shade300,
-                                          ],
-                                  ),
-                                ),
-                                child: Align(
-                                  alignment: Alignment.topLeft,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(
-                                      top: 80,
-                                      left: 40,
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Icon(
-                                          Icons.person,
-                                          size: _riderHovered ? 80 : 64,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'Rider',
-                                          style: TextStyle(
-                                            fontSize: _riderHovered ? 36 : 28,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Search and join rides',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.white.withOpacity(
-                                              0.9,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.person,
+                              size: _riderHovered ? 80 : 64,
+                              color: AppTheme.white,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Rider',
+                              style: TextStyle(
+                                fontSize: _riderHovered ? 36 : 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.white,
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Search and join rides',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppTheme.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-              );
-            },
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
           // Driver section (bottom-right triangle)
-          AnimatedBuilder(
-            animation: _driverAnimation,
-            builder: (context, child) {
-              final scale = _driverExpanding
-                  ? 1.0 + (_driverAnimation.value * 3.0)
-                  : _driverHovered
-                  ? 1.05
-                  : 1.0;
-
-              return Positioned.fill(
-                child: _driverExpanding
-                    ? Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.orange.shade600,
-                              Colors.orange.shade400,
-                            ],
-                          ),
+          Positioned.fill(
+            child: ClipPath(
+              clipper: DiagonalClipper(isTop: false),
+              child: GestureDetector(
+                onTap: _selectDriver,
+                child: MouseRegion(
+                  onEnter: (_) {
+                    if (!_riderExpanding && !_driverExpanding) {
+                      setState(() => _driverHovered = true);
+                    }
+                  },
+                  onExit: (_) {
+                    if (!_riderExpanding && !_driverExpanding) {
+                      setState(() => _driverHovered = false);
+                    }
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: _driverHovered
+                            ? [
+                                AppTheme.darkNavy,
+                                AppTheme.darkNavy.withOpacity(0.8),
+                              ]
+                            : [
+                                AppTheme.darkNavy.withOpacity(0.8),
+                                AppTheme.darkNavy.withOpacity(0.6),
+                              ],
+                      ),
+                    ),
+                    child: Align(
+                      alignment: Alignment.bottomRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          bottom: 80,
+                          right: 40,
                         ),
-                      )
-                    : Transform.scale(
-                        scale: scale,
-                        alignment: Alignment.bottomRight,
-                        child: ClipPath(
-                          clipper: DiagonalClipper(isTop: false),
-                          child: MouseRegion(
-                            onEnter: (_) {
-                              if (!_riderExpanding && !_driverExpanding) {
-                                setState(() => _driverHovered = true);
-                              }
-                            },
-                            onExit: (_) {
-                              if (!_riderExpanding && !_driverExpanding) {
-                                setState(() => _driverHovered = false);
-                              }
-                            },
-                            child: GestureDetector(
-                              onTap: _selectDriver,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: _driverHovered
-                                        ? [
-                                            Colors.orange.shade600,
-                                            Colors.orange.shade400,
-                                          ]
-                                        : [
-                                            Colors.orange.shade400,
-                                            Colors.orange.shade300,
-                                          ],
-                                  ),
-                                ),
-                                child: Align(
-                                  alignment: Alignment.bottomRight,
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(
-                                      bottom: 80,
-                                      right: 40,
-                                    ),
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: [
-                                        Icon(
-                                          Icons.directions_car,
-                                          size: _driverHovered ? 80 : 64,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(height: 16),
-                                        Text(
-                                          'Driver',
-                                          style: TextStyle(
-                                            fontSize: _driverHovered ? 36 : 28,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'Post rides and host passengers',
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            color: Colors.white.withOpacity(
-                                              0.9,
-                                            ),
-                                          ),
-                                          textAlign: TextAlign.right,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Icon(
+                              Icons.directions_car,
+                              size: _driverHovered ? 80 : 64,
+                              color: AppTheme.white,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Driver',
+                              style: TextStyle(
+                                fontSize: _driverHovered ? 36 : 28,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.white,
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Post rides and host passengers',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: AppTheme.white.withOpacity(0.9),
+                              ),
+                              textAlign: TextAlign.right,
+                            ),
+                          ],
                         ),
                       ),
-              );
-            },
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
+          // Expanding circle overlay
+          if (_riderExpanding || _driverExpanding)
+            AnimatedBuilder(
+              animation: _circleAnimation,
+              builder: (context, child) {
+                final radius = _circleAnimation.value * maxRadiusSqrt;
+                final center = _riderExpanding
+                    ? Offset(0, 0) // Top-left corner
+                    : Offset(size.width, size.height); // Bottom-right corner
+
+                return CustomPaint(
+                  painter: CircleExpansionPainter(
+                    center: center,
+                    radius: radius,
+                    color: _riderExpanding
+                        ? AppTheme.primaryGreen
+                        : AppTheme.darkNavy,
+                  ),
+                  size: size,
+                );
+              },
+            ),
         ],
       ),
     );
@@ -384,4 +351,32 @@ class DiagonalClipper extends CustomClipper<Path> {
 
   @override
   bool shouldReclip(CustomClipper<Path> oldClipper) => false;
+}
+
+class CircleExpansionPainter extends CustomPainter {
+  final Offset center;
+  final double radius;
+  final Color color;
+
+  CircleExpansionPainter({
+    required this.center,
+    required this.radius,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+
+    canvas.drawCircle(center, radius, paint);
+  }
+
+  @override
+  bool shouldRepaint(CircleExpansionPainter oldDelegate) {
+    return oldDelegate.radius != radius ||
+        oldDelegate.center != center ||
+        oldDelegate.color != color;
+  }
 }
