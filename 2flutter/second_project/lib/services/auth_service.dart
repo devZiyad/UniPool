@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../models/user.dart';
 import 'api_client.dart';
+import 'push_notification_service.dart';
 
 class AuthService {
   static Future<Map<String, dynamic>> register({
@@ -45,6 +46,14 @@ class AuthService {
   }
 
   static Future<void> logout() async {
+    // Stop polling for notifications on logout
+    try {
+      final pushService = PushNotificationService();
+      pushService.stopPolling();
+      pushService.clearShownNotificationIds();
+    } catch (e) {
+      print('Error stopping push notifications on logout: $e');
+    }
     await ApiClient.setToken(null);
   }
 }

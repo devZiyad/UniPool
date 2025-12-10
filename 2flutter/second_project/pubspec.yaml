@@ -39,6 +39,9 @@ dependencies:
   
   # URL launcher for WhatsApp links
   url_launcher: ^6.2.5
+  
+  # Push notifications
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:

@@ -32,8 +32,19 @@ import 'models/vehicle.dart';
 import 'models/ride.dart';
 import 'models/booking.dart';
 import 'theme/app_theme.dart';
+import 'services/push_notification_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize push notifications (backend-based polling)
+  try {
+    await PushNotificationService().initialize();
+  } catch (e) {
+    print('Push notification initialization failed: $e');
+    // App continues to work without push notifications
+  }
+  
   runApp(const UniPoolApp());
 }
 

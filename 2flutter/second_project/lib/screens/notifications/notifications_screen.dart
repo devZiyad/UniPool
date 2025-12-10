@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/notification.dart' as model;
 import '../../services/notification_service.dart';
+import '../../services/push_notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/app_drawer.dart';
 
@@ -22,6 +23,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   void initState() {
     super.initState();
     _loadNotifications();
+    _setupPushNotificationListener();
+  }
+
+  void _setupPushNotificationListener() {
+    final pushService = PushNotificationService();
+    pushService.initializeNotificationStream();
+    
+    pushService.notificationStream?.listen((notification) {
+      // Refresh notifications when a new push notification arrives
+      _loadNotifications();
+    });
+    
+    // Also refresh when screen becomes visible
+    // This ensures we get the latest notifications when user opens the screen
+  }
+
+  @override
+  void dispose() {
+    PushNotificationService().disposeNotificationStream();
+    super.dispose();
   }
 
   Future<void> _loadNotifications() async {
@@ -54,6 +75,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (notification.read) return;
 
     try {
+      // Mark notification as shown in push service to prevent duplicate notifications
+      PushNotificationService().markNotificationAsShown(notification.id);
       await NotificationService.markAsRead(notification.id);
       setState(() {
         final index = _notifications.indexWhere((n) => n.id == notification.id);
@@ -83,6 +106,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _markAllAsRead() async {
     try {
       await NotificationService.markAllAsRead();
+      
+      // Clear shown notification IDs in push service to prevent duplicate notifications
+      PushNotificationService().clearShownNotificationIds();
+      
       setState(() {
         _notifications = _notifications.map((n) {
           return model.Notification(

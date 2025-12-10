@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
+import '../services/push_notification_service.dart';
 
 class AuthProvider with ChangeNotifier {
   User? _user;
@@ -83,6 +84,14 @@ class AuthProvider with ChangeNotifier {
       }
       _isLoading = false;
       notifyListeners();
+      
+      // Start push notification polling after successful registration
+      try {
+        PushNotificationService().startPolling();
+      } catch (e) {
+        print('Error starting push notifications after registration: $e');
+      }
+      
       return true;
     } catch (e) {
       _error = e.toString();
@@ -117,6 +126,13 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Stop push notification polling on logout
+    try {
+      PushNotificationService().stopPolling();
+    } catch (e) {
+      print('Error stopping push notifications on logout: $e');
+    }
+    
     await AuthService.logout();
     _user = null;
     notifyListeners();
