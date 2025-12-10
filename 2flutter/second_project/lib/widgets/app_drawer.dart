@@ -57,6 +57,15 @@ class AppDrawer extends StatelessWidget {
               Navigator.pushNamed(context, '/profile-settings');
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.notifications),
+            title: const Text('Notifications'),
+            subtitle: const Text('View all your notifications'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/notifications');
+            },
+          ),
           // Only show Switch Mode if university ID is verified
           if (user != null && user.universityIdVerified) ...[
             const Divider(),

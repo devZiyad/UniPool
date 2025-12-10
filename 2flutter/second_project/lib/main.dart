@@ -27,6 +27,7 @@ import 'screens/vehicles/vehicles_management_screen.dart';
 import 'screens/vehicles/add_vehicle_screen.dart';
 import 'screens/profile/profile_settings_screen.dart';
 import 'screens/admin/admin_users_management_screen.dart';
+import 'screens/notifications/notifications_screen.dart';
 import 'models/vehicle.dart';
 import 'models/ride.dart';
 import 'models/booking.dart';
@@ -93,6 +94,7 @@ class UniPoolApp extends StatelessWidget {
           // '/driver/navigation', '/driver/rate-passenger', and '/driver/ride-checklist' are handled by onGenerateRoute
           // Profile & Settings
           '/profile-settings': (context) => const ProfileSettingsScreen(),
+          '/notifications': (context) => const NotificationsScreen(),
           '/vehicles': (context) => const VehiclesManagementScreen(),
           '/vehicles/add': (context) {
             final vehicle = ModalRoute.of(context)?.settings.arguments;
