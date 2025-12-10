@@ -34,8 +34,8 @@ public class Rating {
     @JoinColumn(name = "to_user_id")
     private User toUser;
 
-    @OneToOne(optional = false)
-    @JoinColumn(name = "booking_id", unique = true, nullable = false)
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "booking_id", nullable = false)
     private Booking booking;
 
     @Column(nullable = false)
