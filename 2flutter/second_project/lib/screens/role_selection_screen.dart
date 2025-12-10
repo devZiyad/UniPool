@@ -128,10 +128,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen>
     }
 
     if (mounted) {
-      Navigator.pushReplacementNamed(
-        context,
-        '/driver/post-ride/destination-search',
-      );
+      Navigator.pushReplacementNamed(context, '/driver');
     }
   }
 

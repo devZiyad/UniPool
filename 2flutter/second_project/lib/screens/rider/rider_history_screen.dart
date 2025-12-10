@@ -129,7 +129,7 @@ class _RiderHistoryScreenState extends State<RiderHistoryScreen> {
           ),
         ],
       ),
-      drawer: widget.showInTabBar ? null : const AppDrawer(),
+      drawer: const AppDrawer(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null

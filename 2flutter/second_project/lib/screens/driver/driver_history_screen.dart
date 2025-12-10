@@ -6,7 +6,12 @@ import '../../widgets/app_drawer.dart';
 import '../../models/ride.dart';
 
 class DriverHistoryScreen extends StatefulWidget {
-  const DriverHistoryScreen({super.key});
+  final bool showInTabBar;
+  
+  const DriverHistoryScreen({
+    super.key,
+    this.showInTabBar = false,
+  });
 
   @override
   State<DriverHistoryScreen> createState() => _DriverHistoryScreenState();
@@ -117,7 +122,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(title: const Text('Ride History')),
-        drawer: AppDrawer(),
+        drawer: widget.showInTabBar ? null : const AppDrawer(),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -125,7 +130,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
     if (_completedRides.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Ride History')),
-        drawer: AppDrawer(),
+        drawer: widget.showInTabBar ? null : const AppDrawer(),
         body: const Center(
           child: Text(
             'No completed rides',
@@ -158,7 +163,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
           ),
         ],
       ),
-      drawer: AppDrawer(),
+      drawer: widget.showInTabBar ? null : const AppDrawer(),
       body: Column(
         children: [
           Expanded(

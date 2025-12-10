@@ -21,10 +21,12 @@ enum SearchStep { destination, startLocation, timeFilters }
 
 class RiderUnifiedSearchScreen extends StatefulWidget {
   final bool showInTabBar;
+  final bool forceDriverMode;
   
   const RiderUnifiedSearchScreen({
     super.key,
     this.showInTabBar = false,
+    this.forceDriverMode = false,
   });
 
   @override
@@ -66,7 +68,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
     final now = DateTime.now();
     _startDateTime = DateTime(now.year, now.month, now.day, 7, 0);
     _endDateTime = DateTime(now.year, now.month, now.day, 9, 0);
-    // Determine initial step based on route
+    // Determine initial step based on route or driver mode
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final route = ModalRoute.of(context);
       if (route != null) {
@@ -89,7 +91,19 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
             _currentStep = SearchStep.destination;
           });
           _getCurrentLocation();
+        } else if (widget.forceDriverMode || _isDriver) {
+          // If in driver mode and no specific route, start at destination step
+          setState(() {
+            _currentStep = SearchStep.destination;
+          });
+          _getCurrentLocation();
         }
+      } else if (widget.forceDriverMode || _isDriver) {
+        // If in driver mode and no route, start at destination step
+        setState(() {
+          _currentStep = SearchStep.destination;
+        });
+        _getCurrentLocation();
       }
     });
     _getCurrentLocation();
@@ -506,6 +520,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
 
   // Time filter methods
   bool get _isDriver {
+    if (widget.forceDriverMode) return true;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final role = authProvider.user?.role ?? '';
     return role == 'DRIVER' || role == 'BOTH';
@@ -911,27 +926,57 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
+    // Determine if back button should be shown
+    // Show back button if:
+    // 1. Not on destination step (i.e., on startLocation or timeFilters), OR
+    // 2. On destination step but a destination pin has been dropped
+    final bool showBackButton = _currentStep != SearchStep.destination ||
+        _selectedDestinationLocation != null;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_getAppBarTitle()),
-        leading: _currentStep != SearchStep.destination
+        leading: showBackButton
             ? IconButton(
                 icon: const Icon(Icons.arrow_back),
                 onPressed: () {
                   setState(() {
                     if (_currentStep == SearchStep.timeFilters) {
+                      // Go back to start location step
                       _currentStep = SearchStep.startLocation;
                     } else if (_currentStep == SearchStep.startLocation) {
+                      // Go back to destination step
                       _currentStep = SearchStep.destination;
+                      // Clear start location pin if it exists
+                      _selectedStartLocation = null;
+                      _startSearchController.clear();
+                      _startSuggestions = [];
                       // Fetch location when navigating to destination step
                       _getCurrentLocation();
+                    } else if (_currentStep == SearchStep.destination) {
+                      // If on destination step with a pin, clear it and reset
+                      if (_selectedDestinationLocation != null) {
+                        _selectedDestinationLocation = null;
+                        _destinationSearchController.clear();
+                        _destinationSuggestions = [];
+                        // Clear destination from providers
+                        Provider.of<RideProvider>(
+                          context,
+                          listen: false,
+                        ).setDestinationLocation(null);
+                        Provider.of<DriverProvider>(
+                          context,
+                          listen: false,
+                        ).setDestinationLocation(null);
+                        _routePoints = null;
+                      }
                     }
                   });
                 },
               )
             : null,
       ),
-      drawer: widget.showInTabBar ? null : const AppDrawer(),
+      drawer: widget.showInTabBar ? const AppDrawer() : const AppDrawer(),
       body: Stack(
         children: [
           MapWidget(

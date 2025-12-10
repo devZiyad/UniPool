@@ -100,30 +100,11 @@ class AppDrawer extends StatelessWidget {
             ),
             ListTile(
               leading: const Icon(Icons.home),
-              title: const Text('Home - Post Ride'),
+              title: const Text('Driver Home'),
+              subtitle: const Text('Go to driver main screen'),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(
-                  context,
-                  '/driver/post-ride/destination-search',
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.directions_car_filled),
-              title: const Text('Manage Ride'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/driver/ride-management');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text('Ride History'),
-              subtitle: const Text('View completed bookings'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, '/driver/history');
+                Navigator.pushReplacementNamed(context, '/driver');
               },
             ),
           ],

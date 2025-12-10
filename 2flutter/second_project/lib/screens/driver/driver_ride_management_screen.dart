@@ -11,7 +11,9 @@ import '../../services/notification_service.dart';
 import '../../models/ride.dart';
 
 class DriverRideManagementScreen extends StatefulWidget {
-  const DriverRideManagementScreen({super.key});
+  final bool showInTabBar;
+
+  const DriverRideManagementScreen({super.key, this.showInTabBar = false});
 
   @override
   State<DriverRideManagementScreen> createState() =>
@@ -512,7 +514,7 @@ class _DriverRideManagementScreenState
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(title: const Text('Ride Management')),
-        drawer: AppDrawer(),
+        drawer: widget.showInTabBar ? null : const AppDrawer(),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
@@ -520,7 +522,7 @@ class _DriverRideManagementScreenState
     if (activeRides.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text('Ride Management')),
-        drawer: AppDrawer(),
+        drawer: widget.showInTabBar ? null : const AppDrawer(),
         body: const Center(
           child: Text(
             'No rides available',
@@ -982,7 +984,7 @@ class _DriverRideManagementScreenState
                                 final pendingBookings =
                                     driverProvider.pendingBookings;
 
-                                if (pendingBookings.isEmpty)
+                                if (pendingBookings.isEmpty) {
                                   return Card(
                                     child: Padding(
                                       padding: const EdgeInsets.all(24),
@@ -1007,6 +1009,7 @@ class _DriverRideManagementScreenState
                                       ),
                                     ),
                                   );
+                                }
 
                                 return Column(
                                   children: pendingBookings.map((booking) {

@@ -2,24 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/app_drawer.dart';
-import 'rider_unified_search_screen.dart';
-import 'rider_bookings_screen.dart';
-import 'rider_history_screen.dart';
+import 'driver_ride_management_screen.dart';
+import 'driver_history_screen.dart';
+import '../rider/rider_unified_search_screen.dart';
 
-class RiderMainScreen extends StatefulWidget {
+class DriverMainScreen extends StatefulWidget {
   final int initialIndex;
   
-  const RiderMainScreen({
+  const DriverMainScreen({
     super.key,
     this.initialIndex = 0,
   });
 
   @override
-  State<RiderMainScreen> createState() => _RiderMainScreenState();
+  State<DriverMainScreen> createState() => _DriverMainScreenState();
 }
 
-class _RiderMainScreenState extends State<RiderMainScreen> {
+class _DriverMainScreenState extends State<DriverMainScreen> {
   late int _currentIndex;
 
   @override
@@ -39,13 +38,20 @@ class _RiderMainScreenState extends State<RiderMainScreen> {
   Widget _getScreen(int index) {
     switch (index) {
       case 0:
-        return const RiderUnifiedSearchScreen(showInTabBar: true);
+        // Post Ride - show unified search screen in driver mode
+        return const RiderUnifiedSearchScreen(
+          showInTabBar: true,
+          forceDriverMode: true,
+        );
       case 1:
-        return const RiderBookingsScreen(showInTabBar: true);
+        return const DriverRideManagementScreen(showInTabBar: true);
       case 2:
-        return const RiderHistoryScreen(showInTabBar: true);
+        return const DriverHistoryScreen(showInTabBar: true);
       default:
-        return const RiderUnifiedSearchScreen(showInTabBar: true);
+        return const RiderUnifiedSearchScreen(
+          showInTabBar: true,
+          forceDriverMode: true,
+        );
     }
   }
 
@@ -54,18 +60,17 @@ class _RiderMainScreenState extends State<RiderMainScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final user = authProvider.user;
     
-    // Only show tabs if user is a rider
-    final isRider = user != null &&
-        (user.role.toUpperCase() == 'RIDER' ||
+    // Only show tabs if user is a driver
+    final isDriver = user != null &&
+        (user.role.toUpperCase() == 'DRIVER' ||
             user.role.toUpperCase() == 'BOTH');
 
-    if (!isRider) {
-      // If not a rider, just show the search screen without tabs
+    if (!isDriver) {
+      // If not a driver, just show the post ride screen without tabs
       return const RiderUnifiedSearchScreen();
     }
 
     return Scaffold(
-      drawer: const AppDrawer(),
       body: IndexedStack(
         index: _currentIndex,
         children: [
@@ -92,14 +97,14 @@ class _RiderMainScreenState extends State<RiderMainScreen> {
         ),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            activeIcon: Icon(Icons.search),
-            label: 'Search',
+            icon: Icon(Icons.add_circle_outline),
+            activeIcon: Icon(Icons.add_circle),
+            label: 'Post Ride',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.event_note),
-            activeIcon: Icon(Icons.event_note),
-            label: 'My Bookings',
+            icon: Icon(Icons.directions_car_filled),
+            activeIcon: Icon(Icons.directions_car_filled),
+            label: 'Manage Ride',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.history),
@@ -111,4 +116,3 @@ class _RiderMainScreenState extends State<RiderMainScreen> {
     );
   }
 }
-

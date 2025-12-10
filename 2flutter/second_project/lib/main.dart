@@ -14,9 +14,8 @@ import 'screens/rider/rider_ride_list_screen.dart';
 import 'screens/rider/rider_pending_approval_screen.dart';
 import 'screens/rider/rider_live_tracking_screen.dart';
 import 'screens/rider/rider_rating_screen.dart';
+import 'screens/driver/driver_main_screen.dart';
 import 'screens/driver/driver_ride_posted_confirmation_screen.dart';
-import 'screens/driver/driver_ride_management_screen.dart';
-import 'screens/driver/driver_history_screen.dart';
 import 'screens/driver/driver_incoming_requests_screen.dart';
 import 'screens/driver/driver_accepted_riders_screen.dart';
 import 'screens/driver/driver_navigation_screen.dart';
@@ -72,6 +71,10 @@ class UniPoolApp extends StatelessWidget {
           '/rider/pending-approval': (context) =>
               const RiderPendingApprovalScreen(),
           // '/rider/live-tracking' and '/rider/rating' are handled by onGenerateRoute
+          // Driver main screen with bottom tabs
+          '/driver': (context) => const DriverMainScreen(initialIndex: 0),
+          '/driver/ride-management': (context) => const DriverMainScreen(initialIndex: 1),
+          '/driver/history': (context) => const DriverMainScreen(initialIndex: 2),
           // Driver routes (using unified search screen)
           '/driver/post-ride/destination-search': (context) =>
               const RiderUnifiedSearchScreen(),
@@ -81,9 +84,6 @@ class UniPoolApp extends StatelessWidget {
               const RiderUnifiedSearchScreen(),
           '/driver/ride-posted-confirmation': (context) =>
               const DriverRidePostedConfirmationScreen(),
-          '/driver/ride-management': (context) =>
-              const DriverRideManagementScreen(),
-          '/driver/history': (context) => const DriverHistoryScreen(),
           '/driver/incoming-requests': (context) =>
               const DriverIncomingRequestsScreen(),
           '/driver/accepted-riders': (context) =>
