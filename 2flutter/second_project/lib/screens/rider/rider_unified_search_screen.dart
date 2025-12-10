@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import '../../providers/driver_provider.dart';
 import '../../providers/ride_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/map_provider.dart';
 import '../../services/location_service.dart';
 import '../../services/ride_service.dart';
 import '../../services/vehicle_service.dart';
@@ -14,6 +15,7 @@ import '../../models/location.dart';
 import '../../models/vehicle.dart';
 import '../../widgets/map_widget.dart';
 import '../../widgets/app_drawer.dart';
+import '../../widgets/map_loading_screen.dart';
 import '../../utils/polyline_decoder.dart';
 import '../../theme/app_theme.dart';
 
@@ -68,6 +70,15 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
     final now = DateTime.now();
     _startDateTime = DateTime(now.year, now.month, now.day, 7, 0);
     _endDateTime = DateTime(now.year, now.month, now.day, 9, 0);
+    
+    // Use MapProvider's controller if available
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final mapProvider = Provider.of<MapProvider>(context, listen: false);
+      if (mapProvider.mapController != null && _mapController == null) {
+        _mapController = mapProvider.mapController;
+      }
+    });
+    
     // Determine initial step based on route or driver mode
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final route = ModalRoute.of(context);
@@ -119,6 +130,19 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   }
 
   Future<void> _getCurrentLocation() async {
+    // Try to use cached location from MapProvider first
+    final mapProvider = Provider.of<MapProvider>(context, listen: false);
+    if (mapProvider.isLocationReady && mapProvider.lastKnownLocation != null) {
+      setState(() {
+        _currentLocation = mapProvider.lastKnownLocation!;
+        _userLocation = mapProvider.lastKnownLocation!;
+        _hasUserLocation = true;
+        _isInitializing = false;
+      });
+      _mapController?.move(_currentLocation, 14);
+      return;
+    }
+
     try {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -153,6 +177,9 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
         ).timeout(const Duration(seconds: 10));
 
         final currentLatLng = LatLng(position.latitude, position.longitude);
+        
+        // Update MapProvider with new location
+        mapProvider.updateLocation(currentLatLng);
 
         setState(() {
           _currentLocation = currentLatLng;
@@ -923,7 +950,7 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isInitializing) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const MapLoadingScreen();
     }
 
     // Determine if back button should be shown

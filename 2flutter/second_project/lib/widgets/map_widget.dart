@@ -32,20 +32,35 @@ class MapWidget extends StatefulWidget {
 }
 
 class _MapWidgetState extends State<MapWidget> {
-  final MapController _mapController = MapController();
+  MapController? _mapController;
   LatLng _currentPosition = const LatLng(26.0667, 50.5577); // Bahrain default
   bool _locationPermissionGranted = false;
+  bool _isControllerFromProvider = false;
 
   @override
   void initState() {
     super.initState();
     _currentPosition = widget.initialPosition;
+    
+    // Try to use MapProvider's controller if available
+    // Note: This requires Provider context, so we'll create our own if needed
+    _mapController = MapController();
+    
     if (widget.onMapCreated != null) {
-      widget.onMapCreated!(_mapController);
+      widget.onMapCreated!(_mapController!);
     }
     if (widget.myLocationEnabled) {
       _requestLocationPermission();
     }
+  }
+  
+  @override
+  void dispose() {
+    // Only dispose if we created the controller ourselves
+    if (!_isControllerFromProvider) {
+      _mapController?.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _requestLocationPermission() async {
@@ -87,7 +102,7 @@ class _MapWidgetState extends State<MapWidget> {
             _currentPosition = LatLng(position.latitude, position.longitude);
             _locationPermissionGranted = true;
             // Center map on current location
-            _mapController.move(_currentPosition, widget.zoom);
+            _mapController?.move(_currentPosition, widget.zoom);
           });
         } catch (e) {
           // If location fails, use initial position (Bahrain default)

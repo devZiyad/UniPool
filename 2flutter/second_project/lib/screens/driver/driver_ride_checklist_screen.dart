@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/ride.dart';
-import '../../services/ride_service.dart';
 import '../../services/location_service.dart';
-import '../../services/notification_service.dart';
 import '../../providers/driver_provider.dart';
 
 class DriverRideChecklistScreen extends StatefulWidget {
@@ -21,7 +19,7 @@ class _DriverRideChecklistScreenState extends State<DriverRideChecklistScreen> {
   final Map<int, bool> _completedStops = {};
   List<Map<String, dynamic>> _stops = [];
   bool _isLoading = true;
-  bool _isCompleting = false;
+  final bool _isCompleting = false;
 
   @override
   void initState() {
@@ -44,31 +42,9 @@ class _DriverRideChecklistScreenState extends State<DriverRideChecklistScreen> {
       final bookings = driverProvider.acceptedBookings;
       final stops = <Map<String, dynamic>>[];
 
-      // Add driver's start location as first stop
-      String driverStartAddress = widget.ride.pickupLocationLabel;
-      try {
-        driverStartAddress = await LocationService.reverseGeocode(
-          widget.ride.pickupLatitude,
-          widget.ride.pickupLongitude,
-        );
-      } catch (e) {
-        // Keep default label if reverse geocoding fails
-      }
-
-      stops.add({
-        'type': 'driver_start',
-        'label': 'Your Start Location',
-        'address': driverStartAddress.isNotEmpty
-            ? driverStartAddress
-            : 'Unknown location',
-        'latitude': widget.ride.pickupLatitude,
-        'longitude': widget.ride.pickupLongitude,
-        'bookingId': null,
-        'riderName': null,
-      });
-
-      // Add each rider's pickup location
+      // Add each rider's pickup and dropoff locations
       for (final booking in bookings) {
+        // Add rider's pickup location
         String? riderPickupAddress;
         try {
           if (booking.pickupLatitude != null &&
@@ -91,16 +67,48 @@ class _DriverRideChecklistScreenState extends State<DriverRideChecklistScreen> {
 
         stops.add({
           'type': 'rider_pickup',
-          'label': '${booking.riderName}\'s Pickup',
+          'label': '${booking.riderName}\'s Start',
           'address': riderPickupAddress ?? 'Unknown location',
           'latitude': pickupLat,
           'longitude': pickupLon,
           'bookingId': booking.id,
           'riderName': booking.riderName,
         });
+
+        // Add rider's dropoff/destination location
+        String? riderDropoffAddress;
+        try {
+          if (booking.dropoffLatitude != null &&
+              booking.dropoffLongitude != null) {
+            riderDropoffAddress = await LocationService.reverseGeocode(
+              booking.dropoffLatitude!,
+              booking.dropoffLongitude!,
+            );
+          } else {
+            riderDropoffAddress = booking.dropoffLocationLabel;
+          }
+        } catch (e) {
+          riderDropoffAddress =
+              booking.dropoffLocationLabel ?? 'Unknown location';
+        }
+
+        final dropoffLat =
+            booking.dropoffLatitude ?? widget.ride.destinationLatitude;
+        final dropoffLon =
+            booking.dropoffLongitude ?? widget.ride.destinationLongitude;
+
+        stops.add({
+          'type': 'rider_dropoff',
+          'label': '${booking.riderName}\'s Destination',
+          'address': riderDropoffAddress ?? 'Unknown location',
+          'latitude': dropoffLat,
+          'longitude': dropoffLon,
+          'bookingId': booking.id,
+          'riderName': booking.riderName,
+        });
       }
 
-      // Add final destination
+      // Add driver's final destination
       String destinationAddress = widget.ride.destinationLocationLabel;
       try {
         destinationAddress = await LocationService.reverseGeocode(
@@ -112,8 +120,8 @@ class _DriverRideChecklistScreenState extends State<DriverRideChecklistScreen> {
       }
 
       stops.add({
-        'type': 'destination',
-        'label': 'Final Destination',
+        'type': 'driver_destination',
+        'label': 'Driver\'s Destination',
         'address': destinationAddress.isNotEmpty
             ? destinationAddress
             : 'Unknown location',
@@ -344,10 +352,10 @@ class _DriverRideChecklistScreenState extends State<DriverRideChecklistScreen> {
                             ],
                           ),
                           secondary: Icon(
-                            index == 0
-                                ? Icons.location_on
-                                : index == _stops.length - 1
+                            stop['type'] == 'driver_destination'
                                 ? Icons.place
+                                : stop['type'] == 'rider_dropoff'
+                                ? Icons.location_on
                                 : Icons.person_pin,
                             color: isCompleted ? Colors.green : Colors.blue,
                             size: 32,
