@@ -488,7 +488,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
                                       style: TextStyle(fontSize: 14),
                                     ),
                                     Text(
-                                      '\$${currentRide.basePrice!.toStringAsFixed(2)}',
+                                      'BD ${currentRide.basePrice!.toStringAsFixed(2)}',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
@@ -505,7 +505,7 @@ class _DriverHistoryScreenState extends State<DriverHistoryScreen> {
                                       style: TextStyle(fontSize: 14),
                                     ),
                                     Text(
-                                      '\$${currentRide.pricePerSeat!.toStringAsFixed(2)}',
+                                      'BD ${currentRide.pricePerSeat!.toStringAsFixed(2)}',
                                       style: const TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,

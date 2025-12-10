@@ -284,15 +284,25 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                       final dropoffLocationId =
                                           ride.destinationLocationId;
 
-                                      // Use the ride's departure time range for pickup time
-                                      // Note: ride times are stored in local time (converted from UTC API response)
-                                      // but we need to send UTC times to the API
-                                      var pickupTimeStart =
-                                          ride.departureTimeStart ??
-                                          ride.departureTime;
-                                      var pickupTimeEnd =
-                                          ride.departureTimeEnd ??
-                                          ride.departureTime;
+                                      // Use the rider's search input time range for pickup time
+                                      // Note: times are stored in local time but we need to send UTC times to the API
+                                      final searchTimeFrom = rideProvider.departureTimeFrom;
+                                      final searchTimeTo = rideProvider.departureTimeTo;
+                                      
+                                      if (searchTimeFrom == null || searchTimeTo == null) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('Search time range not available'),
+                                              backgroundColor: Colors.red,
+                                            ),
+                                          );
+                                        }
+                                        return;
+                                      }
+                                      
+                                      var pickupTimeStart = searchTimeFrom;
+                                      var pickupTimeEnd = searchTimeTo;
 
                                       // Ensure pickupTimeStart is in the future (check in UTC since API validates in UTC)
                                       // API requires pickupTimeStart to be in the future when converted to UTC
@@ -391,10 +401,10 @@ class _RiderRideListScreenState extends State<RiderRideListScreen> {
                                         '  dropoffLocationId: $dropoffLocationId',
                                       );
                                       print(
-                                        '  pickupTimeStart: ${pickupTimeStart.toIso8601String()}',
+                                        '  pickupTimeStart (from rider search): ${pickupTimeStart.toIso8601String()}',
                                       );
                                       print(
-                                        '  pickupTimeEnd: ${pickupTimeEnd.toIso8601String()}',
+                                        '  pickupTimeEnd (from rider search): ${pickupTimeEnd.toIso8601String()}',
                                       );
                                       print(
                                         '  Ride departureTimeStart: ${ride.departureTimeStart?.toIso8601String()}',

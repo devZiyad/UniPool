@@ -4,11 +4,13 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/driver_provider.dart';
 import '../../widgets/app_drawer.dart';
+import '../../widgets/vehicle_type_icon.dart';
 import '../../services/ride_service.dart';
 import '../../services/booking_service.dart';
 import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
 import '../../models/ride.dart';
+import '../../models/vehicle_type.dart';
 
 class DriverRideManagementScreen extends StatefulWidget {
   final bool showInTabBar;
@@ -820,30 +822,19 @@ class _DriverRideManagementScreenState
                                   const SizedBox(height: 16),
                                   Row(
                                     children: [
-                                      const Icon(
-                                        Icons.directions_car,
-                                        color: Colors.blue,
+                                      VehicleTypeIcon(
+                                        vehicleType: VehicleType.fromString(
+                                          rideToDisplay.vehicleType,
+                                        ),
+                                        width: 24,
+                                        height: 24,
                                       ),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
-                                          '${rideToDisplay.vehicleMake} ${rideToDisplay.vehicleModel}',
+                                          '${rideToDisplay.vehicleMake} ${rideToDisplay.vehicleModel} • ${rideToDisplay.vehiclePlateNumber}',
                                           style: const TextStyle(fontSize: 16),
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.confirmation_number,
-                                        color: Colors.grey,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        rideToDisplay.vehiclePlateNumber,
-                                        style: const TextStyle(fontSize: 14),
                                       ),
                                     ],
                                   ),
@@ -922,7 +913,7 @@ class _DriverRideManagementScreenState
                                             style: TextStyle(fontSize: 14),
                                           ),
                                           Text(
-                                            '\$${rideToDisplay.basePrice!.toStringAsFixed(2)}',
+                                            'BD ${rideToDisplay.basePrice!.toStringAsFixed(2)}',
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,
@@ -940,7 +931,7 @@ class _DriverRideManagementScreenState
                                             style: TextStyle(fontSize: 14),
                                           ),
                                           Text(
-                                            '\$${rideToDisplay.pricePerSeat!.toStringAsFixed(2)}',
+                                            'BD ${rideToDisplay.pricePerSeat!.toStringAsFixed(2)}',
                                             style: const TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.bold,

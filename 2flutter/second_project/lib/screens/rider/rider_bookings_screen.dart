@@ -5,7 +5,9 @@ import '../../services/ride_service.dart';
 import '../../services/rating_service.dart';
 import '../../models/booking.dart';
 import '../../models/ride.dart';
+import '../../models/vehicle_type.dart';
 import '../../widgets/app_drawer.dart';
+import '../../widgets/vehicle_type_icon.dart';
 
 class RiderBookingsScreen extends StatefulWidget {
   final bool showInTabBar;
@@ -302,10 +304,12 @@ class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
                             // Vehicle information
                             Row(
                               children: [
-                                Icon(
-                                  Icons.directions_car,
-                                  size: 20,
-                                  color: Colors.grey[600],
+                                VehicleTypeIcon(
+                                  vehicleType: VehicleType.fromString(
+                                    ride.vehicleType,
+                                  ),
+                                  width: 20,
+                                  height: 20,
                                 ),
                                 const SizedBox(width: 8),
                                 Expanded(
@@ -500,7 +504,7 @@ class _RiderBookingsScreenState extends State<RiderBookingsScreen> {
                                 ),
                               ),
                               Text(
-                                '\$${booking.costForThisRider.toStringAsFixed(2)}',
+                                'BD ${booking.costForThisRider.toStringAsFixed(2)}',
                                 style: const TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
