@@ -781,9 +781,8 @@ class _ProfileSettingsScreenState extends State<ProfileSettingsScreen> {
       borderRadius: BorderRadius.circular(8),
       child: Image.memory(
         imageBytes,
-        height: 150,
         width: double.infinity,
-        fit: BoxFit.cover,
+        fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) {
           return Container(
             height: 150,
