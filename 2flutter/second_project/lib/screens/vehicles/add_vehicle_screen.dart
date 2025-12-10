@@ -52,13 +52,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
       return;
     }
 
-    if (_selectedVehicleType == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a vehicle type')),
-      );
-      return;
-    }
-
     setState(() {
       _isSubmitting = true;
     });
@@ -92,7 +85,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               : _colorController.text.trim(),
           plateNumber: _plateNumberController.text.trim(),
           seatCount: int.parse(_seatCountController.text),
-          vehicleType: _selectedVehicleType!,
+          vehicleType: _selectedVehicleType,
         );
 
         if (mounted) {
@@ -206,7 +199,7 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
               DropdownButtonFormField<VehicleType>(
                 value: _selectedVehicleType,
                 decoration: const InputDecoration(
-                  labelText: 'Vehicle Type *',
+                  labelText: 'Vehicle Type',
                   hintText: 'Select vehicle type',
                   border: OutlineInputBorder(),
                 ),
@@ -226,12 +219,6 @@ class _AddVehicleScreenState extends State<AddVehicleScreen> {
                     ),
                   );
                 }).toList(),
-                validator: (value) {
-                  if (value == null) {
-                    return 'Please select a vehicle type';
-                  }
-                  return null;
-                },
                 onChanged: (value) {
                   setState(() {
                     _selectedVehicleType = value;

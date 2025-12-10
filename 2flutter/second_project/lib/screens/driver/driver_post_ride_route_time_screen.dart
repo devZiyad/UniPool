@@ -7,6 +7,7 @@ import '../../services/location_service.dart';
 import '../../services/vehicle_service.dart';
 import '../../models/vehicle.dart';
 import '../../widgets/app_drawer.dart';
+import '../../theme/app_theme.dart';
 
 class DriverPostRideRouteTimeScreen extends StatefulWidget {
   const DriverPostRideRouteTimeScreen({super.key});
@@ -18,85 +19,43 @@ class DriverPostRideRouteTimeScreen extends StatefulWidget {
 
 class _DriverPostRideRouteTimeScreenState
     extends State<DriverPostRideRouteTimeScreen> {
-  TimeOfDay? _startTime;
-  TimeOfDay? _endTime;
-  DateTime? _startDate;
-  DateTime? _endDate;
-  bool _isAMStart = true;
-  bool _isAMEnd = true;
+  DateTime? _startDateTime;
+  DateTime? _endDateTime;
   int _totalSeats = 4;
   bool _isPosting = false;
 
   @override
   void initState() {
     super.initState();
-    // Initialize dates to today
+    // Initialize to today with default times
     final now = DateTime.now();
-    _startDate = DateTime(now.year, now.month, now.day);
-    _endDate = DateTime(now.year, now.month, now.day);
+    _startDateTime = DateTime(now.year, now.month, now.day, 7, 0);
+    _endDateTime = DateTime(now.year, now.month, now.day, 9, 0);
   }
 
-  Future<void> _selectStartTime() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _startTime ?? TimeOfDay.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _startTime = picked;
-      });
-    }
-  }
-
-  Future<void> _selectEndTime() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _endTime ?? TimeOfDay.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _endTime = picked;
-      });
-    }
-  }
-
-  Future<void> _selectStartDate() async {
+  Future<void> _selectDateTimeRange() async {
     final now = DateTime.now();
     final maxDate = now.add(const Duration(days: 2));
+    
+    // Initialize with current values or defaults
+    DateTime initialStart = _startDateTime ?? DateTime(now.year, now.month, now.day, 7, 0);
+    DateTime initialEnd = _endDateTime ?? DateTime(now.year, now.month, now.day, 9, 0);
 
-    final DateTime? picked = await showDatePicker(
+    // Show unified picker in a single dialog
+    final result = await showDialog<Map<String, DateTime>>(
       context: context,
-      initialDate: _startDate ?? now,
-      firstDate: now,
-      lastDate: maxDate,
-      helpText: 'Select start date',
+      builder: (context) => _UnifiedDateTimeRangePicker(
+        initialStart: initialStart,
+        initialEnd: initialEnd,
+        firstDate: now,
+        lastDate: maxDate,
+      ),
     );
-    if (picked != null) {
-      setState(() {
-        _startDate = DateTime(picked.year, picked.month, picked.day);
-        // If end date is before start date, update it
-        if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-          _endDate = _startDate;
-        }
-      });
-    }
-  }
 
-  Future<void> _selectEndDate() async {
-    final now = DateTime.now();
-    final maxDate = now.add(const Duration(days: 2));
-    final firstDate = _startDate ?? now;
-
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _endDate ?? firstDate,
-      firstDate: firstDate,
-      lastDate: maxDate,
-      helpText: 'Select end date',
-    );
-    if (picked != null) {
+    if (result != null) {
       setState(() {
-        _endDate = DateTime(picked.year, picked.month, picked.day);
+        _startDateTime = result['start']!;
+        _endDateTime = result['end']!;
       });
     }
   }
@@ -132,7 +91,7 @@ class _DriverPostRideRouteTimeScreenState
                   return ListTile(
                     leading: Icon(
                       isActive ? Icons.check_circle : Icons.circle_outlined,
-                      color: isActive ? Colors.green : Colors.grey,
+                      color: isActive ? AppTheme.primaryGreen : AppTheme.softGrayText,
                     ),
                     title: Text(
                       '${vehicle.make} ${vehicle.model}',
@@ -186,24 +145,17 @@ class _DriverPostRideRouteTimeScreenState
       return;
     }
 
-    if (_startTime == null || _endTime == null) {
+    if (_startDateTime == null || _endDateTime == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select time range')));
-      return;
-    }
-
-    if (_startDate == null || _endDate == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please select dates')));
+      ).showSnackBar(const SnackBar(content: Text('Please select date and time range')));
       return;
     }
 
     // Validate dates are within 2 days
     final now = DateTime.now();
     final maxDate = now.add(const Duration(days: 2));
-    if (_startDate!.isAfter(maxDate) || _endDate!.isAfter(maxDate)) {
+    if (_startDateTime!.isAfter(maxDate) || _endDateTime!.isAfter(maxDate)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Dates cannot be more than 2 days in advance'),
@@ -212,52 +164,23 @@ class _DriverPostRideRouteTimeScreenState
       return;
     }
 
-    if (_endDate!.isBefore(_startDate!)) {
+    if (_endDateTime!.isBefore(_startDateTime!)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('End date cannot be before start date')),
+        const SnackBar(content: Text('End date/time cannot be before start date/time')),
       );
       return;
     }
 
-    // Calculate hour correctly for AM/PM
-    int startHour = _startTime!.hour;
-    if (!_isAMStart && startHour != 12) {
-      startHour = startHour + 12;
-    } else if (_isAMStart && startHour == 12) {
-      startHour = 0;
-    }
-
-    int endHour = _endTime!.hour;
-    if (!_isAMEnd && endHour != 12) {
-      endHour = endHour + 12;
-    } else if (_isAMEnd && endHour == 12) {
-      endHour = 0;
-    }
-
-    // Calculate departure time start
-    var departureTimeStart = DateTime(
-      _startDate!.year,
-      _startDate!.month,
-      _startDate!.day,
-      startHour,
-      _startTime!.minute,
-    );
-
-    // Calculate departure time end
-    var departureTimeEnd = DateTime(
-      _endDate!.year,
-      _endDate!.month,
-      _endDate!.day,
-      endHour,
-      _endTime!.minute,
-    );
+    // Use the date-time values directly
+    var departureTimeStart = _startDateTime!;
+    var departureTimeEnd = _endDateTime!;
 
     // If departure time start is in the past and it's today, add one day
     final today = DateTime(now.year, now.month, now.day);
     final selectedStartDate = DateTime(
-      _startDate!.year,
-      _startDate!.month,
-      _startDate!.day,
+      _startDateTime!.year,
+      _startDateTime!.month,
+      _startDateTime!.day,
     );
     if (departureTimeStart.isBefore(now) &&
         selectedStartDate.year == today.year &&
@@ -265,9 +188,9 @@ class _DriverPostRideRouteTimeScreenState
         selectedStartDate.day == today.day) {
       departureTimeStart = departureTimeStart.add(const Duration(days: 1));
       // Also adjust end time if it's on the same day
-      if (_endDate!.year == _startDate!.year &&
-          _endDate!.month == _startDate!.month &&
-          _endDate!.day == _startDate!.day) {
+      if (_endDateTime!.year == _startDateTime!.year &&
+          _endDateTime!.month == _startDateTime!.month &&
+          _endDateTime!.day == _startDateTime!.day) {
         departureTimeEnd = departureTimeEnd.add(const Duration(days: 1));
       }
     }
@@ -370,7 +293,7 @@ class _DriverPostRideRouteTimeScreenState
       body: Stack(
         children: [
           Container(
-            color: Colors.grey[200],
+            color: AppTheme.lightGrayDivider,
             child: const Center(child: Text('Map View')),
           ),
           Positioned(
@@ -379,7 +302,7 @@ class _DriverPostRideRouteTimeScreenState
             right: 0,
             child: Container(
               decoration: const BoxDecoration(
-                color: Colors.white,
+                color: AppTheme.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
               ),
               padding: const EdgeInsets.all(24),
@@ -399,7 +322,7 @@ class _DriverPostRideRouteTimeScreenState
                         children: [
                           CircleAvatar(
                             radius: 8,
-                            backgroundColor: Colors.green,
+                            backgroundColor: AppTheme.primaryGreen,
                           ),
                           SizedBox(height: 4),
                           Text('Start'),
@@ -408,7 +331,7 @@ class _DriverPostRideRouteTimeScreenState
                       Expanded(
                         child: Container(
                           height: 2,
-                          color: Colors.green,
+                          color: AppTheme.primaryGreen,
                           margin: const EdgeInsets.symmetric(horizontal: 8),
                         ),
                       ),
@@ -416,7 +339,7 @@ class _DriverPostRideRouteTimeScreenState
                         children: [
                           CircleAvatar(
                             radius: 8,
-                            backgroundColor: Colors.green,
+                            backgroundColor: AppTheme.primaryGreen,
                           ),
                           SizedBox(height: 4),
                           Text('Destination'),
@@ -428,217 +351,95 @@ class _DriverPostRideRouteTimeScreenState
                   Text(pickup?.label ?? 'Start location'),
                   Text(destination?.label ?? 'Destination'),
                   const SizedBox(height: 24),
-                  // Date selection
-                  Row(
+                  // Unified Date-Time Range Selection
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Start Date'),
-                            const SizedBox(height: 8),
-                            InkWell(
-                              onTap: _selectStartDate,
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                      const Text(
+                        'Departure Time Range',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: _selectDateTimeRange,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.lightGrayDivider),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Icon(Icons.calendar_today, size: 16),
-                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Start',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.softGrayText,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
                                     Text(
-                                      _startDate != null
-                                          ? DateFormat(
-                                              'MMM dd, yyyy',
-                                            ).format(_startDate!)
-                                          : 'Select date',
-                                      textAlign: TextAlign.center,
+                                      _startDateTime != null
+                                          ? DateFormat('MMM dd, yyyy • HH:mm')
+                                              .format(_startDateTime!)
+                                          : 'Select start date & time',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('End Date'),
-                            const SizedBox(height: 8),
-                            InkWell(
-                              onTap: _selectEndDate,
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                child: Icon(Icons.arrow_forward, size: 20),
+                              ),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    const Icon(Icons.calendar_today, size: 16),
-                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'End',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.softGrayText,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
                                     Text(
-                                      _endDate != null
-                                          ? DateFormat(
-                                              'MMM dd, yyyy',
-                                            ).format(_endDate!)
-                                          : 'Select date',
-                                      textAlign: TextAlign.center,
+                                      _endDateTime != null
+                                          ? DateFormat('MMM dd, yyyy • HH:mm')
+                                              .format(_endDateTime!)
+                                          : 'Select end date & time',
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      textAlign: TextAlign.end,
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'You can select dates up to 2 days in advance',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Time selection
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('Start Time'),
-                            const SizedBox(height: 8),
-                            InkWell(
-                              onTap: _selectStartTime,
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  _startTime != null
-                                      ? '${_startTime!.hour.toString().padLeft(2, '0')} : ${_startTime!.minute.toString().padLeft(2, '0')}'
-                                      : '07 : 00',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isAMStart = true;
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _isAMStart
-                                          ? Colors.green
-                                          : Colors.grey[300],
-                                    ),
-                                    child: const Text('AM'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isAMStart = false;
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: !_isAMStart
-                                          ? Colors.green
-                                          : Colors.grey[300],
-                                    ),
-                                    child: const Text('PM'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.all(8.0),
-                        child: Icon(Icons.arrow_forward),
-                      ),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('End Time'),
-                            const SizedBox(height: 8),
-                            InkWell(
-                              onTap: _selectEndTime,
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  _endTime != null
-                                      ? '${_endTime!.hour.toString().padLeft(2, '0')} : ${_endTime!.minute.toString().padLeft(2, '0')}'
-                                      : '09 : 00',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isAMEnd = true;
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _isAMEnd
-                                          ? Colors.green
-                                          : Colors.grey[300],
-                                    ),
-                                    child: const Text('AM'),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      setState(() {
-                                        _isAMEnd = false;
-                                      });
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: !_isAMEnd
-                                          ? Colors.green
-                                          : Colors.grey[300],
-                                    ),
-                                    child: const Text('PM'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'You can select dates up to 2 days in advance',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.softGrayText,
+                          fontStyle: FontStyle.italic,
                         ),
                       ),
                     ],
@@ -684,8 +485,8 @@ class _DriverPostRideRouteTimeScreenState
                   ElevatedButton(
                     onPressed: _isPosting ? null : _postRide,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppTheme.darkNavy,
+                      foregroundColor: AppTheme.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -698,7 +499,7 @@ class _DriverPostRideRouteTimeScreenState
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
+                                AppTheme.white,
                               ),
                             ),
                           )
@@ -715,6 +516,448 @@ class _DriverPostRideRouteTimeScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _UnifiedDateTimeRangePicker extends StatefulWidget {
+  final DateTime initialStart;
+  final DateTime initialEnd;
+  final DateTime firstDate;
+  final DateTime lastDate;
+
+  const _UnifiedDateTimeRangePicker({
+    required this.initialStart,
+    required this.initialEnd,
+    required this.firstDate,
+    required this.lastDate,
+  });
+
+  @override
+  State<_UnifiedDateTimeRangePicker> createState() => _UnifiedDateTimeRangePickerState();
+}
+
+class _UnifiedDateTimeRangePickerState extends State<_UnifiedDateTimeRangePicker> {
+  late DateTime _selectedDate;
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
+
+  @override
+  void initState() {
+    super.initState();
+    // Use start date as the selected date
+    _selectedDate = DateTime(
+      widget.initialStart.year,
+      widget.initialStart.month,
+      widget.initialStart.day,
+    );
+    _startTime = TimeOfDay.fromDateTime(widget.initialStart);
+    _endTime = TimeOfDay.fromDateTime(widget.initialEnd);
+  }
+
+  void _selectDate(DateTime date) {
+    setState(() {
+      _selectedDate = DateTime(date.year, date.month, date.day);
+    });
+  }
+
+  void _incrementStartHour() {
+    setState(() {
+      final newHour = (_startTime.hour + 1) % 24;
+      _startTime = TimeOfDay(hour: newHour, minute: _startTime.minute);
+      _validateTimes();
+    });
+  }
+
+  void _decrementStartHour() {
+    setState(() {
+      final newHour = (_startTime.hour - 1 + 24) % 24;
+      _startTime = TimeOfDay(hour: newHour, minute: _startTime.minute);
+      _validateTimes();
+    });
+  }
+
+  void _incrementStartMinute() {
+    setState(() {
+      int newMinute = _startTime.minute + 15;
+      int newHour = _startTime.hour;
+      if (newMinute >= 60) {
+        newMinute = 0;
+        newHour = (newHour + 1) % 24;
+      }
+      _startTime = TimeOfDay(hour: newHour, minute: newMinute);
+      _validateTimes();
+    });
+  }
+
+  void _decrementStartMinute() {
+    setState(() {
+      int newMinute = _startTime.minute - 15;
+      int newHour = _startTime.hour;
+      if (newMinute < 0) {
+        newMinute = 45;
+        newHour = (newHour - 1 + 24) % 24;
+      }
+      _startTime = TimeOfDay(hour: newHour, minute: newMinute);
+      _validateTimes();
+    });
+  }
+
+  void _incrementEndHour() {
+    setState(() {
+      final newHour = (_endTime.hour + 1) % 24;
+      _endTime = TimeOfDay(hour: newHour, minute: _endTime.minute);
+      _validateTimes();
+    });
+  }
+
+  void _decrementEndHour() {
+    setState(() {
+      final newHour = (_endTime.hour - 1 + 24) % 24;
+      _endTime = TimeOfDay(hour: newHour, minute: _endTime.minute);
+      _validateTimes();
+    });
+  }
+
+  void _incrementEndMinute() {
+    setState(() {
+      int newMinute = _endTime.minute + 15;
+      int newHour = _endTime.hour;
+      if (newMinute >= 60) {
+        newMinute = 0;
+        newHour = (newHour + 1) % 24;
+      }
+      _endTime = TimeOfDay(hour: newHour, minute: newMinute);
+      _validateTimes();
+    });
+  }
+
+  void _decrementEndMinute() {
+    setState(() {
+      int newMinute = _endTime.minute - 15;
+      int newHour = _endTime.hour;
+      if (newMinute < 0) {
+        newMinute = 45;
+        newHour = (newHour - 1 + 24) % 24;
+      }
+      _endTime = TimeOfDay(hour: newHour, minute: newMinute);
+      _validateTimes();
+    });
+  }
+
+  void _validateTimes() {
+    // Ensure end time is after start time
+    if (_endTime.hour < _startTime.hour || 
+        (_endTime.hour == _startTime.hour && _endTime.minute <= _startTime.minute)) {
+      _endTime = TimeOfDay(
+        hour: (_startTime.hour + 1) % 24,
+        minute: _startTime.minute,
+      );
+    }
+  }
+
+  void _confirm() {
+    final startDateTime = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _startTime.hour,
+      _startTime.minute,
+    );
+    final endDateTime = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _endTime.hour,
+      _endTime.minute,
+    );
+
+    // Validate end is after start
+    if (endDateTime.isBefore(startDateTime) || endDateTime.isAtSameMomentAs(startDateTime)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('End time must be after start time'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop({
+      'start': startDateTime,
+      'end': endDateTime,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maxDate = widget.lastDate;
+    final firstDate = widget.firstDate;
+    
+    // Generate available dates (today, tomorrow, day after)
+    final availableDates = <DateTime>[];
+    for (int i = 0; i <= 2; i++) {
+      final date = firstDate.add(Duration(days: i));
+      if (!date.isAfter(maxDate)) {
+        availableDates.add(date);
+      }
+    }
+
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 600),
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Date & Time Range',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Inline Date Selection
+              const Text(
+                'Date',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: availableDates.map((date) {
+                  final isSelected = date.year == _selectedDate.year &&
+                      date.month == _selectedDate.month &&
+                      date.day == _selectedDate.day;
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: InkWell(
+                        onTap: () => _selectDate(date),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppTheme.darkNavy : AppTheme.lightGrayDivider,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                DateFormat('EEE').format(date),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSelected ? AppTheme.white : AppTheme.softGrayText,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat('dd').format(date),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? AppTheme.white : AppTheme.darkNavy,
+                                ),
+                              ),
+                              Text(
+                                DateFormat('MMM').format(date),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isSelected ? AppTheme.white : AppTheme.softGrayText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+              // Inline Time Range Selection
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Start Time',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.lightGrayDivider),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_up),
+                                    onPressed: _incrementStartHour,
+                                  ),
+                                  Text(
+                                    _startTime.hour.toString().padLeft(2, '0'),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    onPressed: _decrementStartHour,
+                                  ),
+                                ],
+                              ),
+                              const Text(':', style: TextStyle(fontSize: 24)),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_up),
+                                    onPressed: _incrementStartMinute,
+                                  ),
+                                  Text(
+                                    _startTime.minute.toString().padLeft(2, '0'),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    onPressed: _decrementStartMinute,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Icon(Icons.arrow_forward, size: 24),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'End Time',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.lightGrayDivider),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_up),
+                                    onPressed: _incrementEndHour,
+                                  ),
+                                  Text(
+                                    _endTime.hour.toString().padLeft(2, '0'),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    onPressed: _decrementEndHour,
+                                  ),
+                                ],
+                              ),
+                              const Text(':', style: TextStyle(fontSize: 24)),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_up),
+                                    onPressed: _incrementEndMinute,
+                                  ),
+                                  Text(
+                                    _endTime.minute.toString().padLeft(2, '0'),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    onPressed: _decrementEndMinute,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _confirm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.black,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Confirm',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

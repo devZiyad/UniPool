@@ -31,6 +31,7 @@ import 'screens/admin/admin_users_management_screen.dart';
 import 'models/vehicle.dart';
 import 'models/ride.dart';
 import 'models/booking.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const UniPoolApp());
@@ -50,7 +51,7 @@ class UniPoolApp extends StatelessWidget {
       child: MaterialApp(
         title: 'UniPool',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(primarySwatch: Colors.green, useMaterial3: true),
+        theme: AppTheme.lightTheme,
         initialRoute: '/',
         routes: {
           '/': (context) => const WelcomeScreen(),

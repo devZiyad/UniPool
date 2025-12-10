@@ -15,6 +15,7 @@ import '../../models/vehicle.dart';
 import '../../widgets/map_widget.dart';
 import '../../widgets/app_drawer.dart';
 import '../../utils/polyline_decoder.dart';
+import '../../theme/app_theme.dart';
 
 enum SearchStep { destination, startLocation, timeFilters }
 
@@ -48,10 +49,8 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   List<Location> _startSuggestions = [];
 
   // Time filters
-  TimeOfDay? _startTime;
-  TimeOfDay? _endTime;
-  DateTime? _startDate;
-  DateTime? _endDate;
+  DateTime? _startDateTime;
+  DateTime? _endDateTime;
   int _totalSeats = 1;
   bool _isPosting = false;
   bool _isSearching = false;
@@ -60,8 +59,8 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _startDate = DateTime(now.year, now.month, now.day);
-    _endDate = DateTime(now.year, now.month, now.day);
+    _startDateTime = DateTime(now.year, now.month, now.day, 7, 0);
+    _endDateTime = DateTime(now.year, now.month, now.day, 9, 0);
     // Determine initial step based on route
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final route = ModalRoute.of(context);
@@ -507,83 +506,29 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
     return role == 'DRIVER' || role == 'BOTH';
   }
 
-  String _formatTimeOfDay(TimeOfDay time) {
-    int hour = time.hour;
-    final String period;
-    if (hour == 0) {
-      hour = 12;
-      period = 'AM';
-    } else if (hour < 12) {
-      period = 'AM';
-    } else if (hour == 12) {
-      period = 'PM';
-    } else {
-      hour = hour - 12;
-      period = 'PM';
-    }
-    final minute = time.minute.toString().padLeft(2, '0');
-    return '$hour : $minute $period';
-  }
-
-  Future<void> _selectStartTime() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _startTime ?? TimeOfDay.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _startTime = picked;
-      });
-    }
-  }
-
-  Future<void> _selectEndTime() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: _endTime ?? TimeOfDay.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _endTime = picked;
-      });
-    }
-  }
-
-  Future<void> _selectStartDate() async {
+  Future<void> _selectDateTimeRange() async {
     final now = DateTime.now();
     final maxDate = now.add(const Duration(days: 2));
+    
+    // Initialize with current values or defaults
+    DateTime initialStart = _startDateTime ?? DateTime(now.year, now.month, now.day, 7, 0);
+    DateTime initialEnd = _endDateTime ?? DateTime(now.year, now.month, now.day, 9, 0);
 
-    final DateTime? picked = await showDatePicker(
+    // Show unified picker in a single dialog
+    final result = await showDialog<Map<String, DateTime>>(
       context: context,
-      initialDate: _startDate ?? now,
-      firstDate: now,
-      lastDate: maxDate,
-      helpText: 'Select start date',
+      builder: (context) => _UnifiedDateTimeRangePicker(
+        initialStart: initialStart,
+        initialEnd: initialEnd,
+        firstDate: now,
+        lastDate: maxDate,
+      ),
     );
-    if (picked != null) {
-      setState(() {
-        _startDate = DateTime(picked.year, picked.month, picked.day);
-        if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-          _endDate = _startDate;
-        }
-      });
-    }
-  }
 
-  Future<void> _selectEndDate() async {
-    final now = DateTime.now();
-    final maxDate = now.add(const Duration(days: 2));
-
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _endDate ?? _startDate ?? now,
-      firstDate: _startDate ?? now,
-      lastDate: maxDate,
-      helpText: 'Select end date',
-    );
-    if (picked != null) {
+    if (result != null) {
       setState(() {
-        _endDate = DateTime(picked.year, picked.month, picked.day);
+        _startDateTime = result['start']!;
+        _endDateTime = result['end']!;
       });
     }
   }
@@ -664,38 +609,33 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
   }
 
   Future<void> _postRide() async {
-    if (_startTime == null || _endTime == null || _startDate == null) {
+    if (_startDateTime == null || _endDateTime == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select time range')));
+      ).showSnackBar(const SnackBar(content: Text('Please select date and time range')));
       return;
     }
 
     final now = DateTime.now();
-    var departureTimeStart = DateTime(
-      _startDate!.year,
-      _startDate!.month,
-      _startDate!.day,
-      _startTime!.hour,
-      _startTime!.minute,
-    );
+    var departureTimeStart = _startDateTime!;
+    var departureTimeEnd = _endDateTime!;
 
-    var departureTimeEnd = DateTime(
-      _endDate!.year,
-      _endDate!.month,
-      _endDate!.day,
-      _endTime!.hour,
-      _endTime!.minute,
+    // If departure time start is in the past and it's today, add one day
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedStartDate = DateTime(
+      _startDateTime!.year,
+      _startDateTime!.month,
+      _startDateTime!.day,
     );
-
     if (departureTimeStart.isBefore(now) &&
-        _startDate!.year == now.year &&
-        _startDate!.month == now.month &&
-        _startDate!.day == now.day) {
+        selectedStartDate.year == today.year &&
+        selectedStartDate.month == today.month &&
+        selectedStartDate.day == today.day) {
       departureTimeStart = departureTimeStart.add(const Duration(days: 1));
-      if (_endDate!.year == _startDate!.year &&
-          _endDate!.month == _startDate!.month &&
-          _endDate!.day == _startDate!.day) {
+      // Also adjust end time if it's on the same day
+      if (_endDateTime!.year == _startDateTime!.year &&
+          _endDateTime!.month == _startDateTime!.month &&
+          _endDateTime!.day == _startDateTime!.day) {
         departureTimeEnd = departureTimeEnd.add(const Duration(days: 1));
       }
     }
@@ -834,28 +774,15 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
 
   Future<void> _searchRides() async {
     final rideProvider = Provider.of<RideProvider>(context, listen: false);
-    if (_startTime == null || _endTime == null) {
+    if (_startDateTime == null || _endDateTime == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Please select time range')));
+      ).showSnackBar(const SnackBar(content: Text('Please select date and time range')));
       return;
     }
 
-    final now = DateTime.now();
-    final startDateTime = DateTime(
-      _startDate?.year ?? now.year,
-      _startDate?.month ?? now.month,
-      _startDate?.day ?? now.day,
-      _startTime!.hour,
-      _startTime!.minute,
-    );
-    final endDateTime = DateTime(
-      _endDate?.year ?? now.year,
-      _endDate?.month ?? now.month,
-      _endDate?.day ?? now.day,
-      _endTime!.hour,
-      _endTime!.minute,
-    );
+    final startDateTime = _startDateTime!;
+    final endDateTime = _endDateTime!;
 
     rideProvider.setDepartureTimeRange(startDateTime, endDateTime);
     rideProvider.setSeatsNeeded(_totalSeats);
@@ -1258,83 +1185,95 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
-            // Date selection
-            Row(
+            // Unified Date-Time Range Selection
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Start Date'),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: _selectStartDate,
-                        child: Text(
-                          _startDate != null
-                              ? DateFormat('MMM dd, yyyy').format(_startDate!)
-                              : 'Select Date',
-                        ),
-                      ),
-                    ],
+                const Text(
+                  'Departure Time Range',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('End Date'),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: _selectEndDate,
-                        child: Text(
-                          _endDate != null
-                              ? DateFormat('MMM dd, yyyy').format(_endDate!)
-                              : 'Select Date',
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: _selectDateTimeRange,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppTheme.lightGrayDivider),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Start',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _startDateTime != null
+                                    ? DateFormat('MMM dd, yyyy • HH:mm')
+                                        .format(_startDateTime!)
+                                    : 'Select start date & time',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: Icon(Icons.arrow_forward, size: 20),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Text(
+                                'End',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _endDateTime != null
+                                    ? DateFormat('MMM dd, yyyy • HH:mm')
+                                        .format(_endDateTime!)
+                                    : 'Select end date & time',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.end,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Time selection
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Start Time'),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: _selectStartTime,
-                        child: Text(
-                          _startTime != null
-                              ? _formatTimeOfDay(_startTime!)
-                              : 'Select Time',
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('End Time'),
-                      const SizedBox(height: 8),
-                      OutlinedButton(
-                        onPressed: _selectEndTime,
-                        child: Text(
-                          _endTime != null
-                              ? _formatTimeOfDay(_endTime!)
-                              : 'Select Time',
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 8),
+                Text(
+                  'You can select dates up to 2 days in advance',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.softGrayText,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ],
@@ -1378,8 +1317,8 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
                   ? null
                   : (_isDriver ? _postRide : _searchRides),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.black,
-                foregroundColor: Colors.white,
+                backgroundColor: AppTheme.darkNavy,
+                foregroundColor: AppTheme.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -1391,12 +1330,454 @@ class _RiderUnifiedSearchScreenState extends State<RiderUnifiedSearchScreen> {
                       width: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        valueColor: AlwaysStoppedAnimation<Color>(AppTheme.white),
                       ),
                     )
                   : Text(_isDriver ? 'Post Ride' : 'Search Rides'),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UnifiedDateTimeRangePicker extends StatefulWidget {
+  final DateTime initialStart;
+  final DateTime initialEnd;
+  final DateTime firstDate;
+  final DateTime lastDate;
+
+  const _UnifiedDateTimeRangePicker({
+    required this.initialStart,
+    required this.initialEnd,
+    required this.firstDate,
+    required this.lastDate,
+  });
+
+  @override
+  State<_UnifiedDateTimeRangePicker> createState() => _UnifiedDateTimeRangePickerState();
+}
+
+class _UnifiedDateTimeRangePickerState extends State<_UnifiedDateTimeRangePicker> {
+  late DateTime _selectedDate;
+  late TimeOfDay _startTime;
+  late TimeOfDay _endTime;
+
+  @override
+  void initState() {
+    super.initState();
+    // Use start date as the selected date
+    _selectedDate = DateTime(
+      widget.initialStart.year,
+      widget.initialStart.month,
+      widget.initialStart.day,
+    );
+    _startTime = TimeOfDay.fromDateTime(widget.initialStart);
+    _endTime = TimeOfDay.fromDateTime(widget.initialEnd);
+  }
+
+  void _selectDate(DateTime date) {
+    setState(() {
+      _selectedDate = DateTime(date.year, date.month, date.day);
+    });
+  }
+
+  void _incrementStartHour() {
+    setState(() {
+      final newHour = (_startTime.hour + 1) % 24;
+      _startTime = TimeOfDay(hour: newHour, minute: _startTime.minute);
+      _validateTimes();
+    });
+  }
+
+  void _decrementStartHour() {
+    setState(() {
+      final newHour = (_startTime.hour - 1 + 24) % 24;
+      _startTime = TimeOfDay(hour: newHour, minute: _startTime.minute);
+      _validateTimes();
+    });
+  }
+
+  void _incrementStartMinute() {
+    setState(() {
+      int newMinute = _startTime.minute + 15;
+      int newHour = _startTime.hour;
+      if (newMinute >= 60) {
+        newMinute = 0;
+        newHour = (newHour + 1) % 24;
+      }
+      _startTime = TimeOfDay(hour: newHour, minute: newMinute);
+      _validateTimes();
+    });
+  }
+
+  void _decrementStartMinute() {
+    setState(() {
+      int newMinute = _startTime.minute - 15;
+      int newHour = _startTime.hour;
+      if (newMinute < 0) {
+        newMinute = 45;
+        newHour = (newHour - 1 + 24) % 24;
+      }
+      _startTime = TimeOfDay(hour: newHour, minute: newMinute);
+      _validateTimes();
+    });
+  }
+
+  void _incrementEndHour() {
+    setState(() {
+      final newHour = (_endTime.hour + 1) % 24;
+      _endTime = TimeOfDay(hour: newHour, minute: _endTime.minute);
+      _validateTimes();
+    });
+  }
+
+  void _decrementEndHour() {
+    setState(() {
+      final newHour = (_endTime.hour - 1 + 24) % 24;
+      _endTime = TimeOfDay(hour: newHour, minute: _endTime.minute);
+      _validateTimes();
+    });
+  }
+
+  void _incrementEndMinute() {
+    setState(() {
+      int newMinute = _endTime.minute + 15;
+      int newHour = _endTime.hour;
+      if (newMinute >= 60) {
+        newMinute = 0;
+        newHour = (newHour + 1) % 24;
+      }
+      _endTime = TimeOfDay(hour: newHour, minute: newMinute);
+      _validateTimes();
+    });
+  }
+
+  void _decrementEndMinute() {
+    setState(() {
+      int newMinute = _endTime.minute - 15;
+      int newHour = _endTime.hour;
+      if (newMinute < 0) {
+        newMinute = 45;
+        newHour = (newHour - 1 + 24) % 24;
+      }
+      _endTime = TimeOfDay(hour: newHour, minute: newMinute);
+      _validateTimes();
+    });
+  }
+
+  void _validateTimes() {
+    // Ensure end time is after start time
+    if (_endTime.hour < _startTime.hour || 
+        (_endTime.hour == _startTime.hour && _endTime.minute <= _startTime.minute)) {
+      _endTime = TimeOfDay(
+        hour: (_startTime.hour + 1) % 24,
+        minute: _startTime.minute,
+      );
+    }
+  }
+
+  void _confirm() {
+    final startDateTime = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _startTime.hour,
+      _startTime.minute,
+    );
+    final endDateTime = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+      _endTime.hour,
+      _endTime.minute,
+    );
+
+    // Validate end is after start
+    if (endDateTime.isBefore(startDateTime) || endDateTime.isAtSameMomentAs(startDateTime)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('End time must be after start time'),
+        ),
+      );
+      return;
+    }
+
+    Navigator.of(context).pop({
+      'start': startDateTime,
+      'end': endDateTime,
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final maxDate = widget.lastDate;
+    final firstDate = widget.firstDate;
+    
+    // Generate available dates (today, tomorrow, day after)
+    final availableDates = <DateTime>[];
+    for (int i = 0; i <= 2; i++) {
+      final date = firstDate.add(Duration(days: i));
+      if (!date.isAfter(maxDate)) {
+        availableDates.add(date);
+      }
+    }
+
+    return Dialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 600),
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Date & Time Range',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Inline Date Selection
+              const Text(
+                'Date',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: availableDates.map((date) {
+                  final isSelected = date.year == _selectedDate.year &&
+                      date.month == _selectedDate.month &&
+                      date.day == _selectedDate.day;
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      child: InkWell(
+                        onTap: () => _selectDate(date),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppTheme.darkNavy : AppTheme.lightGrayDivider,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                DateFormat('EEE').format(date),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isSelected ? AppTheme.white : AppTheme.softGrayText,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat('dd').format(date),
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: isSelected ? AppTheme.white : AppTheme.darkNavy,
+                                ),
+                              ),
+                              Text(
+                                DateFormat('MMM').format(date),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: isSelected ? AppTheme.white : AppTheme.softGrayText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 24),
+              // Inline Time Range Selection
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Start Time',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.lightGrayDivider),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_up),
+                                    onPressed: _incrementStartHour,
+                                  ),
+                                  Text(
+                                    _startTime.hour.toString().padLeft(2, '0'),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    onPressed: _decrementStartHour,
+                                  ),
+                                ],
+                              ),
+                              const Text(':', style: TextStyle(fontSize: 24)),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_up),
+                                    onPressed: _incrementStartMinute,
+                                  ),
+                                  Text(
+                                    _startTime.minute.toString().padLeft(2, '0'),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    onPressed: _decrementStartMinute,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.all(16.0),
+                    child: Icon(Icons.arrow_forward, size: 24),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'End Time',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: AppTheme.lightGrayDivider),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_up),
+                                    onPressed: _incrementEndHour,
+                                  ),
+                                  Text(
+                                    _endTime.hour.toString().padLeft(2, '0'),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    onPressed: _decrementEndHour,
+                                  ),
+                                ],
+                              ),
+                              const Text(':', style: TextStyle(fontSize: 24)),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_up),
+                                    onPressed: _incrementEndMinute,
+                                  ),
+                                  Text(
+                                    _endTime.minute.toString().padLeft(2, '0'),
+                                    style: const TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.arrow_drop_down),
+                                    onPressed: _decrementEndMinute,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _confirm,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.darkNavy,
+                  foregroundColor: AppTheme.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Confirm',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
