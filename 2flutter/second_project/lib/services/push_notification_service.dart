@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../models/notification.dart' as model;
 import 'notification_service.dart';
 
@@ -23,8 +25,23 @@ class PushNotificationService {
     if (_isInitialized) return;
     
     try {
+      // Request notification permissions for Android (before initialization)
+      if (Platform.isAndroid) {
+        final hasPermission = await _requestAndroidNotificationPermission();
+        if (!hasPermission) {
+          print('Android notification permission not granted');
+          // Continue anyway - user can grant permission later
+        }
+      }
+      
       // Initialize local notifications
+      // For iOS, permissions are requested automatically via DarwinInitializationSettings
       await _initializeLocalNotifications();
+      
+      // For iOS, explicitly request permissions after initialization
+      if (Platform.isIOS) {
+        await _requestIOSNotificationPermission();
+      }
       
       _isInitialized = true;
       print('Push notification service initialized');
@@ -33,6 +50,43 @@ class PushNotificationService {
       startPolling();
     } catch (e) {
       print('Error initializing push notifications: $e');
+    }
+  }
+
+  /// Request notification permission for Android 13+ (API 33+)
+  Future<bool> _requestAndroidNotificationPermission() async {
+    try {
+      final status = await Permission.notification.status;
+      if (status.isDenied) {
+        final result = await Permission.notification.request();
+        return result.isGranted;
+      }
+      return status.isGranted;
+    } catch (e) {
+      print('Error requesting Android notification permission: $e');
+      return false;
+    }
+  }
+
+  /// Request notification permission for iOS
+  Future<bool> _requestIOSNotificationPermission() async {
+    try {
+      final iosImplementation = _localNotifications
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      
+      if (iosImplementation != null) {
+        final result = await iosImplementation.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return result ?? false;
+      }
+      return false;
+    } catch (e) {
+      print('Error requesting iOS notification permission: $e');
+      return false;
     }
   }
 

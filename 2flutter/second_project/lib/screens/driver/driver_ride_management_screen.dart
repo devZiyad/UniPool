@@ -1627,6 +1627,33 @@ class _DriverRideManagementScreenState
                                             ],
                                           ),
                                         ],
+                                        // Pickup time range
+                                        if (booking.pickupTimeStart != null &&
+                                            booking.pickupTimeEnd != null) ...[
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            children: [
+                                              const Icon(
+                                                Icons.access_time,
+                                                size: 20,
+                                                color: Colors.blue,
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  _formatTimeRangeWithEnd(
+                                                    booking.pickupTimeStart!,
+                                                    booking.pickupTimeEnd!,
+                                                    booking.pickupTimeStart!,
+                                                  ),
+                                                  style: const TextStyle(
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
                                         // Phone number with WhatsApp link
                                         if (booking.riderPhoneNumber != null &&
                                             booking
