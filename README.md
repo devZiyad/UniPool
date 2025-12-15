@@ -277,5 +277,79 @@ Ethical Commitment
 
 With such values combined in our design and development process, the UniPool team can ensure that it has the ability to use the application to serve in ensuring a safe, fair, and trustworthy ride-sharing community for all university students. Our team will provide a constant review of these principles as the system changes. 
 
+___________________________________________________________________________________________________________________________________________________________________________________
+User Documentation: “How to use?”  
+
+Account Creation 
+You have two options in the Welcome screen to choose from, Login (if you already have an account) and Register (to create a new account). 
+
+Choosing “login” transfer you to the “login” page where you will be required to choose to log in as Driver or a Rider.  
+
+Either you choose to log in as Driver or log in as Rider you will have to put your email and password and if they are correct and there is a matching account you will log in to it. 
+
+Choosing “Register” will transfer you to the “Register” page where you will be able to create an account. First, you will need to put your name, email and password, then choose to register as a “rider” or “driver”.  
+
+After you’re done, press on sign up to move to the next page.  
+
+In this page you will be required to input a few photos. 
+
+Input a photo of your university card.  
+
+Input a photo of your ID card.  
+
+If you signed up as a Driver, Input a photo of Your driver’s license. After inputting  the required information, your account is ready. 
+
+Driver experience 
+As you log in as a driver, you will be able to post a ride in drive posting page, where you will be required to enter the following information: 
+
+First, as a driver you need to choose your “Source location” by your current live location or a location of your desire. 
+
+Second, you need to choose your destination.  
+
+Third, you need to choose the time you will be on the road (Starting time and ending time). 
+
+Fourth, you will be able to view your available seats based on your input.  
+
+Lastly, confirm the drive and it will be posted for users looking for a ride. 
+
+After your ride is chosen by a rider, you will have the option to accept or deny the request and see the information about the ride. 
+Information such as:  
+   - Ride request  
+   - Number of seats chosen 
+
+   - The rider’s distance away from you (in both time and kilometers) 
+
+If the ride was accepted, the number of available seats for your car would update and you will be able to see the live location of the rider and the time of arrival.  
+
+Once reaching the rider’s location, you will have to confirm the ride to start.  
+
+After the ride is completed, you will get the option to rate the driver out of 5 stars and provide feedback in a comment section.  
+
+Rider experience 
+
+After you logged in as a rider, you will be transferred to the rider's home where you can choose a ride for the location you're going to. 
+
+First, as a user you will need to choose your “pick up” location it can be either your current live location or a location of your desire.  
+
+Second, as a user, you need to choose your destination.   
+
+Third, you will get the option to choose the time you need to get picked up from the “pick up” location, you also can choose to get “picked up now”.  
+
+Fourth, you will be required to choose the number of seats you will need.  
+
+After you’ve chosen the time and location and number of seats you’ll be transferred to the Ride List where you’ll be able to request a ride out of available drivers and their information  
+information include : 
+   - Driver’s name 
+   - Driver’s rating 
+   - Fee (calculated based on the distance) 
+   - Driver’s distance away from you (in both time and Kilometers) 
+   - Available seats 
+
+After pressing “request” you will have to wait for the driver to confirm your request or deny it.  
+
+If your request was accepted, you will be able to see the driver's real time location and their time of arrival. Also you will have the ability to choose your payment method, contact the driver, and cancel the ride if you want. 
+
+After you reach the destination and the ride is concluded, you will have the option to rate your driver out of five stars and provide feedback in a comment section. 
+
 
 
