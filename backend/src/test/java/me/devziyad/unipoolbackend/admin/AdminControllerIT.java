@@ -80,13 +80,17 @@ public class AdminControllerIT {
         }
 
         // Create a driver user for creating rides
-        String driverToken = TestUtils.registerAndGetToken(
+        TestUtils.RegistrationResult driverResult = TestUtils.registerAndGetResult(
                 restClient,
                 "driver@example.com",
                 "driver123",
                 "Driver User",
                 Role.DRIVER
         );
+        String driverToken = driverResult.getToken();
+        
+        // Verify the driver so they can create rides
+        TestUtils.verifyDriverByEmailDirectly(userRepository, driverResult.getEmail());
 
         // Create vehicle, locations, and ride for admin tests
         VehicleResponse vehicle = TestUtils.createVehicle(restClient, driverToken);

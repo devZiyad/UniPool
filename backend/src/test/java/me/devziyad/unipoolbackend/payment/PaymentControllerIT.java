@@ -4,6 +4,7 @@ import me.devziyad.unipoolbackend.common.PaymentMethod;
 import me.devziyad.unipoolbackend.common.Role;
 import me.devziyad.unipoolbackend.payment.dto.InitiatePaymentRequest;
 import me.devziyad.unipoolbackend.payment.dto.WalletTopUpRequest;
+import me.devziyad.unipoolbackend.user.UserRepository;
 import me.devziyad.unipoolbackend.util.TestUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +24,9 @@ public class PaymentControllerIT {
     @Autowired
     private RestTestClient restClient;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private String userToken;
     private String driverToken;
     private Long rideId;
@@ -32,22 +36,30 @@ public class PaymentControllerIT {
     @BeforeEach
     void setUp() {
         // Create regular user
-        userToken = TestUtils.registerAndGetToken(
+        TestUtils.RegistrationResult userResult = TestUtils.registerAndGetResult(
                 restClient,
                 "user@example.com",
                 "user123",
                 "User",
                 Role.RIDER
         );
+        userToken = userResult.getToken();
+        
+        // Verify the user's university ID so they can book rides
+        TestUtils.verifyUniversityIdByEmailDirectly(userRepository, userResult.getEmail());
 
         // Create driver user
-        driverToken = TestUtils.registerAndGetToken(
+        TestUtils.RegistrationResult driverResult = TestUtils.registerAndGetResult(
                 restClient,
                 "driver@example.com",
                 "driver123",
                 "Driver",
                 Role.DRIVER
         );
+        driverToken = driverResult.getToken();
+        
+        // Verify the driver so they can create rides
+        TestUtils.verifyDriverByEmailDirectly(userRepository, driverResult.getEmail());
         
         // Create vehicle, locations, and ride for payment tests
         me.devziyad.unipoolbackend.vehicle.dto.VehicleResponse vehicle = TestUtils.createVehicle(restClient, driverToken);

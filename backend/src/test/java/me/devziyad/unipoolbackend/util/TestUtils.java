@@ -13,6 +13,8 @@ import me.devziyad.unipoolbackend.location.dto.CreateLocationRequest;
 import me.devziyad.unipoolbackend.location.dto.LocationResponse;
 import me.devziyad.unipoolbackend.ride.dto.CreateRideRequest;
 import me.devziyad.unipoolbackend.ride.dto.RideResponse;
+import me.devziyad.unipoolbackend.route.dto.CreateRouteRequest;
+import me.devziyad.unipoolbackend.route.dto.RouteResponse;
 import me.devziyad.unipoolbackend.vehicle.dto.CreateVehicleRequest;
 import me.devziyad.unipoolbackend.vehicle.dto.VehicleResponse;
 import org.springframework.http.MediaType;
@@ -297,14 +299,56 @@ public class TestUtils {
     }
 
     /**
+     * Creates a route for a driver
+     */
+    public static RouteResponse createRoute(RestTestClient restClient, String driverToken, double startLat, double startLon, double endLat, double endLon) {
+        CreateRouteRequest request = new CreateRouteRequest();
+        request.setStartLatitude(startLat);
+        request.setStartLongitude(startLon);
+        request.setEndLatitude(endLat);
+        request.setEndLongitude(endLon);
+
+        byte[] responseBytes = restClient
+                .post()
+                .uri("/api/locations/route")
+                .header("Authorization", "Bearer " + driverToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .exchange()
+                .expectStatus()
+                .isCreated()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+
+        try {
+            String responseBody = new String(responseBytes);
+            return objectMapper.readValue(responseBody, RouteResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse route response", e);
+        }
+    }
+
+    /**
      * Creates a ride for a driver with a custom hours offset for departure time
      * @param hoursOffset Hours from now for the departure time start (to avoid overlapping rides)
      */
     public static RideResponse createRide(RestTestClient restClient, String driverToken, Long vehicleId, Long pickupLocationId, Long destinationLocationId, long hoursOffset) {
+        // First, get the location details to get coordinates
+        LocationResponse pickupLocation = getLocation(restClient, driverToken, pickupLocationId);
+        LocationResponse destinationLocation = getLocation(restClient, driverToken, destinationLocationId);
+        
+        // Create a route using the location coordinates
+        RouteResponse route = createRoute(restClient, driverToken, 
+                pickupLocation.getLatitude(), pickupLocation.getLongitude(),
+                destinationLocation.getLatitude(), destinationLocation.getLongitude());
+        
+        // Now create the ride with the routeId
         CreateRideRequest request = new CreateRideRequest();
         request.setVehicleId(vehicleId);
         request.setPickupLocationId(pickupLocationId);
         request.setDestinationLocationId(destinationLocationId);
+        request.setRouteId(route.getRouteId());
         Instant departureStart = instantNowPlusHours(hoursOffset);
         request.setDepartureTimeStart(departureStart);
         request.setDepartureTimeEnd(departureStart.plus(30, ChronoUnit.MINUTES));
@@ -330,6 +374,29 @@ public class TestUtils {
             return objectMapper.readValue(responseBody, RideResponse.class);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse ride response", e);
+        }
+    }
+    
+    /**
+     * Gets a location by ID
+     */
+    private static LocationResponse getLocation(RestTestClient restClient, String token, Long locationId) {
+        byte[] responseBytes = restClient
+                .get()
+                .uri("/api/locations/" + locationId)
+                .header("Authorization", "Bearer " + token)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+
+        try {
+            String responseBody = new String(responseBytes);
+            return objectMapper.readValue(responseBody, LocationResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse location response", e);
         }
     }
 
@@ -511,6 +578,70 @@ public class TestUtils {
         
         me.devziyad.unipoolbackend.user.User admin = createAdminUserDirectly(userRepository, passwordEncoder, email, password, fullName);
         return jwtService.generateToken(admin.getId(), admin.getEmail());
+    }
+
+    /**
+     * Verifies a driver directly in the database (for test setup)
+     * This bypasses the admin API and directly updates the user entity
+     * 
+     * @param userRepository UserRepository bean (inject in test class)
+     * @param userId The ID of the user to verify as a driver
+     */
+    public static void verifyDriverDirectly(
+            me.devziyad.unipoolbackend.user.UserRepository userRepository,
+            Long userId) {
+        me.devziyad.unipoolbackend.user.User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        user.setVerifiedDriver(true);
+        userRepository.save(user);
+    }
+
+    /**
+     * Verifies a driver by email directly in the database (for test setup)
+     * This bypasses the admin API and directly updates the user entity
+     * 
+     * @param userRepository UserRepository bean (inject in test class)
+     * @param email The email of the user to verify as a driver
+     */
+    public static void verifyDriverByEmailDirectly(
+            me.devziyad.unipoolbackend.user.UserRepository userRepository,
+            String email) {
+        me.devziyad.unipoolbackend.user.User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+        user.setVerifiedDriver(true);
+        userRepository.save(user);
+    }
+
+    /**
+     * Verifies a user's university ID directly in the database (for test setup)
+     * This bypasses the admin API and directly updates the user entity
+     * 
+     * @param userRepository UserRepository bean (inject in test class)
+     * @param userId The ID of the user to verify
+     */
+    public static void verifyUniversityIdDirectly(
+            me.devziyad.unipoolbackend.user.UserRepository userRepository,
+            Long userId) {
+        me.devziyad.unipoolbackend.user.User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with ID: " + userId));
+        user.setUniversityIdVerified(true);
+        userRepository.save(user);
+    }
+
+    /**
+     * Verifies a user's university ID by email directly in the database (for test setup)
+     * This bypasses the admin API and directly updates the user entity
+     * 
+     * @param userRepository UserRepository bean (inject in test class)
+     * @param email The email of the user to verify
+     */
+    public static void verifyUniversityIdByEmailDirectly(
+            me.devziyad.unipoolbackend.user.UserRepository userRepository,
+            String email) {
+        me.devziyad.unipoolbackend.user.User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+        user.setUniversityIdVerified(true);
+        userRepository.save(user);
     }
 }
 

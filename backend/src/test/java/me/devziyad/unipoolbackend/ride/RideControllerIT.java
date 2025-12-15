@@ -3,6 +3,7 @@ package me.devziyad.unipoolbackend.ride;
 import me.devziyad.unipoolbackend.common.RideStatus;
 import me.devziyad.unipoolbackend.common.Role;
 import me.devziyad.unipoolbackend.ride.dto.CreateRideRequest;
+import me.devziyad.unipoolbackend.user.UserRepository;
 import me.devziyad.unipoolbackend.util.TestUtils;
 
 import static me.devziyad.unipoolbackend.util.TestUtils.instantNowPlusHours;
@@ -26,6 +27,9 @@ public class RideControllerIT {
     @Autowired
     private RestTestClient restClient;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private String driverToken;
     private Long vehicleId;
     private Long pickupLocationId;
@@ -35,13 +39,17 @@ public class RideControllerIT {
     @BeforeEach
     void setUp() {
         // Create driver user
-        driverToken = TestUtils.registerAndGetToken(
+        TestUtils.RegistrationResult driverResult = TestUtils.registerAndGetResult(
                 restClient,
                 "driver@example.com",
                 "driver123",
                 "Driver User",
                 Role.DRIVER
         );
+        driverToken = driverResult.getToken();
+        
+        // Verify the driver so they can create rides
+        TestUtils.verifyDriverByEmailDirectly(userRepository, driverResult.getEmail());
         
         // Create vehicle and locations for tests
         me.devziyad.unipoolbackend.vehicle.dto.VehicleResponse vehicle = TestUtils.createVehicle(restClient, driverToken);
@@ -66,10 +74,25 @@ public class RideControllerIT {
 
     @Test
     void shouldCreateRideAsDriver() {
+        // First, get location coordinates to create a route
+        me.devziyad.unipoolbackend.location.dto.LocationResponse pickupLocation = getLocation(pickupLocationId);
+        me.devziyad.unipoolbackend.location.dto.LocationResponse destinationLocation = getLocation(destinationLocationId);
+        
+        // Create a route for this ride
+        me.devziyad.unipoolbackend.route.dto.RouteResponse route = TestUtils.createRoute(
+                restClient,
+                driverToken,
+                pickupLocation.getLatitude(),
+                pickupLocation.getLongitude(),
+                destinationLocation.getLatitude(),
+                destinationLocation.getLongitude()
+        );
+        
         CreateRideRequest request = new CreateRideRequest();
         request.setVehicleId(vehicleId);
         request.setPickupLocationId(pickupLocationId);
         request.setDestinationLocationId(destinationLocationId);
+        request.setRouteId(route.getRouteId());
         // Use a time that doesn't overlap with the ride created in setUp
         // setUp creates a ride starting at instantNowPlusHours(2), so we'll use instantNowPlusHours(25)
         // to ensure no overlap (since rides can be up to 24 hours long)
@@ -95,6 +118,26 @@ public class RideControllerIT {
                 .jsonPath("$.rideId").exists()
                 .jsonPath("$.driverId").exists()
                 .jsonPath("$.totalSeats").isEqualTo(4);
+    }
+    
+    private me.devziyad.unipoolbackend.location.dto.LocationResponse getLocation(Long locationId) {
+        byte[] responseBytes = restClient
+                .get()
+                .uri("/api/locations/" + locationId)
+                .header("Authorization", "Bearer " + driverToken)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .returnResult()
+                .getResponseBody();
+
+        try {
+            String responseBody = new String(responseBytes);
+            return TestUtils.getObjectMapper().readValue(responseBody, me.devziyad.unipoolbackend.location.dto.LocationResponse.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse location response", e);
+        }
     }
 
     @Test

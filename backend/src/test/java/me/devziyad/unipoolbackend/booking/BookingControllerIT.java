@@ -4,6 +4,7 @@ import me.devziyad.unipoolbackend.booking.dto.CreateBookingRequest;
 import me.devziyad.unipoolbackend.common.Role;
 import me.devziyad.unipoolbackend.location.dto.LocationResponse;
 import me.devziyad.unipoolbackend.ride.dto.RideResponse;
+import me.devziyad.unipoolbackend.user.UserRepository;
 import me.devziyad.unipoolbackend.util.TestUtils;
 import me.devziyad.unipoolbackend.vehicle.dto.VehicleResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,6 +23,9 @@ public class BookingControllerIT {
     @Autowired
     private RestTestClient restClient;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private String riderToken;
     private String driverToken;
     private Long rideId;
@@ -29,22 +33,30 @@ public class BookingControllerIT {
     @BeforeEach
     void setUp() {
         // Create rider user
-        riderToken = TestUtils.registerAndGetToken(
+        TestUtils.RegistrationResult riderResult = TestUtils.registerAndGetResult(
                 restClient,
                 "rider@example.com",
                 "rider123",
                 "Rider User",
                 Role.RIDER
         );
+        riderToken = riderResult.getToken();
+        
+        // Verify the rider's university ID so they can book rides
+        TestUtils.verifyUniversityIdByEmailDirectly(userRepository, riderResult.getEmail());
 
         // Create driver user
-        driverToken = TestUtils.registerAndGetToken(
+        TestUtils.RegistrationResult driverResult = TestUtils.registerAndGetResult(
                 restClient,
                 "driver@example.com",
                 "driver123",
                 "Driver User",
                 Role.DRIVER
         );
+        driverToken = driverResult.getToken();
+        
+        // Verify the driver so they can create rides
+        TestUtils.verifyDriverByEmailDirectly(userRepository, driverResult.getEmail());
 
         // Create vehicle for driver
         VehicleResponse vehicle = TestUtils.createVehicle(restClient, driverToken);
