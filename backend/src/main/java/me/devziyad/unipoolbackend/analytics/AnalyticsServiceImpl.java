@@ -4,27 +4,32 @@ import lombok.RequiredArgsConstructor;
 import me.devziyad.unipoolbackend.analytics.dto.*;
 import me.devziyad.unipoolbackend.booking.BookingRepository;
 import me.devziyad.unipoolbackend.common.BookingStatus;
-import me.devziyad.unipoolbackend.common.RideStatus;
-import me.devziyad.unipoolbackend.location.Location;
-import me.devziyad.unipoolbackend.payment.PaymentRepository;
-import me.devziyad.unipoolbackend.payment.Payment;
 import me.devziyad.unipoolbackend.common.PaymentStatus;
+import me.devziyad.unipoolbackend.common.RideStatus;
+import me.devziyad.unipoolbackend.payment.Payment;
+import me.devziyad.unipoolbackend.payment.PaymentRepository;
 import me.devziyad.unipoolbackend.ride.Ride;
 import me.devziyad.unipoolbackend.ride.RideRepository;
+import me.devziyad.unipoolbackend.user.UserRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AnalyticsServiceImpl implements AnalyticsService {
 
     private final PaymentRepository paymentRepository;
     private final RideRepository rideRepository;
     private final BookingRepository bookingRepository;
+    private final UserRepository userRepository;
 
     @Override
     public DriverEarningsResponse getDriverEarnings(Long driverId, LocalDate from, LocalDate to) {
@@ -85,7 +90,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .totalRides(totalRides)
                 .completedRides(completedRides)
                 .cancelledRides(cancelledRides)
-                .activeRides(rides.stream().filter(r -> r.getStatus() == RideStatus.POSTED || 
+                .activeRides(rides.stream().filter(r -> r.getStatus() == RideStatus.POSTED ||
                                                        r.getStatus() == RideStatus.IN_PROGRESS).count())
                 .build();
     }
@@ -93,12 +98,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     @Override
     public BookingStatsResponse getBookingStats() {
         long totalBookings = bookingRepository.count();
-        long confirmedBookings = bookingRepository.findAll().stream()
-                .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
-                .count();
-        long cancelledBookings = bookingRepository.findAll().stream()
-                .filter(b -> b.getStatus() == BookingStatus.CANCELLED)
-                .count();
+        long confirmedBookings = bookingRepository.countByStatus(BookingStatus.CONFIRMED);
+        long cancelledBookings = bookingRepository.countByStatus(BookingStatus.CANCELLED);
 
         return BookingStatsResponse.builder()
                 .totalBookings(totalBookings)
@@ -110,17 +111,15 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public PopularDestinationsResponse getPopularDestinations(Integer limit) {
-        Map<Location, Long> destinationCounts = rideRepository.findAll().stream()
-                .filter(r -> r.getStatus() == RideStatus.COMPLETED)
-                .collect(Collectors.groupingBy(Ride::getDestinationLocation, Collectors.counting()));
+        int pageSize = limit != null && limit > 0 ? limit : 10;
+        List<Object[]> rows = rideRepository.findPopularDestinations(
+                RideStatus.COMPLETED, PageRequest.of(0, pageSize));
 
-        List<PopularDestination> popular = destinationCounts.entrySet().stream()
-                .sorted(Map.Entry.<Location, Long>comparingByValue().reversed())
-                .limit(limit != null ? limit : 10)
-                .map(e -> PopularDestination.builder()
-                        .locationId(e.getKey().getId())
-                        .locationLabel(e.getKey().getLabel())
-                        .rideCount(e.getValue())
+        List<PopularDestination> popular = rows.stream()
+                .map(row -> PopularDestination.builder()
+                        .locationId((Long) row[0])
+                        .locationLabel((String) row[1])
+                        .rideCount((Long) row[2])
                         .build())
                 .collect(Collectors.toList());
 
@@ -131,8 +130,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public PeakTimesResponse getPeakTimes() {
-        Map<Integer, Long> hourCounts = rideRepository.findAll().stream()
-                .map(r -> r.getDepartureTimeStart().atZone(java.time.ZoneId.of("UTC")).getHour())
+        Map<Integer, Long> hourCounts = rideRepository.findAllDepartureTimes().stream()
+                .map(instant -> instant.atZone(java.time.ZoneId.of("UTC")).getHour())
                 .collect(Collectors.groupingBy(h -> h, Collectors.counting()));
 
         List<PeakTime> peakTimes = hourCounts.entrySet().stream()
@@ -151,27 +150,17 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public DashboardStatsResponse getDashboardStats() {
-        long totalUsers = rideRepository.findAll().stream()
-                .map(r -> r.getDriver().getId())
-                .distinct()
-                .count();
-
+        long totalUsers = userRepository.count();
         long totalRides = rideRepository.count();
-        long activeRides = rideRepository.findAll().stream()
-                .filter(r -> r.getStatus() == RideStatus.POSTED || r.getStatus() == RideStatus.IN_PROGRESS)
-                .count();
-
-        BigDecimal totalRevenue = paymentRepository.findAll().stream()
-                .filter(p -> p.getStatus() == PaymentStatus.SETTLED)
-                .map(Payment::getPlatformFee)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long activeRides = rideRepository.countByStatusIn(
+                List.of(RideStatus.POSTED, RideStatus.IN_PROGRESS));
+        BigDecimal totalRevenue = paymentRepository.sumPlatformFeeByStatus(PaymentStatus.SETTLED);
 
         return DashboardStatsResponse.builder()
                 .totalUsers(totalUsers)
                 .totalRides(totalRides)
                 .activeRides(activeRides)
-                .totalRevenue(totalRevenue)
+                .totalRevenue(totalRevenue != null ? totalRevenue : BigDecimal.ZERO)
                 .build();
     }
 }
-

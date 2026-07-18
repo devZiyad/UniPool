@@ -72,4 +72,24 @@ public interface RideRepository extends JpaRepository<@NonNull Ride, @NonNull Lo
     @Query("SELECT r FROM Ride r WHERE r.availableSeats >= :minSeats AND r.status = 'POSTED'")
     @NonNull
     List<@NonNull Ride> findAvailableRidesWithBookings(@Param("minSeats") Integer minSeats);
+
+    @EntityGraph(attributePaths = {"driver", "destinationLocation"})
+    @Query("SELECT r FROM Ride r WHERE r.status = :status AND r.departureTimeStart > :from AND r.departureTimeStart < :to")
+    @NonNull
+    List<@NonNull Ride> findByStatusAndDepartureTimeStartBetween(
+            @Param("status") RideStatus status,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
+
+    long countByStatusIn(List<RideStatus> statuses);
+
+    @Query("SELECT r.destinationLocation.id, r.destinationLocation.label, COUNT(r) FROM Ride r " +
+           "WHERE r.status = :status GROUP BY r.destinationLocation.id, r.destinationLocation.label " +
+           "ORDER BY COUNT(r) DESC")
+    @NonNull
+    List<Object[]> findPopularDestinations(@Param("status") RideStatus status, org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT r.departureTimeStart FROM Ride r")
+    @NonNull
+    List<@NonNull Instant> findAllDepartureTimes();
 }

@@ -14,7 +14,9 @@ import java.time.Instant;
 @Table(name = "bookings", indexes = {
     @Index(name = "idx_booking_ride_id", columnList = "ride_id"),
     @Index(name = "idx_booking_rider_id", columnList = "rider_id"),
-    @Index(name = "idx_booking_status", columnList = "status")
+    @Index(name = "idx_booking_status", columnList = "status"),
+    @Index(name = "idx_booking_ride_status", columnList = "ride_id, status"),
+    @Index(name = "idx_booking_rider_status", columnList = "rider_id, status")
 })
 @Getter
 @Setter

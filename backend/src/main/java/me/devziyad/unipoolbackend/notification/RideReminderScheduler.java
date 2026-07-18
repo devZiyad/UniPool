@@ -32,27 +32,20 @@ public class RideReminderScheduler {
         Instant now = Instant.now();
         Instant tenMinutesFromNow = now.plusSeconds(10 * 60L);
 
-        // Find rides starting in the next 10 minutes
-        List<Ride> upcomingRides = rideRepository.findAll().stream()
-                .filter(ride -> ride.getStatus() == RideStatus.POSTED)
-                .filter(ride -> ride.getDepartureTimeStart().isAfter(now))
-                .filter(ride -> ride.getDepartureTimeStart().isBefore(tenMinutesFromNow))
-                .toList();
+        List<Ride> upcomingRides = rideRepository.findByStatusAndDepartureTimeStartBetween(
+                RideStatus.POSTED, now, tenMinutesFromNow);
 
         for (Ride ride : upcomingRides) {
-            // Notify driver
             notificationService.createNotification(
                     ride.getDriver().getId(),
                     "Ride Starting Soon",
-                    String.format("Your ride to %s is starting in 10 minutes", 
+                    String.format("Your ride to %s is starting in 10 minutes",
                             ride.getDestinationLocation().getLabel()),
                     NotificationType.RIDE_REMINDER
             );
 
-            // Notify all passengers
-            List<Booking> bookings = bookingRepository.findByRideId(ride.getId()).stream()
-                    .filter(b -> b.getStatus() == BookingStatus.CONFIRMED)
-                    .toList();
+            List<Booking> bookings = bookingRepository.findByRideIdAndStatus(
+                    ride.getId(), BookingStatus.CONFIRMED);
 
             for (Booking booking : bookings) {
                 notificationService.createNotification(
@@ -68,4 +61,3 @@ public class RideReminderScheduler {
         logger.info("Processed {} upcoming rides", upcomingRides.size());
     }
 }
-

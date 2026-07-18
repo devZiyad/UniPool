@@ -32,4 +32,8 @@ public interface PaymentRepository extends JpaRepository<@NonNull Payment, @NonN
     @Query("SELECT SUM(p.driverEarnings) FROM Payment p WHERE p.driver.id = :driverId AND p.status = 'SETTLED'")
     @NonNull
     BigDecimal getTotalEarningsByDriverId(@Param("driverId") Long driverId);
+
+    @Query("SELECT COALESCE(SUM(p.platformFee), 0) FROM Payment p WHERE p.status = :status")
+    @NonNull
+    BigDecimal sumPlatformFeeByStatus(@Param("status") PaymentStatus status);
 }

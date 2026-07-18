@@ -7,7 +7,9 @@ import me.devziyad.unipoolbackend.user.User;
 import java.time.Instant;
 
 @Entity
-@Table(name = "routes")
+@Table(name = "routes", indexes = {
+    @Index(name = "idx_route_created_by_user_id", columnList = "created_by_user_id")
+})
 @Getter
 @Setter
 @NoArgsConstructor

@@ -4,6 +4,7 @@ import lombok.NonNull;
 import me.devziyad.unipoolbackend.common.BookingStatus;
 import me.devziyad.unipoolbackend.user.User;
 import me.devziyad.unipoolbackend.ride.Ride;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -35,4 +36,10 @@ public interface BookingRepository extends JpaRepository<@NonNull Booking, @NonN
     @Query("SELECT COUNT(b) FROM Booking b WHERE b.ride.id = :rideId AND b.status != 'CANCELLED'")
     @NonNull
     Integer countActiveBookingsByRideId(@Param("rideId") Long rideId);
+
+    long countByStatus(BookingStatus status);
+
+    @EntityGraph(attributePaths = {"rider"})
+    @NonNull
+    List<@NonNull Booking> findByRideIdAndStatus(Long rideId, BookingStatus status);
 }
