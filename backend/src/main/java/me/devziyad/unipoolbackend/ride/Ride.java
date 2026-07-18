@@ -15,7 +15,9 @@ import java.time.Instant;
     @Index(name = "idx_ride_driver_id", columnList = "driver_id"),
     @Index(name = "idx_ride_status", columnList = "status"),
     @Index(name = "idx_ride_departure_time_start", columnList = "departureTimeStart"),
-    @Index(name = "idx_ride_departure_time_end", columnList = "departureTimeEnd")
+    @Index(name = "idx_ride_departure_time_end", columnList = "departureTimeEnd"),
+    @Index(name = "idx_ride_status_departure_start", columnList = "status, departureTimeStart"),
+    @Index(name = "idx_ride_driver_status", columnList = "driver_id, status")
 })
 @Getter
 @Setter

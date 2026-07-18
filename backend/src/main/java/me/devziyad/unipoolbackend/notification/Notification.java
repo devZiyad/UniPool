@@ -10,7 +10,8 @@ import java.time.Instant;
 @Entity
 @Table(name = "notifications", indexes = {
     @Index(name = "idx_notification_user_id", columnList = "user_id"),
-    @Index(name = "idx_notification_read", columnList = "read")
+    @Index(name = "idx_notification_read", columnList = "read"),
+    @Index(name = "idx_notification_user_read", columnList = "user_id, read")
 })
 @Getter
 @Setter
