@@ -2,7 +2,41 @@
 
 UniPool is a carpooling application designed exclusively for university students to share rides safely, conveniently, and affordably within their campus community.
 
-Kanban Board: https://trello.com/invite/b/68fce5588559a96c8bb57a4d/ATTI70741969f7daa0f7319562d4f276b8da75F9874B/swen-kanban-board 
+Kanban Board: https://trello.com/invite/b/68fce5588559a96c8bb57a4d/ATTI70741969f7daa0f7319562d4f276b8da75F9874B/swen-kanban-board
+
+## Repository layout
+
+```
+UniPool/
+├── backend/            # Spring Boot API (Java 17 / Maven)
+├── frontend/           # Flutter app
+├── architecture_docs/  # Diagrams, screenshots, wireframe links
+└── README.md
+```
+
+| Path | Stack | Docs |
+|------|--------|------|
+| `backend/` | Spring Boot, JPA, JWT | [`backend/README.md`](backend/README.md), [`backend/API_DOCUMENTATION.md`](backend/API_DOCUMENTATION.md) |
+| `frontend/` | Flutter / Dart | [`frontend/README.md`](frontend/README.md) |
+| `architecture_docs/` | Project diagrams & assets | — |
+
+### Quick start
+
+**API** (default `http://localhost:8080`):
+
+```bash
+cd backend
+cp .env.template .env   # fill in DB and secrets
+./mvnw spring-boot:run
+```
+
+**App** (points at `http://localhost:8080/api`):
+
+```bash
+cd frontend
+flutter pub get
+flutter run
+```
 
 ## Features
 
